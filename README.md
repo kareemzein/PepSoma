@@ -6,8 +6,8 @@ A working demo storefront for **pepsoma.com**, a research-use-only peptide suppl
 |---|---|---|
 | Path | `/a/` | `/b/` |
 | Inspired by | brellohealth.com (product/plan layout) | olympexsolutions.com (catalog/lab layout) |
-| Look | Cream, lavender, deep purple, yellow accents; Fraunces serif italics + DM Sans | Near-black, antique gold, cream; Inter Tight + Inter |
-| Signature pieces | Plan-selector product page, “What’s included” box, testimonial band, 4-step path, split FAQ | Marquee trust bars, “Buy more, save more” tiers, 01/02/03 standards, framed product art |
+| Look | Cream, lavender, deep purple, yellow accents; Fraunces serif italics + DM Sans. Follows the device's light/dark mode, with a sun/moon toggle to override | Near-black, antique gold, cream; Inter Tight + Inter |
+| Signature pieces | Plan-selector product page, “What’s included” box, animated hero with rolling headline word, compound marquee, count-up stats, live COA window, fly-to-cart, giant footer wordmark | Marquee trust bars, “Buy more, save more” tiers, 01/02/03 standards, framed product art |
 
 The root `index.html` is a split-screen page where you pick a version.
 

@@ -14,7 +14,6 @@
     const lines = p.vial || [p.name];
     const longest = Math.max(...lines.map((l) => l.length));
     const fs = longest > 12 ? 9 : longest > 9 ? 11 : longest > 6 ? 13 : 15;
-    const lot = PS.lots(p)[0];
     const powder = p.liquid ? null : p.powder || (theme === 'dark' ? '#e9e4d8' : '#f4f1ff');
     const esc = PS.esc;
     const nameY = lines.length > 1 ? 146 : 152;
@@ -42,7 +41,7 @@
         <text x="60" y="${nameY}" text-anchor="middle" font-family="Inter Tight, Inter, sans-serif" font-weight="800" font-size="${fs}" fill="#f4f1ea">${nameText}</text>
         <rect x="38" y="${nameY + (lines.length > 1 ? fs + 8 : 10)}" width="44" height="12" rx="6" fill="none" stroke="#f4f1ea" stroke-opacity=".5"/>
         <text x="60" y="${nameY + (lines.length > 1 ? fs + 16.5 : 18.5)}" text-anchor="middle" font-family="Inter, sans-serif" font-size="6.5" fill="#f4f1ea">${esc(size)}</text>
-        <text x="60" y="193" text-anchor="middle" font-family="Inter, sans-serif" font-size="4.6" letter-spacing="1" fill="#8a857a">${lot ? esc(lot.code) + ' · ' : ''}RESEARCH USE ONLY</text>`;
+`;
     } else {
       glassTint = 'rgba(224,215,255,.28)'; glassStroke = 'rgba(31,10,89,.18)';
       cap = `
@@ -60,7 +59,7 @@
         <text x="60" y="126" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-style="italic" font-weight="600" font-size="9" fill="#1f0a59">pepsoma</text>
         <text x="60" y="${nameY}" text-anchor="middle" font-family="DM Sans, sans-serif" font-weight="700" font-size="${fs}" fill="#1f0a59">${nameText}</text>
         <text x="60" y="${nameY + (lines.length > 1 ? fs + 16 : 18)}" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="7.5" fill="#5b5277">${esc(size)}${p.purity ? ' · ≥' + Math.floor(p.purity) + '%' : ''}</text>
-        <text x="60" y="193" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="4.6" letter-spacing="1" fill="#7a6e96">${lot ? esc(lot.code) + ' · ' : ''}RESEARCH USE ONLY</text>`;
+`;
     }
 
     return `<svg class="vial-svg" viewBox="0 0 120 240" role="img" aria-label="${esc(p.name)} ${esc(size)} vial">

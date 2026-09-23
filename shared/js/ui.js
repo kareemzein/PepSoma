@@ -32,6 +32,9 @@
     mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
     phone: '<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2z"/>',
     pin: '<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+    sun: '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/>',
+    moon: '<path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/>',
+    monitor: '<rect x="3" y="4" width="18" height="12.5" rx="2"/><path d="M8.5 20.5h7M12 16.5v4"/>',
     download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
     box: '<path d="M3 7.5L12 3l9 4.5v9L12 21l-9-4.5z"/><path d="M3 7.5l9 4.5 9-4.5M12 12v9"/>',
     beaker: '<path d="M6 3h12M8 3v14a4 4 0 0 0 8 0V3"/><path d="M8 12h8"/>',
@@ -455,9 +458,10 @@
       else if (d.add) {
         e.preventDefault();
         PS.cart.add(d.add, d.size, 1, 'once');
+        PS.emit('added', { el: t, id: d.add });
         const p = PS.getProduct(d.add);
         PS.toast(`${esc(p.name)} added to cart`);
-        if (T().openCartOnAdd !== false) PS.openCart();
+        if (T().openCartOnAdd !== false) setTimeout(PS.openCart, T().cartDelay || 0);
       }
       else if (d.step) {
         const q = $('.qty-input', t.closest('.qty'));
@@ -529,8 +533,9 @@
       if (kind === 'product') {
         const p = PS.getProduct(form.dataset.id);
         PS.cart.add(p.id, data.size, data.qty, data.plan || 'once');
+        PS.emit('added', { el: form.querySelector('[type=submit]'), id: p.id });
         PS.toast(`${esc(p.name)} added to cart`);
-        PS.openCart();
+        setTimeout(PS.openCart, T().cartDelay || 0);
         return;
       }
       if (kind === 'search') { PS.go('#/shop?q=' + encodeURIComponent(data.q || '')); document.body.classList.remove('nav-open'); return; }
@@ -618,6 +623,7 @@
     lastPath = r.path;
     $$('form[data-form="product"]', main).forEach(PS.syncProductForm);
     if (out.after) out.after();
+    if (T().afterRender) T().afterRender(r, main);
     reveal();
   }
   PS.render = render;
@@ -625,7 +631,7 @@
   /* ---------- boot ---------- */
   PS.boot = (theme) => {
     PS.theme = theme;
-    document.documentElement.dataset.theme = theme.name;
+    document.documentElement.dataset.site = theme.name;
     $('#app-header').innerHTML = theme.header();
     $('#app-footer').innerHTML = theme.footer();
     document.body.insertAdjacentHTML('beforeend', `
