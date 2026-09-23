@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pepsoma — Choose a design</title>
+  <meta name="description" content="Two design directions for the Pepsoma research peptide storefront.">
+  <link rel="icon" href="assets/favicon-a.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:ital,wght@1,500&family=Inter:wght@400;600&family=Inter+Tight:wght@800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'DM Sans', system-ui, sans-serif; min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
+    .pane { position: relative; display: flex; flex-direction: column; justify-content: space-between; padding: 48px clamp(24px, 5vw, 72px); text-decoration: none; overflow: hidden; min-height: 100vh; transition: flex .3s; }
+    .pane-a { background: radial-gradient(700px 400px at 80% 30%, #e0d7ff, transparent 60%), #fefbf4; color: #1f0a59; }
+    .pane-b { background: radial-gradient(600px 400px at 70% 40%, rgba(200,164,77,.2), transparent 65%), #0e0e0e; color: #f4f1ea; font-family: 'Inter', sans-serif; }
+    .tag { font-size: .72rem; letter-spacing: .24em; text-transform: uppercase; font-weight: 700; opacity: .7; }
+    h1 { margin: 14px 0 12px; line-height: 1.02; font-size: clamp(2.4rem, 5vw, 4.4rem); }
+    .pane-a h1 { font-weight: 500; letter-spacing: -.03em; }
+    .pane-a h1 em { font-family: 'Fraunces', serif; font-weight: 500; }
+    .pane-b h1 { font-family: 'Inter Tight', sans-serif; font-weight: 800; letter-spacing: -.045em; }
+    .pane-b h1 span { color: #c8a44d; }
+    p { max-width: 420px; font-size: 1.05rem; line-height: 1.55; opacity: .85; }
+    .vials { display: flex; align-items: flex-end; justify-content: center; height: 42vh; min-height: 260px; margin: 20px 0; }
+    .vials svg { height: 100%; width: auto; filter: drop-shadow(0 24px 30px rgba(0,0,0,.25)); transition: transform .4s ease; }
+    .vials span { height: 100%; display: block; }
+    .vials span:first-child, .vials span:last-child { height: 72%; }
+    .vials span:first-child { transform: rotate(-9deg) translateX(18%); }
+    .vials span:last-child { transform: rotate(9deg) translateX(-18%); }
+    .pane:hover .vials span:nth-child(2) svg { transform: translateY(-12px); }
+    .foot { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .swatches { display: flex; gap: 6px; }
+    .swatches i { width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(128,128,128,.3); }
+    .cta { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; padding: 16px 26px; }
+    .pane-a .cta { background: #1f0a59; color: #fff; border-radius: 99px; }
+    .pane-b .cta { background: #f4f1ea; color: #0e0e0e; text-transform: uppercase; letter-spacing: .16em; font-size: .78rem; }
+    .brand { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 5; background: #fff; color: #1f0a59; padding: 10px 18px; border-radius: 99px; font-size: .78rem; font-weight: 700; box-shadow: 0 10px 30px rgba(0,0,0,.2); white-space: nowrap; }
+    @media (max-width: 800px) {
+      body { grid-template-columns: 1fr; }
+      .pane { min-height: auto; padding-top: 80px; }
+      .vials { height: 280px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="brand">pepsoma.com · pick a direction</div>
+  <a class="pane pane-a" href="a/">
+    <div><span class="tag">Version A · Clinical</span><h1>Research peptides, <em>documented</em> to the lot.</h1>
+      <p>Light cream and lavender with deep-purple type and serif-italic accents. Product pages use a plan selector for one-time purchases or standing orders.</p></div>
+    <div class="vials" data-vials="light"></div>
+    <div class="foot"><div class="swatches"><i style="background:#1f0a59"></i><i style="background:#e0d7ff"></i><i style="background:#f5d153"></i><i style="background:#fefbf4"></i></div><span class="cta">Enter Version A →</span></div>
+  </a>
+  <a class="pane pane-b" href="b/">
+    <div><span class="tag">Version B · Lab</span><h1>Raising the bar for peptide <span>research</span>.</h1>
+      <p>Near-black with antique gold and cream. Built catalog-first, with marquee trust bars, tiered volume pricing and lab-tests front and center.</p></div>
+    <div class="vials" data-vials="dark"></div>
+    <div class="foot"><div class="swatches"><i style="background:#0e0e0e"></i><i style="background:#a98f55"></i><i style="background:#c8a44d"></i><i style="background:#f4f1ea"></i></div><span class="cta">Enter Version B →</span></div>
+  </a>
+  <script src="shared/js/data.js"></script>
+  <script src="shared/js/core.js"></script>
+  <script src="shared/js/visuals.js"></script>
+  <script>
+    document.querySelectorAll('[data-vials]').forEach(function (el) {
+      var theme = el.dataset.vials;
+      el.innerHTML = ['ghk-cu', 'bpc-157', 'nad'].map(function (id) { return '<span>' + PS.vial(PS.getProduct(id), { theme: theme }) + '</span>'; }).join('');
+    });
+  </script>
+</body>
+</html>
