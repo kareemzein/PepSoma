@@ -252,7 +252,8 @@
   @keyframes tcLine{to{transform:scaleX(1);}}
   .tc-go{margin-top:26px; min-height:48px; padding:12px 24px; opacity:0;}
   .tc-go svg{width:18px; height:18px;}
-  .titlecard.show .tc-go{animation:smIn .6s .7s cubic-bezier(.16,1,.3,1) both;}
+  .titlecard.show .tc-go{animation:tcGoIn .6s .7s cubic-bezier(.16,1,.3,1) both;}
+  @keyframes tcGoIn{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;}}
   .titlecard .tc-line{animation-duration:var(--read, 1.25s) !important;}
   .sibling-chip{position:fixed; top:84px; left:50%; z-index:36; transform:translate(-50%,-8px); opacity:0; pointer-events:none;
     background:var(--ink); color:var(--paper); font-weight:700; font-size:.9rem; padding:10px 18px; border-radius:999px; box-shadow:var(--shadow);
@@ -307,6 +308,7 @@
   .side-arrow:hover{transform:scale(1.07);}
   .side-arrow.prev{left:-84px;} .side-arrow.next{right:-84px;}
   .site-card:not(.is-active) .side-arrow{opacity:0;}
+  .side-arrow[hidden]{display:none;}
   @media (max-width:900px){ .side-arrow{display:none;} }
   @media (min-width:901px){ .car-nav .car-arrow{display:none;} .car-nav{justify-content:center;} .car-dots{flex:0 1 auto;} }
   .shot-wrap img{width:100%; height:100%; object-fit:cover; object-position:top; cursor:zoom-in; display:block;}
@@ -2105,7 +2107,7 @@
     });
     function pos(k){ return -k * (cw + gap); }
     function setX(px, animate){
-      track.style.transition = animate ? 'transform .55s cubic-bezier(.22,1,.36,1)' : 'none';
+      track.style.transition = !animate ? 'none' : (i === 0 || i === n - 1) ? 'transform .6s cubic-bezier(.22,1,.36,1)' : 'transform .6s cubic-bezier(.2,1.12,.36,1)';
       track.style.transform = 'translate3d(' + px + 'px,0,0)';
     }
     function fit(){ vp.style.height = (cards[i].offsetHeight + 32) + 'px'; }
@@ -2350,13 +2352,15 @@
     var now = performance.now();
     var dir = dy > 0 ? 1 : -1;
     var edge = (dir > 0 ? atBottom() : atTop()) && stages[cur + dir];
-    var gap = now - wheelLast, grew = Math.abs(dy) > Math.abs(wheelLastD) + 3;
+    var gap = now - wheelLast, prevD = wheelLastD;
     wheelLast = now; wheelLastD = dy;
     if (!edge) { armed = false; edgeDir = 0; return; }
     e.preventDefault();
-    if (edgeDir !== dir) { edgeDir = dir; armed = false; arrivedAt = now; return; }
-    // the scroll that brought her here (and its momentum) never counts: she has to stop, then scroll again
-    if (!armed && gap > 220) armed = true;
+    // the scroll that brought her here (and its momentum) never counts: she has to stop, then scroll again.
+    // A fresh scroll is one after a pause, or a new swipe that kicks in harder than the fading momentum.
+    var fresh = gap > 220 || (now - arrivedAt > 250 && Math.abs(dy) > Math.abs(prevD) * 1.6 + 6);
+    if (edgeDir !== dir) { edgeDir = dir; arrivedAt = now; armed = gap > 220; if (!armed) return; }
+    else if (!armed && fresh) armed = true;
     if (armed) addPull(dir, Math.min(Math.abs(dy), 120));
   }, { passive: false });
 
