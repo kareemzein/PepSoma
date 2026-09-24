@@ -256,13 +256,16 @@
   @keyframes tcGoIn{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;}}
   .titlecard .tc-line{animation-duration:var(--read, 1.25s) !important;}
   .wb-card{cursor:default;}
+  .wb-was{margin-bottom:4px !important;}
+  .wb-step{font-weight:700; font-size:clamp(1.25rem,3.4vw,1.6rem); line-height:1.3; margin:0 0 10px; color:var(--ink);}
+  .wb-card.show .wb-step{animation:smIn .8s .14s cubic-bezier(.16,1,.3,1) both;}
   .wb-actions{display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:26px;}
   .wb-actions .tc-go{margin-top:0;}
   .flashcard{position:fixed; inset:0; z-index:75; display:grid; place-items:center; text-align:center; background:var(--paper); opacity:0; transition:opacity .35s ease; pointer-events:none;}
   .flashcard[hidden]{display:none;}
   .flashcard.show{opacity:1;}
-  .fc-brand{font-family:'Fraunces',Georgia,serif; font-size:clamp(2.4rem,7vw,3.6rem); margin:0; line-height:1;}
-  .fc-step{margin:12px 0 0; color:var(--muted); font-size:.95rem; font-weight:600; letter-spacing:.02em;}
+  .fc-brand{font-size:.8rem; letter-spacing:.18em; text-transform:uppercase; font-weight:700; color:var(--muted); margin:0;}
+  .fc-step{margin:12px 0 0; padding:0 24px; font-family:'Fraunces',Georgia,serif; font-size:clamp(1.9rem,5.5vw,3rem); line-height:1.1; color:var(--ink);}
   .flashcard.show .fc-brand{animation:smIn .6s cubic-bezier(.16,1,.3,1) both;}
   .flashcard.show .fc-step{animation:smIn .6s .08s cubic-bezier(.16,1,.3,1) both;}
   .sibling-chip{position:fixed; top:84px; left:50%; z-index:36; transform:translate(-50%,-8px); opacity:0; pointer-events:none;
@@ -874,6 +877,8 @@
 <div class="titlecard wb-card" id="wbCard" role="dialog" aria-modal="true" aria-labelledby="wbTitle" hidden><div class="tc-inner">
   <p class="tc-kicker">Pepsoma</p>
   <h2 id="wbTitle">Welcome back</h2>
+  <p class="tc-outline wb-was">You were on</p>
+  <p class="wb-step" id="wbStep"></p>
   <p class="tc-outline" id="wbWhere"></p>
   <div class="wb-actions">
     <button class="btn btn-primary tc-go wb-go" id="wbResume" type="button">Pick up where I left off <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
@@ -2487,9 +2492,9 @@
     saveWhere();
   }
   function whereText(w){
-    var t = 'You were on ' + STAGE_NAMES[w.stage];
-    if ((w.stage === 1 || w.stage === 2) && w.cards && w.cards[w.stage] != null) t += ' (site ' + (w.cards[w.stage] + 1) + ' of 9)';
-    return t + '. Your picks are all saved.';
+    var t = STAGE_NAMES[w.stage];
+    if ((w.stage === 1 || w.stage === 2) && w.cards && w.cards[w.stage] != null) t += ', site ' + (w.cards[w.stage] + 1) + ' of 9';
+    return t;
   }
   var flashCard = document.getElementById('flashCard');
   function flash(){
@@ -2497,7 +2502,7 @@
     flashCard.hidden = false;
     requestAnimationFrame(function(){ flashCard.classList.add('show'); });
     clearTimeout(flashCard._t);
-    flashCard._t = setTimeout(function(){ flashCard.classList.remove('show'); setTimeout(function(){ flashCard.hidden = true; }, 380); }, 1100);
+    flashCard._t = setTimeout(function(){ flashCard.classList.remove('show'); setTimeout(function(){ flashCard.hidden = true; }, 380); }, 1600);
   }
   var wbCard = document.getElementById('wbCard');
   function startReturning(){
@@ -2508,7 +2513,8 @@
     if (fromDesign) { jumpTo(0, w && w.cards); settleIntro(); return; }
     var started = w && (w.stage > 0 || Object.keys(state.picks).length);
     if (!started) { showTitle(0, settleIntro); return; }
-    document.getElementById('wbWhere').textContent = whereText(w);
+    document.getElementById('wbStep').textContent = whereText(w);
+    document.getElementById('wbWhere').textContent = 'Your picks are all saved.';
     wbCard.hidden = false;
     requestAnimationFrame(function(){ wbCard.classList.add('show'); });
     var close = function(){ wbCard.classList.remove('show'); setTimeout(function(){ wbCard.hidden = true; }, 450); };
