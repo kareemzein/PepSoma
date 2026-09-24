@@ -330,7 +330,9 @@
   .shot-caption button{flex-shrink:0; border:0; background:#fff; color:#1b1a17; font-size:.76rem; font-weight:700; padding:7px 12px; border-radius:999px; min-height:32px; box-shadow:0 2px 8px rgba(0,0,0,.2);}
   .shot-wrap.zoomed .insp-badge{opacity:0;}
   .insp-badge{transition:opacity .3s ease;}
-  .idea-row.zoomable .idea-text{cursor:pointer; display:flex; align-items:flex-start; gap:8px; border-radius:8px;}
+  .idea-row.zoomable{cursor:pointer;}
+  .idea-row.zoomable .idea-actions{cursor:default;}
+  .idea-row.zoomable .idea-text{display:flex; align-items:flex-start; gap:8px; border-radius:8px;}
   .idea-row.zoomable .idea-text:focus-visible{outline:2px solid var(--ink); outline-offset:4px;}
   .zoom-ic{flex-shrink:0; width:26px; height:26px; margin-top:-2px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:var(--paper); border:1px solid var(--line); color:var(--muted); transition:background .2s ease, color .2s ease, transform .2s ease;}
   .zoom-ic svg{width:14px; height:14px;}
@@ -1433,7 +1435,8 @@
       t.setAttribute('role', 'button'); t.tabIndex = 0;
       t.setAttribute('aria-label', 'Show ' + text + ' in the screenshot');
       var go = function(){ if (activeRow === row) unzoom(); else zoomTo(v, text, row); };
-      t.addEventListener('click', go);
+      // the whole box shows it, except the Like / Pass buttons
+      row.addEventListener('click', function(e){ if (!e.target.closest('button')) go(); });
       t.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
     }
     frag.querySelector('[data-shot-reset]').addEventListener('click', function(e){ e.stopPropagation(); unzoom(); });
