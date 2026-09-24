@@ -1,7 +1,7 @@
 /* Pepsoma — Version A “Clinical”: cream, lavender and deep purple, serif-italic accents,
    plan-selector product pages. Follows the device's light/dark setting (toggle overrides).
    Motion vocabulary (rise-and-unblur load-ins, sliding nav pill, live demo window,
-   count-ups, corner brackets, footer wordmark) borrowed from the USMLE Reframe design lab. */
+   count-ups, corner brackets, footer wordmark). */
 (function () {
   const PS = window.PS;
   const esc = PS.esc, icon = PS.icon, money = PS.money, H = PS.html;

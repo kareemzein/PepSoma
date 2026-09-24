@@ -9,7 +9,7 @@ A working demo storefront for **pepsoma.com**, a research-use-only peptide suppl
 | Look | Cream, lavender, deep purple, yellow accents; Fraunces serif italics + DM Sans. Follows the device's light/dark mode, with a sun/moon toggle to override | Near-black, antique gold, cream; Inter Tight + Inter |
 | Signature pieces | Plan-selector product page, “What’s included” box, animated hero with rolling headline word, compound marquee, count-up stats, live COA window, fly-to-cart, giant footer wordmark | Marquee trust bars, “Buy more, save more” tiers, 01/02/03 standards, framed product art |
 
-The root `index.html` is a split-screen page where you pick a version.
+The root `index.html` is a feedback page: both versions embedded live, a reference board of similar sites (screenshots in `assets/board/`), and Like/Pass picks that the reader copies and sends back.
 
 ## What works (both versions)
 
@@ -48,7 +48,7 @@ You can also open `index.html` directly. There's no build step and no dependenci
 ## Project structure
 
 ```
-index.html            version chooser
+index.html            feedback page (live previews + reference board)
 a/                    Version A: index.html, app.js (layout + pages), styles.css
 b/                    Version B: same shape
 shared/js/data.js     products, prices, categories, FAQs, company info   ← edit content here
@@ -63,7 +63,7 @@ To change prices, shipping, tiers or promo codes, edit `PS.config` in `shared/js
 
 ## Before a real launch
 
-- [ ] Pick a version, then delete the other folder and the chooser page
+- [ ] Pick a version, then delete the other folder and point the root at the chosen version
 - [ ] Fill in the bracketed placeholders in `PS.company` (`shared/js/data.js`): business address, state of formation, county, and the phone number (currently a 555 placeholder)
 - [ ] **Have a lawyer review every policy.** They're starting templates for a US RUO supplier.
 - [ ] Replace the sample testimonials with real, verifiable reviews, or remove them
