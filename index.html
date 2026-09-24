@@ -204,6 +204,11 @@
   .endcap{margin-top:auto; padding:56px 16px 36px; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center;}
   .endcap-ring{position:relative; width:64px; height:64px; border-radius:50%; border:0; background:none; padding:0; color:var(--ink);}
   .endcap-ring svg:first-child, .backcue svg{width:100%; height:100%; transform:rotate(-90deg);}
+  .stage.leaning > :not(.endcap){transform:translateY(var(--lean, 0));}
+  .stage > :not(.endcap){transition:transform .25s cubic-bezier(.16,1,.3,1);}
+  .endcap .ring-bg{fill:none; opacity:0; transition:opacity .25s ease;}
+  .endcap.pulling .ring-bg{opacity:1;}
+  .endcap .endcap-chev{width:28px; height:28px;}
   .ring-bg{fill:var(--surface); stroke:var(--line); stroke-width:3;}
   .ring-fg{fill:none; stroke:var(--ink); stroke-width:4; stroke-linecap:round; stroke-dasharray:175.93; stroke-dashoffset:175.93;}
   .endcap-chev{position:absolute; inset:0; margin:auto; width:22px; height:22px; animation:chevBob 1.8s ease-in-out infinite;}
@@ -242,6 +247,9 @@
   .titlecard.show .tc-outline{animation-delay:.18s;}
   .titlecard.show .tc-line{animation:tcLine 1.25s .3s cubic-bezier(.65,0,.35,1) forwards;}
   @keyframes tcLine{to{transform:scaleX(1);}}
+  .tc-hint{margin:22px 0 0; font-size:.85rem; color:var(--muted); opacity:0;}
+  .titlecard.show .tc-hint{animation:smIn .6s 1.6s cubic-bezier(.16,1,.3,1) both;}
+  .titlecard .tc-line{animation-duration:var(--read, 1.25s) !important;}
   .sibling-chip{position:fixed; top:84px; left:50%; z-index:36; transform:translate(-50%,-8px); opacity:0; pointer-events:none;
     background:var(--ink); color:var(--paper); font-weight:700; font-size:.9rem; padding:10px 18px; border-radius:999px; box-shadow:var(--shadow);
     transition:opacity .25s ease, transform .35s cubic-bezier(.16,1,.3,1);}
@@ -276,14 +284,20 @@
 
   .site-card{
     background:var(--surface); border:1px solid var(--line); border-radius:24px;
-    box-shadow:var(--shadow); display:grid; grid-template-columns:minmax(0,1.45fr) minmax(0,1fr); align-items:start; position:relative;
+    box-shadow:var(--shadow); display:block; position:relative;
   }
-  .shot-col{position:sticky; top:78px; padding:18px; z-index:2;}
-  .shot-wrap{position:relative; aspect-ratio:16/10; background:var(--line); overflow:hidden; border-radius:16px; border:1px solid var(--line);}
-  @media (max-width:900px){
-    .site-card{grid-template-columns:1fr;}
-    .shot-col{top:69px; padding:10px; background:var(--surface); border-radius:24px 24px 0 0; box-shadow:0 10px 16px -12px rgba(0,0,0,.25);}
-  }
+  .shot-col{position:sticky; top:69px; z-index:3; padding:16px 16px 14px; background:var(--surface); border-radius:24px 24px 0 0; box-shadow:0 12px 16px -14px rgba(0,0,0,.28);}
+  .shot-wrap{position:relative; aspect-ratio:16/10; background:var(--line); overflow:hidden; border-radius:16px; border:1px solid var(--line);
+    width:min(100%, calc((100vh - 69px) * .56 * 1.6)); width:min(100%, calc((100dvh - 69px) * .56 * 1.6)); margin:0 auto;}
+  @media (max-width:900px){ .shot-col{padding:10px;} }
+  .side-arrow{position:absolute; top:50%; width:56px; height:56px; margin-top:-28px; border-radius:50%; border:1px solid var(--line); background:var(--surface); color:var(--ink);
+    display:inline-flex; align-items:center; justify-content:center; padding:0; box-shadow:var(--shadow); transition:transform .2s ease, opacity .25s ease;}
+  .side-arrow svg{width:24px; height:24px;}
+  .side-arrow:hover{transform:scale(1.07);}
+  .side-arrow.prev{left:-84px;} .side-arrow.next{right:-84px;}
+  .site-card:not(.is-active) .side-arrow{opacity:0;}
+  @media (max-width:900px){ .side-arrow{display:none;} }
+  @media (min-width:901px){ .car-nav .car-arrow{display:none;} .car-nav{justify-content:center;} .car-dots{flex:0 1 auto;} }
   .shot-wrap img{width:100%; height:100%; object-fit:cover; object-position:top; cursor:zoom-in; display:block;}
   .shot-zoom{position:absolute; inset:0; transform-origin:0 0; transition:transform .75s cubic-bezier(.16,1,.3,1); will-change:transform;}
   .shot-spot{position:absolute; border-radius:6px; pointer-events:none; opacity:0; transition:opacity .4s ease .25s;
@@ -321,7 +335,8 @@
     padding:6px 12px; border-radius:999px; letter-spacing:.02em; z-index:2;
   }
   :root[data-theme="dark"] .insp-badge{background:#f3f1ea; color:#17150f;}
-  .site-body{padding:24px 26px 26px 8px; display:flex; flex-direction:column;}
+  .site-body{padding:14px 28px 28px; display:flex; flex-direction:column;}
+  @media (min-width:901px){ .site-body [data-site-ideas]{display:grid; grid-template-columns:1fr 1fr; align-items:start;} }
   @media (max-width:900px){ .site-body{padding:14px 18px 22px;} }
   .site-name-row h3{font-size:1.45rem !important;}
   .site-colors{margin-top:18px; padding-top:16px; border-top:1px solid var(--line);}
@@ -702,11 +717,11 @@
     </div>
     <div class="endcap" data-endcap>
       <button class="endcap-ring" type="button" data-endcap-go aria-label="Continue to Step 2 · Other websites"><svg viewBox="0 0 64 64" aria-hidden="true"><circle class="ring-bg" cx="32" cy="32" r="28"/><circle class="ring-fg" cx="32" cy="32" r="28"/></svg><svg class="endcap-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
-      <p class="endcap-text"><span>Keep scrolling for</span> <b>Step 2 · Other websites</b></p>
+      <p class="endcap-text"><b>Step 2 · Other websites</b></p>
     </div>
   </section>
 
-  <section class="stage" data-stage="1" data-group="sites" data-step="2" data-title="Other websites" data-outline="18 sites with ideas worth borrowing. Flip through them, tap an idea to zoom in, and Like or Pass. You can mark colors you like on each one, too." hidden>
+  <section class="stage" data-stage="1" data-group="sites" data-step="2" data-title="Other websites" data-outline="18 sites with ideas worth borrowing. Tap an idea to zoom in, then Like or Pass. You can mark colors you like, too." hidden>
     <div class="wrap stage-head">
       <p class="kicker">Step 2 of 4</p>
       <h2>Step 2 · Other websites</h2>
@@ -727,7 +742,7 @@
     </div>
     <div class="endcap" data-endcap>
       <button class="endcap-ring" type="button" data-endcap-go aria-label="Continue to the dark &amp; bold sites"><svg viewBox="0 0 64 64" aria-hidden="true"><circle class="ring-bg" cx="32" cy="32" r="28"/><circle class="ring-fg" cx="32" cy="32" r="28"/></svg><svg class="endcap-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
-      <p class="endcap-text"><span>Keep scrolling for</span> <b>the dark &amp; bold sites</b></p>
+      <p class="endcap-text"><b>the dark &amp; bold sites</b></p>
     </div>
   </section>
 
@@ -752,7 +767,7 @@
     </div>
     <div class="endcap" data-endcap>
       <button class="endcap-ring" type="button" data-endcap-go aria-label="Continue to Step 3 · Colors"><svg viewBox="0 0 64 64" aria-hidden="true"><circle class="ring-bg" cx="32" cy="32" r="28"/><circle class="ring-fg" cx="32" cy="32" r="28"/></svg><svg class="endcap-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
-      <p class="endcap-text"><span>Keep scrolling for</span> <b>Step 3 · Colors</b></p>
+      <p class="endcap-text"><b>Step 3 · Colors</b></p>
     </div>
   </section>
 
@@ -778,7 +793,7 @@
     </div>
     <div class="endcap" data-endcap>
       <button class="endcap-ring" type="button" data-endcap-go aria-label="Continue to Step 4 · Review and send"><svg viewBox="0 0 64 64" aria-hidden="true"><circle class="ring-bg" cx="32" cy="32" r="28"/><circle class="ring-fg" cx="32" cy="32" r="28"/></svg><svg class="endcap-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
-      <p class="endcap-text"><span>Keep scrolling for</span> <b>Step 4 · Review and send</b></p>
+      <p class="endcap-text"><b>Step 4 · Review and send</b></p>
     </div>
   </section>
 
@@ -814,7 +829,7 @@
 
 <div class="backcue" id="backCue" aria-hidden="true"><svg viewBox="0 0 64 64"><circle class="ring-bg" cx="32" cy="32" r="28"/><circle class="ring-fg" cx="32" cy="32" r="28"/></svg><span id="backCueText">Back</span></div>
 <button class="return-pill" id="returnPill" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>Back to Review &amp; send</button>
-<div class="titlecard" id="titleCard" aria-live="polite" hidden><div class="tc-inner"><p class="tc-kicker" id="tcKicker"></p><h2 id="tcTitle"></h2><p class="tc-outline" id="tcOutline"></p><span class="tc-line"></span></div></div>
+<div class="titlecard" id="titleCard" aria-live="polite" hidden><div class="tc-inner"><p class="tc-kicker" id="tcKicker"></p><h2 id="tcTitle"></h2><p class="tc-outline" id="tcOutline"></p><span class="tc-line"></span><p class="tc-hint">Tap anywhere to continue</p></div></div>
 <div class="sibling-chip" id="siblingChip" aria-hidden="true"></div>
 
 
@@ -971,7 +986,7 @@
 <template id="siteCardTpl">
 
   <article class="site-card" data-site-card>
-    <div class="shot-col"><div class="shot-wrap" data-shot-wrap>
+    <div class="shot-col"><button class="side-arrow prev" type="button" data-side-prev aria-label="Previous site"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><button class="side-arrow next" type="button" data-side-next aria-label="Next site"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button><div class="shot-wrap" data-shot-wrap>
       <span class="insp-badge" data-insp-badge hidden>Main inspiration</span>
       <div class="shot-zoom" data-shot-zoom><img data-shot-img src="" alt="" width="960" height="600" loading="lazy"><span class="shot-spot" data-shot-spot></span></div>
       <div class="shot-caption" data-shot-caption><span data-shot-caption-text></span><button type="button" data-shot-reset>Whole page</button></div>
@@ -2071,19 +2086,22 @@
       dotsEl.appendChild(d); return d;
     });
     cards.forEach(function(c, j){
+      var sp = c.querySelector('[data-side-prev]'), sn = c.querySelector('[data-side-next]');
+      if (j === 0) sp.hidden = true; else sp.addEventListener('click', function(){ go(j - 1); });
+      if (j === n - 1) sn.hidden = true; else sn.addEventListener('click', function(){ go(j + 1); });
       var nb = c.querySelector('[data-next-site]');
       if (j < n - 1) { nb.querySelector('[data-next-label]').textContent = 'Next site: ' + sites[j + 1].name; nb.addEventListener('click', function(){ go(j + 1); }); }
       else nb.hidden = true;
     });
     function pos(k){ return -k * (cw + gap); }
     function setX(px, animate){
-      track.style.transition = animate ? 'transform .6s cubic-bezier(.2,1.12,.36,1)' : 'none';
+      track.style.transition = animate ? 'transform .55s cubic-bezier(.22,1,.36,1)' : 'none';
       track.style.transform = 'translate3d(' + px + 'px,0,0)';
     }
     function fit(){ vp.style.height = (cards[i].offsetHeight + 32) + 'px'; }
     function layout(){
       var vw = vp.clientWidth; if (!vw) return;
-      cw = Math.min(1088, vw - 32);
+      cw = vw > 900 ? Math.min(980, vw - 200) : vw - 32;
       track.style.setProperty('--cw', cw + 'px');
       track.style.paddingLeft = ((vw - cw) / 2) + 'px';
       setX(pos(i), false); fit();
@@ -2128,8 +2146,10 @@
       }
       drag.dx = dx;
       drag.samples.push([performance.now(), dx]); if (drag.samples.length > 6) drag.samples.shift();
-      var edge = (i === 0 && dx > 0) || (i === n - 1 && dx < 0);
-      setX(pos(i) + dx * (edge ? 0.3 : 1), false);
+      // the first and last site are hard stops
+      if ((i === 0 && dx > 0) || (i === n - 1 && dx < 0)) dx = 0;
+      drag.dx = dx;
+      setX(pos(i) + dx, false);
     });
     function endDrag(){
       if (!drag) return;
@@ -2161,7 +2181,8 @@
       if (wLocked) return;
       wAcc += e.deltaX;
       var edge = (i === 0 && wAcc < 0) || (i === n - 1 && wAcc > 0);
-      setX(pos(i) - wAcc * (edge ? 0.2 : 0.5), false);
+      if (edge) { wAcc = 0; return; }
+      setX(pos(i) - wAcc * 0.5, false);
       if (!edge && Math.abs(wAcc) > 150) { wLocked = true; go(i + (wAcc > 0 ? 1 : -1)); }
     }, { passive: false });
 
@@ -2176,8 +2197,7 @@
 
   /* ---------------- stages: pull past the end of one to reach the next ---------------- */
   // effort needed, in scroll units (a trackpad swipe is ~300-800, a mouse notch ~100; touch counts 4x finger travel).
-  // To make going back as hard as going forward, set back to the same value as next.
-  var PULL = { next: 900, back: 450, sibling: 420 };
+  var PULL = { next: 900, back: 900, sibling: 420 };
   var stages = Array.prototype.slice.call(document.querySelectorAll('section.stage'));
   var cur = 0, busy = false, pull = 0, pullDir = 0, lastInput = 0, drainOn = false;
   var backCue = document.getElementById('backCue'), backCueText = document.getElementById('backCueText');
@@ -2206,8 +2226,9 @@
     }
     backRing.style.strokeDashoffset = RING * (1 - (pullDir < 0 ? p : 0));
     backCue.classList.toggle('show', pullDir < 0 && p > 0.02);
-    // the section leans a little in the direction she's pulling
-    st.style.transform = p ? 'translateY(' + (pullDir > 0 ? -1 : 1) * Math.round(44 * Math.sqrt(p)) + 'px)' : '';
+    // everything but the end arrow leans a little in the direction she's pulling
+    st.style.setProperty('--lean', (pullDir > 0 ? -1 : 1) * Math.round(44 * Math.sqrt(p)) + 'px');
+    st.classList.toggle('leaning', p > 0);
   }
   function drain(){
     if (!drainOn) return;
@@ -2249,7 +2270,11 @@
       done && done();
     };
     titleCard.onclick = finish;
-    setTimeout(finish, 1700);
+    // about 4 words a second, plus a beat to take in the title
+    var words = (st.dataset.title + ' ' + st.dataset.outline).split(/\s+/).length;
+    var hold = Math.max(2400, Math.min(9000, 1200 + words * 260));
+    titleCard.style.setProperty('--read', (hold / 1000 - 0.3) + 's');
+    setTimeout(finish, hold);
   }
   var siblingChip = document.getElementById('siblingChip');
   function showSiblingChip(text){
@@ -2265,7 +2290,7 @@
     busy = true;
     var from = stages[cur], to = stages[idx], dir = idx > cur ? 1 : -1, sib = sibling(cur, idx);
     pull = 0; pullDir = 0; drainOn = false; render();
-    from.style.transform = '';
+    from.classList.remove('leaning');
     var outCls = sib ? (dir > 0 ? 'out-left' : 'out-right') : (dir > 0 ? 'out-up' : 'out-down');
     var inCls = sib ? (dir > 0 ? 'in-right' : 'in-left') : (dir > 0 ? 'in-up' : 'in-down');
     from.classList.add(outCls);
