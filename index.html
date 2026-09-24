@@ -390,13 +390,28 @@
 
   /* ---------- colors step ---------- */
   .pal-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:14px;}
-  .pal{position:relative; display:flex; flex-direction:column; text-align:left; padding:0; border:1px solid var(--line); background:var(--surface); border-radius:20px; overflow:hidden; box-shadow:var(--shadow); transition:transform .3s cubic-bezier(.16,1,.3,1), box-shadow .25s ease;}
-  .pal:hover{transform:translateY(-3px);}
+  .pal-card{position:relative; display:flex; transition:transform .3s cubic-bezier(.16,1,.3,1);}
+  .pal-card:hover{transform:translateY(-3px);}
+  .pal{position:relative; width:100%; display:flex; flex-direction:column; text-align:left; padding:0; border:1px solid var(--line); background:var(--surface); border-radius:20px; overflow:hidden; box-shadow:var(--shadow); transition:box-shadow .25s ease;}
   .pal[aria-pressed="true"]{box-shadow:0 0 0 3px var(--ink), var(--shadow);}
   .pal-bars{display:flex; height:92px;}
   .pal-bars span{flex:1; transition:flex .45s cubic-bezier(.16,1,.3,1);}
   .pal:hover .pal-bars span:hover{flex:1.6;}
-  .pal-meta{padding:12px 16px 14px;}
+  .pal-meta{padding:12px 16px 62px;}
+  .pal-peek{position:absolute; left:12px; bottom:12px; display:inline-flex; align-items:center; gap:7px; min-height:40px; padding:0 14px; border-radius:999px; border:1px solid var(--line); background:var(--paper); color:var(--ink); font-weight:600; font-size:.84rem; transition:border-color .2s ease, transform .2s ease;}
+  .pal-peek svg{width:16px; height:16px;}
+  .pal-peek:hover, .pal-peek:focus-visible{border-color:var(--ink); outline:none;}
+  .pal-peek:active{transform:scale(.97);}
+  .pv-panel{width:min(980px,100%);}
+  .pv-panel .sm-head{position:sticky; top:0; z-index:1; pointer-events:none;}
+  .pv-panel .sm-close{pointer-events:auto; box-shadow:var(--shadow);}
+  .pv-bars{display:flex; height:14px; border-radius:999px; overflow:hidden; margin:-8px 0 22px; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);}
+  .pv-bars span{flex:1;}
+  .pv-site + .pv-site{margin-top:22px;}
+  .pv-name{font-weight:700; margin:0 0 10px;}
+  .pv-pair{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .pv-pair img{width:100%; height:auto; border-radius:12px; border:1px solid var(--line); background:var(--paper);}
+  @media (max-width:640px){ .pv-pair{grid-template-columns:1fr;} }
   .pal-meta b{display:block; font-size:1rem;}
   .pal-meta small{color:var(--muted); font-size:.82rem;}
   .pal-check{position:absolute; top:10px; right:10px; width:30px; height:30px; border-radius:50%; background:var(--ink); color:var(--paper); display:flex; align-items:center; justify-content:center; opacity:0; transform:scale(.4); transition:opacity .2s ease, transform .35s cubic-bezier(.34,1.56,.64,1);}
@@ -882,7 +897,7 @@
 <div class="titlecard wb-card" id="wbCard" role="dialog" aria-modal="true" aria-labelledby="wbTitle" hidden><div class="tc-inner">
   <p class="tc-kicker">Pepsoma</p>
   <h2 id="wbTitle">Welcome back</h2>
-  <p class="tc-outline wb-was">You were on</p>
+  <p class="tc-outline wb-was" id="wbWas">You were on</p>
   <p class="wb-step" id="wbStep"></p>
   <p class="tc-outline" id="wbWhere"></p>
   <div class="wb-actions">
@@ -917,6 +932,17 @@
         <button class="btn btn-primary wm-go" id="wmGo" type="button">Let's start <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       </div>
     </div>
+  </div>
+</div>
+<div class="sm-overlay" id="peekModal" aria-hidden="true">
+  <div class="sm-panel pv-panel" role="dialog" aria-modal="true" aria-labelledby="pvTitle" tabindex="-1">
+    <div class="sm-head"><button class="sm-icon-btn sm-close" id="pvClose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="sm-body"><div class="sm-view">
+      <h3 id="pvTitle"></h3>
+      <p class="sm-sub" id="pvFrom"></p>
+      <div class="pv-bars" id="pvBars"></div>
+      <div id="pvShots"></div>
+    </div></div>
   </div>
 </div>
 <div class="sm-overlay" id="reviewModal" aria-hidden="true">
@@ -1094,7 +1120,7 @@
 
   /* ---------------- state ---------------- */
   var STORAGE_KEY = 'pepsomaFeedback.v1';
-  function freshState(){ return { picks: {}, favorite: null, notes: '', siteNotes: {}, schemes: {}, siteColors: {}, palettes: [], colors: [] }; }
+  function freshState(){ return { picks: {}, favorite: null, notes: '', siteNotes: {}, schemes: {}, siteColors: {}, palettes: [], colors: [], schemesCarried: true }; }
   var state = freshState();
 
   function loadState(){
@@ -1111,6 +1137,7 @@
           state.siteColors = parsed.siteColors || {};
           state.palettes = parsed.palettes || [];
           state.colors = parsed.colors || [];
+          state.schemesCarried = !!parsed.schemesCarried;
         }
       }
     } catch (e) { /* ignore, start fresh */ }
@@ -1502,6 +1529,7 @@
     schemeBox.checked = !!state.schemes[site.key];
     schemeBox.addEventListener('change', function(){
       if (schemeBox.checked) state.schemes[site.key] = true; else delete state.schemes[site.key];
+      carrySchemes(site.key);
       saveState(); refreshSummary();
     });
     var swatchWrap = frag.querySelector('[data-swatches]');
@@ -2042,6 +2070,9 @@
     applyFavorite();
     notesInput.value = '';
     refreshSummary();
+    // back to the very start: Step 1, first site in each set, then a fresh welcome back
+    jumpTo(0, { 1: 0, 2: 0 });
+    startReturning(true);
   });
 
   /* ---------------- haptics: phones only (Android vibrate; iOS 18+ switch trick). Mac trackpads can't be reached from a web page. ---------------- */
@@ -2058,20 +2089,36 @@
 
   /* ---------------- colors step: palettes + single colors ---------------- */
   var PALETTES = [
-    { id: 'lavender', name: 'Lavender & Butter', from: 'From Brello', colors: ['#1E0359', '#E9E2FF', '#F6F7A7', '#FDFBFA', '#857594'] },
-    { id: 'gold', name: 'Black & Antique Gold', from: 'From Olympex', colors: ['#141413', '#C4AA68', '#A78D59', '#F3F0EA', '#757575'] },
-    { id: 'tiles', name: 'Bright Tiles', from: 'From Eden', colors: ['#0A975A', '#C78865', '#54A8DB', '#FBE57C', '#F8F8F9'] },
-    { id: 'yellow', name: 'Electric Yellow', from: 'From Hone Health', colors: ['#F7F840', '#070505', '#FEFEC4', '#D9D7D6', '#FCFCFC'] },
-    { id: 'clay', name: 'Warm Clay', from: 'From Function Health', colors: ['#B15935', '#231B14', '#FDF9EE', '#EAE4D9', '#A7A29C'] },
-    { id: 'plum', name: 'Plum Lab', from: 'From Protide', colors: ['#1B1024', '#662968', '#9A3593', '#F1E6F4', '#FDFDFD'] },
-    { id: 'clinical', name: 'Clinical Blue', from: 'From Verified + Direct', colors: ['#042438', '#1C73C0', '#7AB5E8', '#E5E6E7', '#FCFCFC'] },
-    { id: 'forest', name: 'Forest & Mint', from: 'From Henry Meds', colors: ['#123C36', '#03B57B', '#D7B797', '#FDFAF8', '#E7E6E4'] },
-    { id: 'midnight', name: 'Midnight Lavender', from: 'New mix: Brello × Olympex', colors: ['#111018', '#2A2350', '#B7A6FF', '#EFEAFF', '#F5D153'] },
-    { id: 'sage', name: 'Sage & Gold', from: 'New mix: Fridays × Olympex', colors: ['#293525', '#D2DECD', '#C4AA68', '#FAF6EE', '#141413'] },
-    { id: 'navyclay', name: 'Navy & Clay', from: 'New mix: Limitless × Function', colors: ['#0D1436', '#B15935', '#EAE4D9', '#FDF9EE', '#6B7A8F'] },
-    { id: 'honey', name: 'Honey Noir', from: 'New mix: Superpower × Core', colors: ['#070202', '#EA9836', '#F7B868', '#F3E9D6', '#874615'] }
+    { id: 'lavender', name: 'Lavender & Butter', from: 'From Brello', colors: ['#1E0359', '#E9E2FF', '#F6F7A7', '#FDFBFA', '#857594'], sites: ['brello'] },
+    { id: 'gold', name: 'Black & Antique Gold', from: 'From Olympex', colors: ['#141413', '#C4AA68', '#A78D59', '#F3F0EA', '#757575'], sites: ['olympex'] },
+    { id: 'tiles', name: 'Bright Tiles', from: 'From Eden', colors: ['#0A975A', '#C78865', '#54A8DB', '#FBE57C', '#F8F8F9'], sites: ['eden'] },
+    { id: 'yellow', name: 'Electric Yellow', from: 'From Hone Health', colors: ['#F7F840', '#070505', '#FEFEC4', '#D9D7D6', '#FCFCFC'], sites: ['hone'] },
+    { id: 'clay', name: 'Warm Clay', from: 'From Function Health', colors: ['#B15935', '#231B14', '#FDF9EE', '#EAE4D9', '#A7A29C'], sites: ['function'] },
+    { id: 'plum', name: 'Plum Lab', from: 'From Protide', colors: ['#1B1024', '#662968', '#9A3593', '#F1E6F4', '#FDFDFD'], sites: ['protide'] },
+    { id: 'clinical', name: 'Clinical Blue', from: 'From Verified + Direct', colors: ['#042438', '#1C73C0', '#7AB5E8', '#E5E6E7', '#FCFCFC'], sites: ['verified', 'direct'] },
+    { id: 'forest', name: 'Forest & Mint', from: 'From Henry Meds', colors: ['#123C36', '#03B57B', '#D7B797', '#FDFAF8', '#E7E6E4'], sites: ['henry'] },
+    { id: 'midnight', name: 'Midnight Lavender', from: 'New mix: Brello × Olympex', colors: ['#111018', '#2A2350', '#B7A6FF', '#EFEAFF', '#F5D153'], sites: ['brello', 'olympex'], mix: true },
+    { id: 'sage', name: 'Sage & Gold', from: 'New mix: Fridays × Olympex', colors: ['#293525', '#D2DECD', '#C4AA68', '#FAF6EE', '#141413'], sites: ['fridays', 'olympex'], mix: true },
+    { id: 'navyclay', name: 'Navy & Clay', from: 'New mix: Limitless × Function', colors: ['#0D1436', '#B15935', '#EAE4D9', '#FDF9EE', '#6B7A8F'], sites: ['limitless', 'function'], mix: true },
+    { id: 'honey', name: 'Honey Noir', from: 'New mix: Superpower × Core', colors: ['#070202', '#EA9836', '#F7B868', '#F3E9D6', '#874615'], sites: ['superpower', 'core'], mix: true }
   ];
-  var palGrid = document.getElementById('palGrid');
+  // "I like the whole color scheme" in Step 2 = that site's palette is picked here too
+  function carrySchemes(onlyKey){
+    PALETTES.forEach(function(pl, k){
+      if (pl.mix || (onlyKey && pl.sites.indexOf(onlyKey) < 0)) return;
+      var on = pl.sites.some(function(key){ return state.schemes[key]; });
+      var at = state.palettes.indexOf(pl.id);
+      if (on && at < 0) state.palettes.push(pl.id);
+      else if (!on && at > -1 && onlyKey) state.palettes.splice(at, 1);
+      else return;
+      var card = palGrid && palGrid.querySelectorAll('.pal')[k];
+      if (card) card.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    if (palGrid) renderPicked();
+  }
+  var palGrid = null;
+  if (!state.schemesCarried) { carrySchemes(); state.schemesCarried = true; saveState(); }
+  palGrid = document.getElementById('palGrid');
   PALETTES.forEach(function(pl, k){
     var b = document.createElement('button');
     b.type = 'button'; b.className = 'pal';
@@ -2087,8 +2134,57 @@
       b.setAttribute('aria-pressed', at > -1 ? 'false' : 'true');
       saveState(); refreshSummary(); renderPicked();
     });
-    palGrid.appendChild(b);
+    var wrap = document.createElement('div');
+    wrap.className = 'pal-card';
+    var peek = document.createElement('button');
+    peek.type = 'button'; peek.className = 'pal-peek';
+    peek.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>' + (pl.sites.length > 1 ? 'Preview sites' : 'Preview site');
+    peek.setAttribute('aria-label', 'Preview the site' + (pl.sites.length > 1 ? 's' : '') + ' behind ' + pl.name);
+    peek.addEventListener('click', function(){ openPeek(pl); });
+    wrap.appendChild(b); wrap.appendChild(peek);
+    palGrid.appendChild(wrap);
   });
+
+  /* ---------------- palette preview: screenshots of the site(s) it came from ---------------- */
+  var pv = document.getElementById('peekModal');
+  var pvShots = document.getElementById('pvShots');
+  var pvLastFocus = null;
+  function siteByKey(key){
+    return SITES_SOFT.concat(SITES_BOLD).filter(function(x){ return x.key === key; })[0];
+  }
+  function openPeek(pl){
+    pvLastFocus = document.activeElement;
+    document.getElementById('pvTitle').textContent = pl.name;
+    document.getElementById('pvFrom').textContent = pl.from;
+    document.getElementById('pvBars').innerHTML = pl.colors.map(function(c){ return '<span style="background:' + c + '"></span>'; }).join('');
+    pvShots.innerHTML = '';
+    pl.sites.forEach(function(key){
+      var site = siteByKey(key);
+      var sec = document.createElement('div');
+      sec.className = 'pv-site';
+      sec.innerHTML = '<p class="pv-name"></p><div class="pv-pair"><img alt="" loading="lazy" width="960" height="600"><img alt="" loading="lazy" width="960" height="600"></div>';
+      sec.querySelector('.pv-name').textContent = site ? site.name : key;
+      var imgs = sec.querySelectorAll('img');
+      imgs[0].src = 'assets/board/' + key + '-1.jpg'; imgs[0].alt = (site ? site.name : key) + ' home page';
+      imgs[1].src = 'assets/board/' + key + '-2.jpg'; imgs[1].alt = (site ? site.name : key) + ', further down the page';
+      pvShots.appendChild(sec);
+    });
+    var body = pv.querySelector('.sm-view');
+    body.classList.remove('anim'); void body.offsetWidth; body.classList.add('anim');
+    pv.querySelector('.sm-panel').scrollTop = 0;
+    pv.setAttribute('aria-hidden', 'false'); pv.classList.add('open');
+    document.body.classList.add('sm-lock');
+    setTimeout(function(){ pv.querySelector('.sm-panel').focus({ preventScroll: true }); }, 50);
+  }
+  function closePeek(){
+    if (!pv.classList.contains('open')) return;
+    pv.classList.remove('open'); pv.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('sm-lock');
+    if (pvLastFocus) pvLastFocus.focus({ preventScroll: true });
+  }
+  document.getElementById('pvClose').addEventListener('click', closePeek);
+  pv.addEventListener('click', function(e){ if (e.target === pv) closePeek(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closePeek(); });
   var palPicked = document.getElementById('palPicked');
   function renderPicked(){
     palPicked.innerHTML = '';
@@ -2510,20 +2606,27 @@
     flashCard._t = setTimeout(function(){ flashCard.classList.remove('show'); setTimeout(function(){ flashCard.hidden = true; }, 380); }, 1600);
   }
   var wbCard = document.getElementById('wbCard');
-  function startReturning(){
+  function filledAny(){
+    var any = function(o){ return Object.keys(o).some(function(k){ var v = o[k]; return typeof v === 'string' ? !!v.trim() : !!v; }); };
+    return any(state.picks) || !!state.favorite || !!state.notes.trim() || any(state.siteNotes) || any(state.schemes) || any(state.siteColors) || state.palettes.length > 0 || state.colors.length > 0;
+  }
+  function startReturning(afterReset){
     var w = loadWhere();
     var fromDesign = false;
     try { fromDesign = sessionStorage.getItem('pepsomaBackFromDesign') === '1'; sessionStorage.removeItem('pepsomaBackFromDesign'); } catch (e) {}
     // back from a full-screen design: just drop her back into Step 1, no card or flash
     if (fromDesign) { jumpTo(0, w && w.cards); settleIntro(); portalReturn(); return; }
-    var started = w && (w.stage > 0 || Object.keys(state.picks).length);
-    if (!started) { showTitle(0, settleIntro); return; }
-    document.getElementById('wbStep').textContent = whereText(w);
+    var started = w && (w.stage > 0 || filledAny());
+    document.getElementById('wbTitle').textContent = afterReset ? "Let's start over" : 'Welcome back';
+    // nothing filled in yet and still on Step 1: just say hi, no step to choose
+    ['wbWas', 'wbStep', 'wbWhere', 'wbRestart'].forEach(function(id){ document.getElementById(id).hidden = !started; });
+    document.getElementById('wbResume').firstChild.nodeValue = started ? 'Pick up where I left off ' : afterReset ? 'Start ' : "Let's go ";
+    document.getElementById('wbStep').textContent = started ? whereText(w) : '';
     document.getElementById('wbWhere').textContent = 'Your picks are all saved.';
     wbCard.hidden = false;
     requestAnimationFrame(function(){ wbCard.classList.add('show'); });
     var close = function(){ wbCard.classList.remove('show'); setTimeout(function(){ wbCard.hidden = true; }, 450); };
-    document.getElementById('wbResume').onclick = function(){ jumpTo(w.stage, w.cards); close(); if (!w.stage) settleIntro(); };
+    document.getElementById('wbResume').onclick = function(){ if (started) jumpTo(w.stage, w.cards); close(); if (!started || !w.stage) settleIntro(); };
     document.getElementById('wbRestart').onclick = function(){ close(); jumpTo(0, w.cards); showTitle(0, settleIntro); };
   }
   // leaving to another tab or app (like "Visit full site") and coming back
