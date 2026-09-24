@@ -401,6 +401,12 @@
   .cp-chip{display:inline-flex; align-items:center; gap:8px; border:1px solid var(--line); background:var(--paper); border-radius:999px; padding:5px 6px 5px 5px; font:600 .82rem ui-monospace,monospace; animation:smIn .4s cubic-bezier(.16,1,.3,1);}
   .cp-chip i{width:24px; height:24px; border-radius:50%; background:var(--c); box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);}
   .cp-chip button{width:28px; height:28px; border-radius:50%; border:0; background:none; color:var(--muted); padding:0; font-size:1rem; line-height:1;}
+  .pal-picked{margin-top:22px;}
+  .pal-mini-list{display:flex; flex-wrap:wrap; gap:8px; align-items:center; min-height:40px;}
+  .pal-mini{display:inline-flex; align-items:center; gap:10px; border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:5px 6px 5px 6px; font-weight:600; font-size:.85rem; animation:smIn .4s cubic-bezier(.16,1,.3,1);}
+  .pal-mini i{display:flex; width:70px; height:22px; border-radius:999px; overflow:hidden; box-shadow:inset 0 0 0 1px rgba(0,0,0,.1);}
+  .pal-mini i span{flex:1;}
+  .pal-mini button{width:28px; height:28px; border-radius:50%; border:0; background:none; color:var(--muted); padding:0; font-size:1rem; line-height:1;}
   .send-row{display:grid; grid-template-columns:auto 1fr; gap:10px; margin-top:18px;}
   .send-row .send-main{margin-top:0;}
   .review-btn{min-height:58px; padding:12px 22px; font-size:1rem;}
@@ -488,6 +494,8 @@
   .sm-opt .chev{margin-left:auto; width:18px; height:18px; color:var(--muted); flex-shrink:0; transition:transform .25s ease;}
   .sm-opt:hover .chev{transform:translateX(3px);}
   .app-ic{width:48px; height:48px; flex-shrink:0; display:block;}
+  :root[data-theme="dark"] #gShare stop{stop-color:#f3f1ea;}
+  :root[data-theme="dark"] .ic-share path{stroke:#1b1a17;}
   .app-ic.xs{width:24px; height:24px; display:inline-block; vertical-align:-6px;}
   .app-ic.lg{width:64px; height:64px;}
   .sm-hero{display:flex; align-items:center; justify-content:center; gap:14px; margin:0 0 14px;}
@@ -743,7 +751,7 @@
     <div class="wrap stage-head">
       <p class="kicker">Step 2 of 4</p>
       <h2>Step 2 · Other websites</h2>
-      <p class="sub">I found these sites while looking around online. Swipe or use the arrows to flip through them. Tap any idea under a site and the screenshot zooms in on that exact spot, then Like or Pass it. Under each site you can tick “I like this color scheme” and tap any of its colors you like, as many as you want. Click “Visit full site” to see how the real site moves and feels.</p>
+      <p class="sub">I found these sites while looking around online. Swipe or use the arrows to flip through them. Tap any idea under a site and the screenshot zooms in on that exact spot, then Like or Pass it. Under each site you can tick “I like the whole color scheme” and tap any of its colors you like, as many as you want. Click “Visit full site” to see how the real site moves and feels.</p>
       <div class="board-switch" role="group" aria-label="Which sites">
         <button type="button" data-go-stage="1" aria-pressed="true">Soft &amp; clean <small>9 sites</small></button>
         <button type="button" data-go-stage="2" aria-pressed="false">Dark &amp; bold <small>9 sites</small></button>
@@ -807,6 +815,10 @@
           <p class="ideas-label">Colors you added</p>
           <div class="cp-chips" id="cpChips"><span class="cp-empty">Nothing yet. Tap a color above.</span></div>
         </div>
+      </div>
+      <div class="pal-picked">
+        <p class="ideas-label">Palettes you picked</p>
+        <div class="pal-mini-list" id="palPicked"><span class="cp-empty">None yet. Tap any palette above.</span></div>
       </div>
     </div>
     <div class="endcap" data-endcap>
@@ -892,7 +904,7 @@
     <linearGradient id="gMsg"><stop offset="0" stop-color="#34c759"/></linearGradient>
     <linearGradient id="gMail"><stop offset="0" stop-color="#1f7cf5"/></linearGradient>
     <linearGradient id="gCopy"><stop offset="0" stop-color="#8e8e93"/></linearGradient>
-    <linearGradient id="gShare"><stop offset="0" stop-color="#5e5ce6"/></linearGradient>
+    <linearGradient id="gShare"><stop offset="0" stop-color="#1b1a17"/></linearGradient>
   </defs></svg>
   <div class="sm-panel" role="dialog" aria-modal="true" aria-labelledby="smTitle" data-view="choose" tabindex="-1">
     <div class="sm-head">
@@ -905,14 +917,14 @@
         <h3 id="smTitle">Send your picks</h3>
         <p class="sm-sub" id="smSummary"></p>
         <div class="sm-options">
-          <button class="sm-opt" type="button" data-go="share" style="--k:0"><svg class="app-ic" viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="10" fill="url(#gShare)"/><path d="M22 9.5v16M16.5 15 22 9.5l5.5 5.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 19.5h-3.5v15h17v-15H27" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><strong>Share</strong><small>Send it to Kareem in Messages</small></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+          <button class="sm-opt" type="button" data-go="share" style="--k:0"><svg class="app-ic ic-share" viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="10" fill="url(#gShare)"/><path d="M22 9.5v16M16.5 15 22 9.5l5.5 5.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 19.5h-3.5v15h17v-15H27" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span><strong>Share</strong><small>Send it to Kareem in Messages</small></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
           <button class="sm-opt" type="button" data-go="email" style="--k:1"><svg class="app-ic" viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="10" fill="url(#gMail)"/><rect x="9" y="13" width="26" height="18" rx="2.5" fill="#fff"/><path d="M10 14.3 22 23.4l12-9.1" fill="none" stroke="#1a6ff2" stroke-width="2" stroke-linejoin="round"/></svg><span><strong>Email my picks</strong><small>Opens an email that's ready to send</small></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
           <button class="sm-opt" type="button" data-go="copy" style="--k:2"><svg class="app-ic" viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="10" fill="url(#gCopy)"/><rect x="16" y="15" width="16" height="19" rx="3" fill="#fff"/><path d="M13 29V12.5A2.5 2.5 0 0 1 15.5 10H27" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg><span><strong>Copy my picks</strong><small>Paste it into a text or email yourself</small></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
         </div>
       </div>
 
       <div class="sm-view" data-v="share" hidden>
-        <div class="sm-hero"><svg class="app-ic lg" viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="10" fill="url(#gShare)"/><path d="M22 9.5v16M16.5 15 22 9.5l5.5 5.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 19.5h-3.5v15h17v-15H27" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg><svg class="app-ic lg" viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="10" fill="url(#gMsg)"/><path d="M22 10.5c-7.5 0-13.5 4.9-13.5 10.9 0 3.5 2 6.6 5.2 8.6-.3 1.9-1.3 3.6-2.9 4.8 2.8.2 5.4-.7 7.3-2.2 1.2.3 2.5.5 3.9.5 7.5 0 13.5-4.9 13.5-10.9S29.5 10.5 22 10.5z" fill="#fff"/></svg></div>
+        <div class="sm-hero"><svg class="app-ic ic-share lg" viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="10" fill="url(#gShare)"/><path d="M22 9.5v16M16.5 15 22 9.5l5.5 5.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 19.5h-3.5v15h17v-15H27" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg><svg class="app-ic lg" viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="10" fill="url(#gMsg)"/><path d="M22 10.5c-7.5 0-13.5 4.9-13.5 10.9 0 3.5 2 6.6 5.2 8.6-.3 1.9-1.3 3.6-2.9 4.8 2.8.2 5.4-.7 7.3-2.2 1.2.3 2.5.5 3.9.5 7.5 0 13.5-4.9 13.5-10.9S29.5 10.5 22 10.5z" fill="#fff"/></svg></div>
         <h3>Share with Messages</h3>
         <div data-share-ok>
           <ol class="sm-steps">
@@ -1027,7 +1039,7 @@
       </div>
       <div class="site-colors">
         <p class="ideas-label">Colors</p>
-        <label class="scheme-check"><input type="checkbox" data-scheme> <span>I like this color scheme</span></label>
+        <label class="scheme-check"><input type="checkbox" data-scheme> <span>I like the whole color scheme</span></label>
         <div class="swatch-picks" data-swatches></div>
         <p class="colors-hint">Tap any single colors you like. Pick as many as you want.</p>
       </div>
@@ -1989,6 +2001,7 @@
     document.querySelectorAll('[data-scheme]').forEach(function(c){ c.checked = false; });
     document.querySelectorAll('.swatch-pick, .pal, .cp-grid button').forEach(function(b){ b.setAttribute('aria-pressed', 'false'); });
     renderChips();
+    renderPicked();
     document.querySelectorAll('[data-site-note]').forEach(function(t){ t.value = ''; });
     saveState();
     document.querySelectorAll('[data-idea-row]').forEach(function(row){
@@ -2042,10 +2055,31 @@
       var at = state.palettes.indexOf(pl.id);
       if (at > -1) state.palettes.splice(at, 1); else state.palettes.push(pl.id);
       b.setAttribute('aria-pressed', at > -1 ? 'false' : 'true');
-      saveState(); refreshSummary();
+      saveState(); refreshSummary(); renderPicked();
     });
     palGrid.appendChild(b);
   });
+  var palPicked = document.getElementById('palPicked');
+  function renderPicked(){
+    palPicked.innerHTML = '';
+    var picked = PALETTES.filter(function(pl){ return state.palettes.indexOf(pl.id) > -1; });
+    if (!picked.length) { palPicked.innerHTML = '<span class="cp-empty">None yet. Tap any palette above.</span>'; return; }
+    picked.forEach(function(pl){
+      var chip = document.createElement('span');
+      chip.className = 'pal-mini';
+      chip.innerHTML = '<i>' + pl.colors.map(function(c){ return '<span style="background:' + c + '"></span>'; }).join('') + '</i><b></b><button type="button">×</button>';
+      chip.querySelector('b').textContent = pl.name;
+      chip.querySelector('button').setAttribute('aria-label', 'Remove ' + pl.name);
+      chip.querySelector('button').addEventListener('click', function(){
+        state.palettes.splice(state.palettes.indexOf(pl.id), 1);
+        var card = palGrid.querySelectorAll('.pal')[PALETTES.indexOf(pl)];
+        if (card) card.setAttribute('aria-pressed', 'false');
+        saveState(); refreshSummary(); renderPicked();
+      });
+      palPicked.appendChild(chip);
+    });
+  }
+  renderPicked();
 
   function hslHex(h, sat, l){
     sat /= 100; l /= 100;
@@ -2091,7 +2125,7 @@
 
   /* ---------------- site carousels: one site centered, swipe / arrows / dots ---------------- */
   var carousels = [];
-  function Carousel(root, sites){
+  function Carousel(root, sites, onLast){
     var vp = root.querySelector('.car-viewport'), track = root.querySelector('.car-track');
     var cards = Array.prototype.slice.call(track.children), n = cards.length;
     var prevBtn = root.querySelector('[data-car-prev]'), nextBtn = root.querySelector('[data-car-next]');
@@ -2109,6 +2143,7 @@
       if (j === n - 1) sn.hidden = true; else sn.addEventListener('click', function(){ go(j + 1); });
       var nb = c.querySelector('[data-next-site]');
       if (j < n - 1) { nb.querySelector('[data-next-label]').textContent = 'Next site: ' + sites[j + 1].name; nb.addEventListener('click', function(){ go(j + 1); }); }
+      else if (onLast) { nb.querySelector('[data-next-label]').textContent = onLast.label; nb.addEventListener('click', onLast.go); }
       else nb.hidden = true;
     });
     function pos(k){ return -k * (cw + gap); }
@@ -2218,8 +2253,8 @@
     layout(); go(0);
     return api;
   }
-  carousels[1] = Carousel(document.querySelector('[data-stage="1"] [data-carousel]'), SITES_SOFT);
-  carousels[2] = Carousel(document.querySelector('[data-stage="2"] [data-carousel]'), SITES_BOLD);
+  carousels[1] = Carousel(document.querySelector('[data-stage="1"] [data-carousel]'), SITES_SOFT, { label: 'Onto the dark & bold websites', go: function(){ goToStage(2, { top: true }); } });
+  carousels[2] = Carousel(document.querySelector('[data-stage="2"] [data-carousel]'), SITES_BOLD, { label: 'Onto Step 3: Color choices', go: function(){ goToStage(3, { top: true }); } });
 
   /* ---------------- stages: pull past the end of one to reach the next ---------------- */
   // effort needed, in scroll units (a trackpad swipe is ~300-800, a mouse notch ~100; touch counts 4x finger travel).
