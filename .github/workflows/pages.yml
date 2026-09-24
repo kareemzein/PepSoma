@@ -23,6 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - run: rm -rf .handoffs  # session notes stay in the repo, not on the public site
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
