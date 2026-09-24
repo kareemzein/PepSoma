@@ -79,18 +79,12 @@
   .intro.wrap{padding-top:40px;}
   .kicker{font-size:.78rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:700; margin-bottom:10px;}
   h1.page-title{font-size:clamp(1.9rem, 5vw, 2.9rem); max-width:16ch;}
-  .lede{font-size:1.08rem; color:var(--muted); max-width:62ch;}
-  .steps{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:28px;}
-  @media (max-width:760px){ .steps{grid-template-columns:1fr;} }
-  .step-card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow);}
-  .step-num{
-    display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px;
-    border-radius:50%; background:var(--ink); color:var(--paper); font-weight:700; font-size:.85rem; margin-bottom:12px;
-  }
-  :root[data-theme="dark"] .step-num{background:#f3f1ea; color:#17150f;}
-  .step-card h3{font-size:1.05rem; font-family:'DM Sans',sans-serif; font-weight:700; margin-bottom:6px;}
-  .step-card p{color:var(--muted); font-size:.92rem; margin:0;}
-  .note{font-size:.85rem; color:var(--muted); margin-top:22px;}
+  .mini-steps{list-style:none; margin:22px 0 0; padding:0; display:flex; flex-wrap:wrap; align-items:center; gap:10px;}
+  .mini-steps li{display:inline-flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:8px 16px 8px 8px; font-weight:600; font-size:.95rem;}
+  .mini-steps li b{display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:var(--ink); color:var(--paper); font-size:.8rem;}
+  .mini-steps .sep{width:16px; height:16px; color:var(--muted); background:none; border:0; padding:0;}
+  .how-link{margin-top:10px; padding-left:2px;}
+  .intro.settle .mini-steps li, .intro.settle .how-link{animation:smIn .6s cubic-bezier(.16,1,.3,1) both; animation-delay:calc(var(--k,0) * 90ms);}
 
   /* ---------- section heading ---------- */
   .section-head{margin-bottom:22px;}
@@ -284,8 +278,8 @@
   .sm-opt small{display:block; color:var(--muted); font-size:.85rem; margin-top:1px;}
   .sm-opt .chev{margin-left:auto; width:18px; height:18px; color:var(--muted); flex-shrink:0; transition:transform .25s ease;}
   .sm-opt:hover .chev{transform:translateX(3px);}
-  .app-ic{width:46px; height:46px; flex-shrink:0; display:block; filter:drop-shadow(0 3px 6px rgba(0,0,0,.14));}
-  .app-ic.xs{width:24px; height:24px; display:inline-block; vertical-align:-6px; filter:none;}
+  .app-ic{width:48px; height:48px; flex-shrink:0; display:block;}
+  .app-ic.xs{width:24px; height:24px; display:inline-block; vertical-align:-6px;}
   .app-ic.lg{width:64px; height:64px;}
   .sm-hero{display:flex; align-items:center; justify-content:center; gap:14px; margin:0 0 14px;}
   .sm-hero .arrow{width:22px; height:22px; color:var(--muted);}
@@ -321,6 +315,42 @@
   @keyframes smInR{from{opacity:0; transform:translateX(28px);}}
   @keyframes smInL{from{opacity:0; transform:translateX(-28px);}}
   body.sm-lock{overflow:hidden;}
+  .sm-panel[data-view="thanks"] .sm-back{opacity:0; pointer-events:none;}
+
+  /* thank-you */
+  .sm-view[data-v="thanks"]{text-align:center; padding-top:10px;}
+  .ty-mark{position:relative; width:96px; height:96px; margin:0 auto 18px;}
+  .ty-ring{position:absolute; inset:0; border-radius:50%; background:var(--pass-bg);}
+  .ty-heart{position:absolute; inset:22px; width:52px; height:52px; fill:var(--pass);}
+  .sm-view.anim .ty-ring{animation:tyRing .9s cubic-bezier(.16,1,.3,1) both;}
+  .sm-view.anim .ty-heart{animation:tyPop .7s .1s cubic-bezier(.34,1.56,.64,1) both, tyBeat 1.4s 1s ease-in-out 2;}
+  @keyframes tyRing{0%{transform:scale(.2); opacity:0;} 60%{opacity:1;} 100%{transform:scale(1);}}
+  @keyframes tyPop{from{transform:scale(0) rotate(-20deg);}}
+  @keyframes tyBeat{0%,100%{transform:scale(1);} 20%{transform:scale(1.14);} 40%{transform:scale(.98);} 60%{transform:scale(1.08);}}
+  .confetti{position:fixed; z-index:95; width:9px; height:14px; border-radius:2px; pointer-events:none; top:0; left:0; will-change:transform, opacity;}
+
+  /* welcome */
+  .wm-panel{width:min(820px,100%);}
+  .wm-body{padding:0 32px 30px;}
+  .wm-body h2{font-size:clamp(1.7rem,3.6vw,2.3rem); margin:0 0 10px; max-width:18ch;}
+  .wm-lede{color:var(--muted); font-size:1.04rem; max-width:60ch; margin:0 0 24px;}
+  .wm-steps{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
+  @media (max-width:720px){ .wm-steps{grid-template-columns:1fr;} .wm-body{padding:0 20px 22px;} }
+  .wm-step{position:relative; background:var(--paper); border:1px solid var(--line); border-radius:20px; padding:18px 18px 20px;}
+  .wm-art{display:block; width:100%; height:92px; margin-bottom:14px; border-radius:14px; background:var(--surface); border:1px solid var(--line);}
+  .wm-num{display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; background:var(--ink); color:var(--paper); font-weight:700; font-size:.8rem; margin-bottom:8px;}
+  .wm-step h3{font:700 1.05rem/1.3 'DM Sans',sans-serif; margin:0 0 6px;}
+  .wm-step p{color:var(--muted); font-size:.92rem; margin:0;}
+  .wm-foot{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-top:22px;}
+  .wm-save{display:flex; align-items:center; gap:8px; color:var(--muted); font-size:.88rem; margin:0;}
+  .wm-save svg{width:18px; height:18px; color:var(--like); flex-shrink:0;}
+  .wm-go{min-height:54px; padding:12px 28px; font-size:1.02rem;}
+  .wm-go svg{width:18px; height:18px; transition:transform .3s cubic-bezier(.16,1,.3,1);}
+  .wm-go:hover svg{transform:translateX(4px);}
+  @media (max-width:720px){ .wm-go{width:100%;} .wm-art{height:70px;} .wm-foot{position:sticky; bottom:0; background:var(--surface); margin:18px -20px -22px; padding:14px 20px 20px; border-top:1px solid var(--line);} }
+  .wm-body.anim > *{animation:smIn .6s cubic-bezier(.16,1,.3,1) both; animation-delay:calc(120ms + var(--k,0) * 70ms);}
+  .wm-body.anim .wm-step{animation:smIn .6s cubic-bezier(.16,1,.3,1) both; animation-delay:calc(320ms + var(--k,0) * 110ms);}
+  .wm-body.anim .wm-art .pop{animation:tyPop .6s cubic-bezier(.34,1.56,.64,1) both; animation-delay:calc(520ms + var(--k,0) * 110ms); transform-box:fill-box; transform-origin:center;}
   details.reveal{margin-top:20px;}
   details.reveal summary{cursor:pointer; font-weight:600; font-size:.9rem; color:var(--muted);}
   details.reveal textarea{
@@ -370,26 +400,12 @@
   <section class="intro wrap">
     <p class="kicker">Pepsoma · design feedback</p>
     <h1 class="page-title">Pick the look for Pepsoma</h1>
-    <p class="lede">Pepsoma is the new online shop we're building. Two sample versions of the site are below, and I collected ideas from other websites I came across. This should take about 10 minutes.</p>
-
-    <div class="steps">
-      <div class="step-card">
-        <span class="step-num">1</span>
-        <h3>Look around both initial sample designs (exact copies of Brello and Olympex)</h3>
-        <p>They work like real websites. Click around each one, then answer the things below each one.</p>
-      </div>
-      <div class="step-card">
-        <span class="step-num">2</span>
-        <h3>Tap Like or Pass on the other design elements from more websites below</h3>
-        <p>Skip anything you don't have an opinion on.</p>
-      </div>
-      <div class="step-card">
-        <span class="step-num">3</span>
-        <h3>Send me your picks</h3>
-        <p>At the bottom, click “Send” and pick how to send it to me: Messages, email, or copy and paste. It walks you through each one.</p>
-      </div>
-    </div>
-    <p class="note">Your picks are saved on this device, so you can close the page and come back later.</p>
+    <ol class="mini-steps">
+      <li style="--k:0"><b>1</b>Try both designs</li>
+      <li style="--k:1"><b>2</b>Like or pass on ideas</li>
+      <li style="--k:2"><b>3</b>Hit Send at the bottom</li>
+    </ol>
+    <button class="btn-text how-link" id="howBtn" type="button" style="--k:3">How this works</button>
   </section>
 
   <section class="wrap" id="step1">
@@ -549,12 +565,33 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<div class="sm-overlay" id="welcome" aria-hidden="true">
+  <div class="sm-panel wm-panel" role="dialog" aria-modal="true" aria-labelledby="wmTitle" tabindex="-1">
+    <div class="sm-head">
+      <button class="sm-icon-btn sm-close" id="wmClose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="wm-body" id="wmBody">
+      <p class="kicker">Pepsoma · design feedback</p>
+      <h2 id="wmTitle">Hey! Let's pick the look for Pepsoma</h2>
+      <p class="wm-lede">Pepsoma is the online shop we're building. Below are two sample versions of the site, plus design ideas I pulled from other websites. Tell me what you love and what you'd skip. It takes about 10 minutes, and there are no wrong answers.</p>
+      <div class="wm-steps">
+        <div class="wm-step" style="--k:0"><svg class="wm-art" viewBox="0 0 200 92" aria-hidden="true"><rect class="pop" style="--k:0" x="34" y="16" width="84" height="58" rx="8" fill="#fefbf4" stroke="#e0d7ff" stroke-width="2"/><rect x="34" y="16" width="84" height="12" rx="6" fill="#e0d7ff"/><rect x="44" y="38" width="40" height="6" rx="3" fill="#1f0a59"/><rect x="44" y="50" width="28" height="5" rx="2.5" fill="#6d4dff" opacity=".6"/><circle cx="100" cy="54" r="10" fill="#e0d7ff"/><g class="pop" style="--k:0"><rect x="84" y="26" width="84" height="58" rx="8" fill="#0e0e0e"/><rect x="84" y="26" width="84" height="12" rx="6" fill="#2a2a2a"/><rect x="94" y="48" width="42" height="6" rx="3" fill="#f4f1ea"/><rect x="94" y="60" width="22" height="6" rx="3" fill="#c8a44d"/><rect x="148" y="50" width="10" height="22" rx="3" fill="#f4f1ea"/></g></svg><span class="wm-num">1</span><h3>Try the two designs</h3><p>They're based on Brello and Olympex and work like real websites. Click around each one, then answer the quick questions under it.</p></div>
+        <div class="wm-step" style="--k:1"><svg class="wm-art" viewBox="0 0 200 92" aria-hidden="true"><g class="pop" style="--k:1"><rect x="26" y="28" width="74" height="36" rx="18" fill="#1f7a4d"/><path transform="translate(-12 0)" d="M56 51v-9m0 0 4-8a3 3 0 0 1 3 4l-1 4h7a2.5 2.5 0 0 1 2.4 3.2l-2 6.3A2.5 2.5 0 0 1 67 53H56" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><text x="65" y="50" fill="#fff" font-family="DM Sans,sans-serif" font-weight="700" font-size="12">Like</text></g><g class="pop" style="--k:1"><rect x="108" y="28" width="74" height="36" rx="18" fill="none" stroke="#b4442f" stroke-width="2"/><path transform="translate(-2 0)" d="M122 41v9m0 0 4 8a3 3 0 0 0 3-4l-1-4h7a2.5 2.5 0 0 0 2.4-3.2l-2-6.3A2.5 2.5 0 0 0 133 39h-11" fill="none" stroke="#b4442f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><text x="145" y="50" fill="#b4442f" font-family="DM Sans,sans-serif" font-weight="700" font-size="12">Pass</text></g></svg><span class="wm-num">2</span><h3>Like or pass on ideas</h3><p>Scroll through features from other websites and tap Like or Pass. Skip anything you don't have an opinion on.</p></div>
+        <div class="wm-step" style="--k:2"><svg class="wm-art" viewBox="0 0 200 92" aria-hidden="true"><path d="M40 70c30 0 40-30 70-30" fill="none" stroke="#c9c3b5" stroke-width="2" stroke-dasharray="3 5" stroke-linecap="round"/><g class="pop" style="--k:2"><path d="M150 20 108 38l16 7 7 16z" fill="#5e5ce6"/><path d="m124 45 26-25-19 31z" fill="#3f3db8"/></g><g class="pop" style="--k:2"><rect x="30" y="58" width="22" height="22" rx="6" fill="#34c759"/><rect x="56" y="58" width="22" height="22" rx="6" fill="#1f7cf5"/><rect x="82" y="58" width="22" height="22" rx="6" fill="#8e8e93"/></g></svg><span class="wm-num">3</span><h3>Send me your picks</h3><p>Hit Send at the bottom and choose Messages, email, or copy. It walks you through each one.</p></div>
+      </div>
+      <div class="wm-foot">
+        <p class="wm-save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.8 2.8L16 10"/></svg>Your picks save automatically in this browser, so you can take a break and come back.</p>
+        <button class="btn btn-primary wm-go" id="wmGo" type="button">Let's start <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="sm-overlay" id="sendModal" aria-hidden="true">
   <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-    <linearGradient id="gMsg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6cf07f"/><stop offset="1" stop-color="#11c036"/></linearGradient>
-    <linearGradient id="gMail" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4fb6ff"/><stop offset="1" stop-color="#1a6ff2"/></linearGradient>
-    <linearGradient id="gCopy" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a3a3ab"/><stop offset="1" stop-color="#6e6e76"/></linearGradient>
-    <linearGradient id="gShare" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f3d38"/><stop offset="1" stop-color="#1b1a17"/></linearGradient>
+    <linearGradient id="gMsg"><stop offset="0" stop-color="#34c759"/></linearGradient>
+    <linearGradient id="gMail"><stop offset="0" stop-color="#1f7cf5"/></linearGradient>
+    <linearGradient id="gCopy"><stop offset="0" stop-color="#8e8e93"/></linearGradient>
+    <linearGradient id="gShare"><stop offset="0" stop-color="#5e5ce6"/></linearGradient>
   </defs></svg>
   <div class="sm-panel" role="dialog" aria-modal="true" aria-labelledby="smTitle" data-view="choose" tabindex="-1">
     <div class="sm-head">
@@ -617,14 +654,21 @@
             <li style="--k:1"><span>Start a new message to <b>Kareem</b>.</span></li>
             <li style="--k:2"><span>Click in the message box, press <kbd>⌘</kbd> <kbd>V</kbd> to paste, then send.</span></li>
           </ol>
-          <div class="sm-actions"><button class="btn btn-primary" type="button" data-close>Done</button></div>
+          <div class="sm-actions"><button class="btn btn-primary" type="button" data-thanks>Done</button></div>
         </div>
         <div data-copy-no hidden>
           <h3>Copy it by hand</h3>
           <p class="sm-sub">Your browser blocked automatic copying. Click in the box, press <kbd>⌘</kbd> <kbd>A</kbd> then <kbd>⌘</kbd> <kbd>C</kbd>, and paste it into a text to Kareem.</p>
           <textarea id="smManual" readonly aria-label="Your picks"></textarea>
-          <div class="sm-actions"><button class="btn btn-primary" type="button" data-close>Done</button></div>
+          <div class="sm-actions"><button class="btn btn-primary" type="button" data-thanks>Done</button></div>
         </div>
+      </div>
+
+      <div class="sm-view" data-v="thanks" hidden>
+        <div class="ty-mark" id="tyMark"><span class="ty-ring"></span><svg class="ty-heart" viewBox="0 0 64 64"><path d="M32 55S10 41.5 10 25.5A11.5 11.5 0 0 1 32 19a11.5 11.5 0 0 1 22 6.5C54 41.5 32 55 32 55z"/></svg></div>
+        <h3>Thank you!</h3>
+        <p class="sm-sub">This is a huge help. I'll go through your picks, and we'll land on the look together.</p>
+        <div class="sm-actions"><button class="btn btn-primary" type="button" data-close>Close</button></div>
       </div>
 
     </div>
@@ -1366,6 +1410,7 @@
   document.getElementById('smBack').addEventListener('click', function(){ showView('choose', 'from-left'); });
   sm.addEventListener('click', function(e){
     if (e.target === sm || e.target.closest('[data-close]')) { closeSend(); return; }
+    if (e.target.closest('[data-thanks]')) { showThanks(); return; }
     var go = e.target.closest('[data-go]');
     if (!go) return;
     if (go.dataset.go === 'copy') { goCopy(); return; }
@@ -1379,7 +1424,7 @@
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && sm.classList.contains('open')) closeSend(); });
 
   document.getElementById('smShareGo').addEventListener('click', function(){
-    navigator.share({ title: SUBJECT, text: buildPayload() }).catch(function(){ /* closed the menu */ });
+    navigator.share({ title: SUBJECT, text: buildPayload() }).then(showThanks).catch(function(){ /* closed the menu */ });
   });
 
   document.getElementById('smMailGo').addEventListener('click', function(){
@@ -1387,6 +1432,7 @@
     copyText(text).catch(function(){}); // backup in case the mail app trims a long message
     document.getElementById('smMailStatus').textContent = 'Opening your email app… (your picks are also copied, just in case)';
     location.href = 'mailto:' + EMAIL_TO + '?subject=' + encodeURIComponent(SUBJECT) + '&body=' + encodeURIComponent(text);
+    setTimeout(showThanks, 1600);
   });
 
   document.getElementById('smGmailGo').addEventListener('click', function(){
@@ -1394,7 +1440,67 @@
     copyText(text).catch(function(){});
     window.open('https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(EMAIL_TO) + '&su=' + encodeURIComponent(SUBJECT) + '&body=' + encodeURIComponent(text), '_blank', 'noopener');
     document.getElementById('smMailStatus').textContent = 'Gmail opened in a new tab. Click Send there.';
+    setTimeout(showThanks, 700);
   });
+
+  var reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  function burstConfetti(){
+    if (reduceMotion.matches || !document.body.animate) return;
+    var mark = document.getElementById('tyMark').getBoundingClientRect();
+    var cx = mark.left + mark.width / 2, cy = mark.top + mark.height / 2;
+    var colors = ['#6d4dff', '#f5d153', '#34c759', '#ef8874', '#1f7cf5', '#c8a44d'];
+    for (var n = 0; n < 46; n++) {
+      var c = document.createElement('i');
+      c.className = 'confetti';
+      c.style.background = colors[n % colors.length];
+      if (n % 3 === 0) { c.style.width = '8px'; c.style.height = '8px'; c.style.borderRadius = '50%'; }
+      document.body.appendChild(c);
+      var ang = Math.random() * Math.PI * 2, dist = 90 + Math.random() * 170;
+      var dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist * 0.8 - 60;
+      var rot = (Math.random() * 720 - 360) + 'deg';
+      c.animate([
+        { transform: 'translate(' + cx + 'px,' + cy + 'px) scale(.4) rotate(0deg)', opacity: 1 },
+        { transform: 'translate(' + (cx + dx) + 'px,' + (cy + dy) + 'px) scale(1) rotate(' + rot + ')', opacity: 1, offset: 0.45 },
+        { transform: 'translate(' + (cx + dx * 1.15) + 'px,' + (cy + dy + 220) + 'px) scale(.9) rotate(' + rot + ')', opacity: 0 }
+      ], { duration: 1300 + Math.random() * 700, delay: 180 + Math.random() * 120, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'both' }).onfinish = (function(el){ return function(){ el.remove(); }; })(c);
+    }
+  }
+  function showThanks(){
+    if (!sm.classList.contains('open')) return;
+    if (smPanel.dataset.view === 'thanks') return;
+    showView('thanks', 'from-right');
+    setTimeout(burstConfetti, 60);
+  }
+
+  /* ---------------- welcome box (first visit; "How this works" reopens it) ---------------- */
+  var wm = document.getElementById('welcome');
+  var wmPanel = wm.querySelector('.sm-panel');
+  var wmBody = document.getElementById('wmBody');
+  var introSec = document.querySelector('.intro');
+  function openWelcome(){
+    Array.prototype.forEach.call(wmBody.children, function(c, i){ c.style.setProperty('--k', i); });
+    wmBody.classList.remove('anim'); void wmBody.offsetWidth; wmBody.classList.add('anim');
+    wm.setAttribute('aria-hidden', 'false');
+    wm.classList.add('open');
+    document.body.classList.add('sm-lock');
+    setTimeout(function(){ wmPanel.focus({ preventScroll: true }); }, 50);
+  }
+  function closeWelcome(){
+    if (!wm.classList.contains('open')) return;
+    wm.classList.remove('open');
+    wm.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('sm-lock');
+    try { localStorage.setItem('pepsomaWelcomed', '1'); } catch (e) {}
+    introSec.classList.remove('settle'); void introSec.offsetWidth; introSec.classList.add('settle');
+  }
+  document.getElementById('wmClose').addEventListener('click', closeWelcome);
+  document.getElementById('wmGo').addEventListener('click', closeWelcome);
+  wm.addEventListener('click', function(e){ if (e.target === wm) closeWelcome(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeWelcome(); });
+  document.getElementById('howBtn').addEventListener('click', openWelcome);
+  var welcomed = false;
+  try { welcomed = localStorage.getItem('pepsomaWelcomed') === '1'; } catch (e) {}
+  if (!welcomed) setTimeout(openWelcome, 250);
 
   /* ---------------- light / dark toggle (follows the device until clicked) ---------------- */
   var mq = matchMedia('(prefers-color-scheme: dark)');
