@@ -291,9 +291,12 @@
     background:var(--surface); border:1px solid var(--line); border-radius:24px;
     box-shadow:var(--shadow); display:block; position:relative;
   }
-  .shot-col{position:sticky; top:69px; z-index:3; padding:16px 16px 14px; background:var(--surface); border-radius:24px 24px 0 0; box-shadow:0 12px 16px -14px rgba(0,0,0,.28);}
+  .shot-col{position:sticky; top:69px; z-index:3; padding:16px 16px 14px; background:var(--surface); border-radius:24px 24px 0 0;
+    border-bottom:1.5px solid color-mix(in srgb, var(--ink) 22%, transparent); box-shadow:0 14px 18px -16px rgba(0,0,0,.3);}
   .shot-wrap{position:relative; aspect-ratio:16/10; background:var(--line); overflow:hidden; border-radius:16px; border:1px solid var(--line);
-    width:min(100%, calc((100vh - 69px) * .56 * 1.6)); width:min(100%, calc((100dvh - 69px) * .56 * 1.6)); margin:0 auto;}
+    --shrink:1; width:min(100%, calc((100vh - 69px) * .56 * 1.6 * var(--shrink))); width:min(100%, calc((100dvh - 69px) * .56 * 1.6 * var(--shrink))); margin:0 auto;
+    transition:width .45s cubic-bezier(.16,1,.3,1);}
+  @media (min-width:901px){ .site-card.compact .shot-wrap{--shrink:.8;} .site-card.compact .shot-col{padding-top:10px; padding-bottom:10px;} }
   .shot-toggle-below{display:none;}
   @media (max-width:900px){
     .shot-col{padding:10px;}
@@ -2122,7 +2125,7 @@
       k = Math.max(0, Math.min(n - 1, k));
       var changed = k !== i; i = k;
       setX(pos(i), true);
-      cards.forEach(function(c, j){ c.classList.toggle('is-active', j === i); c.setAttribute('aria-hidden', j === i ? 'false' : 'true'); });
+      cards.forEach(function(c, j){ c.classList.toggle('is-active', j === i); c.setAttribute('aria-hidden', j === i ? 'false' : 'true'); if (j !== i) c.classList.remove('compact'); });
       dots.forEach(function(d, j){ d.setAttribute('aria-current', j === i ? 'true' : 'false'); });
       countEl.textContent = (i + 1) + ' / ' + n;
       prevBtn.disabled = i === 0; nextBtn.disabled = i === n - 1;
@@ -2180,25 +2183,33 @@
     track.addEventListener('pointercancel', endDrag);
 
     // trackpad side-swipe: each deliberate swipe moves one site; a light brush springs back
-    var wAcc = 0, wLast = 0, wLastD = 0, wLocked = false, wTimer = 0;
+    // one swipe = one site. After a move, the swipe's leftover momentum is ignored until it fades out
+    // (or a clearly new, harder swipe starts), so a light flick can't skip several sites.
+    var wAcc = 0, wLast = 0, wMin = 0, wLocked = false, wLockedAt = 0, wTimer = 0;
     vp.addEventListener('wheel', function(e){
       if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
       e.preventDefault();
-      var now = performance.now();
-      var fresh = now - wLast > 170 || (wLocked && Math.abs(e.deltaX) > Math.abs(wLastD) + 4);
-      wLast = now; wLastD = e.deltaX;
-      if (fresh) { wAcc = 0; wLocked = false; }
+      var now = performance.now(), ad = Math.abs(e.deltaX);
+      var gap = now - wLast; wLast = now;
+      if (gap > 200) { wAcc = 0; wLocked = false; }
+      else if (wLocked && now - wLockedAt > 350 && ad > wMin * 2.5 + 10) { wAcc = 0; wLocked = false; }
+      wMin = wLocked ? Math.min(wMin, ad) : ad;
       clearTimeout(wTimer);
-      wTimer = setTimeout(function(){ if (!wLocked) go(i); wAcc = 0; wLocked = false; }, 180);
+      wTimer = setTimeout(function(){ if (!wLocked) go(i); wAcc = 0; wLocked = false; }, 200);
       if (wLocked) return;
       wAcc += e.deltaX;
       var edge = (i === 0 && wAcc < 0) || (i === n - 1 && wAcc > 0);
       if (edge) { wAcc = 0; return; }
-      setX(pos(i) - wAcc * 0.5, false);
-      if (!edge && Math.abs(wAcc) > 150) { wLocked = true; go(i + (wAcc > 0 ? 1 : -1)); }
+      setX(pos(i) - wAcc * 0.45, false);
+      if (Math.abs(wAcc) > 190) { wLocked = true; wLockedAt = now; wMin = ad; go(i + (wAcc > 0 ? 1 : -1)); }
     }, { passive: false });
 
     if ('ResizeObserver' in window) new ResizeObserver(function(){ fit(); }).observe(track);
+    // once she's scrolled down into a site's questions, the pinned preview gets smaller
+    window.addEventListener('scroll', function(){
+      var c = cards[i]; if (!c || !c.offsetParent) return;
+      c.classList.toggle('compact', c.getBoundingClientRect().top < 40);
+    }, { passive: true });
     window.addEventListener('resize', layout);
     var api = { layout: layout, next: function(){ go(i + 1); }, prev: function(){ go(i - 1); }, root: root };
     layout(); go(0);
