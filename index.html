@@ -6,6 +6,7 @@
 <title>Pepsoma · Design feedback</title>
 <meta name="description" content="Pick the look for Pepsoma — look at two sample designs, like or pass on ideas, and send your picks.">
 <script>(function(){var t;try{t=localStorage.getItem('pepsomaTheme');}catch(e){}if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t;})();</script>
+<script>(function(){var c;try{c=sessionStorage.getItem('pepsomaPortalBack');}catch(e){}if(!c)return;var r=document.documentElement;r.classList.add('portal-back');r.style.setProperty('--portal-bg',c);setTimeout(function(){r.classList.remove('portal-back');},4000);})();</script>
 <link rel="icon" href="assets/favicon-a.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -145,6 +146,10 @@
   .phone-viewport iframe{border:none; display:block; transform-origin:0 0;}
 
   .preview-tip{font-size:.85rem; color:var(--muted); margin-top:14px;}
+
+  /* open full screen: the preview grows into the page; coming back, the page shrinks into the preview */
+  .portal{position:fixed; inset:0; z-index:300; pointer-events:none;}
+  html.portal-back body::after{content:''; position:fixed; inset:0; z-index:300; background:var(--portal-bg);}
 
   /* ---------- idea rows ---------- */
   .idea-list{list-style:none; margin:18px 0 26px; padding:0; display:flex; flex-direction:column; gap:10px;}
@@ -2510,7 +2515,7 @@
     var fromDesign = false;
     try { fromDesign = sessionStorage.getItem('pepsomaBackFromDesign') === '1'; sessionStorage.removeItem('pepsomaBackFromDesign'); } catch (e) {}
     // back from a full-screen design: just drop her back into Step 1, no card or flash
-    if (fromDesign) { jumpTo(0, w && w.cards); settleIntro(); return; }
+    if (fromDesign) { jumpTo(0, w && w.cards); settleIntro(); portalReturn(); return; }
     var started = w && (w.stage > 0 || Object.keys(state.picks).length);
     if (!started) { showTitle(0, settleIntro); return; }
     document.getElementById('wbStep').textContent = whereText(w);
@@ -2530,7 +2535,89 @@
   });
   // the full-screen designs open in this same tab; mark it so coming back skips the welcome back card
   document.querySelectorAll('.open-full').forEach(function(a){
-    a.addEventListener('click', function(){ try { sessionStorage.setItem('pepsomaBackFromDesign', '1'); } catch (e) {} saveWhere(); });
+    a.addEventListener('click', function(e){
+      var which = a.closest('[data-design]').dataset.design, mode = viewMode[which];
+      var color = portalColor(which);
+      try {
+        sessionStorage.setItem('pepsomaBackFromDesign', '1');
+        sessionStorage.setItem('pepsomaPortal', JSON.stringify({ which: which, mode: mode, y: window.scrollY }));
+        sessionStorage.setItem('pepsomaPortalIn', color);
+      } catch (err) {}
+      saveWhere();
+      if (reduceMotion.matches || !document.body.animate || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+      e.preventDefault();
+      var p = document.createElement('div');
+      p.className = 'portal';
+      p.style.background = color;
+      document.body.appendChild(p);
+      p.animate([{ clipPath: portalClip(which, mode) }, { clipPath: 'inset(0px round 0px)' }],
+        { duration: 640, easing: 'cubic-bezier(.7,0,.2,1)', fill: 'forwards' })
+        .onfinish = function(){ location.href = a.href; };
+    });
+  });
+  // the design's own background, read from the live preview so light/dark matches
+  function portalColor(which){
+    try {
+      var d = iframes[which].contentDocument, c = getComputedStyle(d.body).backgroundColor;
+      if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') return c;
+    } catch (e) {}
+    return which === 'b' ? '#0e0e0e' : '#ffffff';
+  }
+  // the preview window's screen area, as a clip on a full-screen layer
+  function portalClip(which, mode){
+    var r = currentViewport(which, mode).getBoundingClientRect();
+    var t = Math.max(0, r.top), b = Math.max(0, window.innerHeight - r.bottom);
+    return 'inset(' + t + 'px ' + (window.innerWidth - r.right) + 'px ' + b + 'px ' + r.left + 'px round ' + (mode === 'phone' ? 22 : 4) + 'px)';
+  }
+  // back from a full-screen design: put her where she was, then shrink the page back into the preview
+  function portalReturn(){
+    var info = null, color = null;
+    try {
+      info = JSON.parse(sessionStorage.getItem('pepsomaPortal'));
+      color = sessionStorage.getItem('pepsomaPortalBack');
+      sessionStorage.removeItem('pepsomaPortal'); sessionStorage.removeItem('pepsomaPortalBack');
+    } catch (e) {}
+    if (info && (info.which === 'a' || info.which === 'b')) {
+      selectTab(info.which);
+      if (info.mode === 'computer' || info.mode === 'phone') setView(info.which, info.mode);
+      window.scrollTo({ top: info.y || 0, behavior: 'instant' });
+    }
+    var root = document.documentElement;
+    if (!color) { root.classList.remove('portal-back'); return; }
+    if (!info || reduceMotion.matches || !document.body.animate) { root.classList.remove('portal-back'); return; }
+    shrinkInto(info.which, viewMode[info.which], color, iframes[info.which]);
+  }
+  function shrinkInto(which, mode, color, iframe){
+    var p = document.createElement('div');
+    p.className = 'portal';
+    p.style.background = color;
+    document.body.appendChild(p);
+    document.documentElement.classList.remove('portal-back');
+    var go = function(){
+      if (p._went) return; p._went = true;
+      var clip = portalClip(which, mode);
+      p.animate([{ clipPath: 'inset(0px round 0px)' }, { clipPath: clip }],
+        { duration: 600, easing: 'cubic-bezier(.7,0,.2,1)', fill: 'forwards' })
+        .onfinish = function(){
+          p.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 320, easing: 'ease-out', fill: 'forwards' })
+            .onfinish = function(){ p.remove(); };
+        };
+    };
+    // let the preview load underneath first, so the curtain lands on the live page
+    var ready = !iframe;
+    try { ready = ready || (iframe.contentDocument.readyState === 'complete' && iframe.contentDocument.URL !== 'about:blank'); } catch (e) { ready = true; }
+    if (!ready) iframe.addEventListener('load', function(){ setTimeout(go, 60); }, { once: true });
+    setTimeout(go, ready ? 60 : 900);
+  }
+  // browser Back after opening full screen: the page comes back from memory with the curtain still up
+  window.addEventListener('pageshow', function(e){
+    if (!e.persisted) return;
+    var stuck = document.querySelector('.portal');
+    if (!stuck) return;
+    stuck.remove();
+    var info = null;
+    try { info = JSON.parse(sessionStorage.getItem('pepsomaPortal')); sessionStorage.removeItem('pepsomaPortal'); sessionStorage.removeItem('pepsomaBackFromDesign'); } catch (err) {}
+    if (info && !reduceMotion.matches) shrinkInto(info.which, info.mode, stuck.style.background, null);
   });
 
   /* ---------------- review: jump back to any section ---------------- */
