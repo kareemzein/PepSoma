@@ -2504,7 +2504,8 @@
     var w = loadWhere();
     var fromDesign = false;
     try { fromDesign = sessionStorage.getItem('pepsomaBackFromDesign') === '1'; sessionStorage.removeItem('pepsomaBackFromDesign'); } catch (e) {}
-    if (fromDesign) { jumpTo(0, w && w.cards); flash(); settleIntro(); return; }
+    // back from a full-screen design: just drop her back into Step 1, no card or flash
+    if (fromDesign) { jumpTo(0, w && w.cards); settleIntro(); return; }
     var started = w && (w.stage > 0 || Object.keys(state.picks).length);
     if (!started) { showTitle(0, settleIntro); return; }
     document.getElementById('wbWhere').textContent = whereText(w);
@@ -2521,7 +2522,7 @@
     if (hiddenAt && Date.now() - hiddenAt > 8000 && !modalOpen() && wbCard.hidden) flash();
     hiddenAt = 0;
   });
-  // the full-screen designs open in this same tab; mark it so coming back gets the quick flash
+  // the full-screen designs open in this same tab; mark it so coming back skips the welcome back card
   document.querySelectorAll('.open-full').forEach(function(a){
     a.addEventListener('click', function(){ try { sessionStorage.setItem('pepsomaBackFromDesign', '1'); } catch (e) {} saveWhere(); });
   });
