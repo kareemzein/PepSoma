@@ -65,7 +65,9 @@
       { id: '4w', label: 'Standing order · every 4 weeks', short: 'Every 4 weeks', pct: 15, weeks: 4 },
       { id: '8w', label: 'Standing order · every 8 weeks', short: 'Every 8 weeks', pct: 10, weeks: 8 },
     ],
-    // Volume savings on one-time vials (highest qualifying tier wins)
+    // One-time vial deal: 'volume' = tiers below (highest qualifying tier wins);
+    // 'bogo' = Buy 1 Get 1 — every second vial of the same product and size is free (stacks excluded)
+    deal: 'volume',
     tiers: [ { min: 10, pct: 15 }, { min: 5, pct: 10 }, { min: 3, pct: 5 } ],
     promos: {
       WELCOME10: { pct: 10, label: '10% off your order' },
@@ -132,10 +134,16 @@
       const subtotal = sum(lines, (l) => l.total);
       const once = lines.filter((l) => l.planObj.id === 'once');
       const onceQty = once.reduce((s, l) => s + l.qty, 0);
-      const tier = C.tiers.find((t) => onceQty >= t.min) || null;
-      const nextTier = C.tiers.slice().reverse().find((t) => t.min > onceQty) || null;
+      const bogo = C.deal === 'bogo';
+      const tier = bogo ? null : C.tiers.find((t) => onceQty >= t.min) || null;
+      const nextTier = bogo ? null : C.tiers.slice().reverse().find((t) => t.min > onceQty) || null;
       const tierDiscount = tier ? PS.round(sum(once, (l) => l.total) * tier.pct / 100) : 0;
-      const afterItems = PS.round(subtotal - tierDiscount);
+      const bogoLines = bogo ? once.filter((l) => !l.product.includes) : [];
+      bogoLines.forEach((l) => { l.free = Math.floor(l.qty / 2); });
+      const dealFree = bogoLines.reduce((s, l) => s + l.free, 0);
+      const dealDiscount = sum(bogoLines, (l) => l.free * l.unit);
+      const dealOdd = bogoLines.filter((l) => l.qty % 2);
+      const afterItems = PS.round(subtotal - tierDiscount - dealDiscount);
       let promo = null, promoDiscount = 0, freeShipPromo = false;
       if (cart.promo) {
         const p = C.promos[cart.promo];
@@ -150,9 +158,10 @@
       const freeStandard = freeShipPromo || afterItems >= C.freeShip;
       const shipPrice = (m) => (m.freeEligible && freeStandard ? 0 : m.price);
       const shipping = lines.length ? shipPrice(method) : 0;
-      const savings = PS.round(sum(lines, (l) => ((l.compare || l.base) - l.unit) * l.qty) + tierDiscount + promoDiscount);
+      const savings = PS.round(sum(lines, (l) => ((l.compare || l.base) - l.unit) * l.qty) + tierDiscount + dealDiscount + promoDiscount);
       return {
         lines, count: lines.reduce((s, l) => s + l.qty, 0), subtotal, onceQty, tier, nextTier, tierDiscount, afterItems,
+        deal: C.deal, dealFree, dealDiscount, dealOdd,
         promo, promoCode: cart.promo, promoDiscount, merch, method, shipping, shipPrice, freeStandard,
         total: PS.round(merch + shipping), savings,
         freeShipRemaining: Math.max(0, PS.round(C.freeShip - afterItems)),
@@ -192,6 +201,7 @@
         method: { id: totals.method.id, label: totals.method.label, eta: totals.method.eta },
         items: totals.lines.map((l) => ({ id: l.id, name: l.product.name, size: l.sizeObj.label, plan: l.planObj.short, planId: l.planObj.id, qty: l.qty, unit: l.unit, total: l.total })),
         subtotal: totals.subtotal, tierDiscount: totals.tierDiscount, tierPct: totals.tier ? totals.tier.pct : 0,
+        dealDiscount: totals.dealDiscount, dealFree: totals.dealFree,
         promo: totals.promo ? totals.promo.code : null, promoDiscount: totals.promoDiscount,
         shipping: totals.shipping, total: totals.total,
         payment: { brand: PS.cardBrand(data.card), last4: String(data.card).replace(/\D/g, '').slice(-4) },

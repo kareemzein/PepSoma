@@ -68,6 +68,11 @@
   H.freeShip = (t) => t.count === 0 ? '' : `<div class="freeship"><div class="freeship-text">${t.freeStandard ? `${PS.icon('truck')} You’ve unlocked <strong>free standard shipping</strong>` : `${PS.icon('truck')} You’re <strong>${PS.money(t.freeShipRemaining)}</strong> away from free shipping`}</div><div class="freeship-bar"><span style="width:${Math.round((t.freeStandard ? 1 : t.freeShipProgress) * 100)}%"></span></div></div>`;
 
   H.tierNote = (t) => {
+    if (t.deal === 'bogo') {
+      if (t.dealOdd.length) return `<p class="tier-note">Add <strong>1 more ${esc(t.dealOdd[0].product.name)}</strong> (${esc(t.dealOdd[0].sizeObj.label)}) and it’s <strong>free</strong> · Buy 1 Get 1</p>`;
+      if (t.dealFree) return `<p class="tier-note">${PS.icon('check')} Buy 1 Get 1 applied: ${t.dealFree} free vial${t.dealFree > 1 ? 's' : ''}</p>`;
+      return '';
+    }
     if (t.tier && !t.nextTier) return `<p class="tier-note">${PS.icon('check')} Max volume savings applied: ${t.tier.pct}% off one-time vials</p>`;
     if (t.nextTier && t.onceQty > 0) return `<p class="tier-note">Add <strong>${t.nextTier.min - t.onceQty}</strong> more vial${t.nextTier.min - t.onceQty > 1 ? 's' : ''} to save <strong>${t.nextTier.pct}%</strong>${t.tier ? ` (now ${t.tier.pct}%)` : ''}</p>`;
     return '';
@@ -80,6 +85,7 @@
     return `<div class="totals">
       ${row('Subtotal', PS.money(t.subtotal))}
       ${t.tierDiscount ? row(`Volume savings (${t.tier.pct}%)`, '−' + PS.money(t.tierDiscount), 'discount') : ''}
+      ${t.dealDiscount ? row(`Buy 1 Get 1 (${t.dealFree} free)`, '−' + PS.money(t.dealDiscount), 'discount') : ''}
       ${t.promoDiscount ? row(`Promo ${esc(t.promo.code)}`, '−' + PS.money(t.promoDiscount), 'discount') : ''}
       ${opts.shipping ? row(`Shipping <small>${esc(t.method.label.split(' — ')[0])}</small>`, t.shipping ? PS.money(t.shipping) : 'Free') : row('Shipping', t.freeStandard ? 'Free' : 'Calculated at checkout')}
       ${opts.shipping ? row('Tax', 'Calculated per state · $0.00', 'muted') : ''}
@@ -168,6 +174,7 @@
     <div class="totals">
       <div class="tot-row"><span>Subtotal</span><span>${PS.money(o.subtotal)}</span></div>
       ${o.tierDiscount ? `<div class="tot-row discount"><span>Volume savings (${o.tierPct}%)</span><span>−${PS.money(o.tierDiscount)}</span></div>` : ''}
+      ${o.dealDiscount ? `<div class="tot-row discount"><span>Buy 1 Get 1 (${o.dealFree} free)</span><span>−${PS.money(o.dealDiscount)}</span></div>` : ''}
       ${o.promoDiscount ? `<div class="tot-row discount"><span>Promo ${esc(o.promo)}</span><span>−${PS.money(o.promoDiscount)}</span></div>` : ''}
       <div class="tot-row"><span>Shipping</span><span>${o.shipping ? PS.money(o.shipping) : 'Free'}</span></div>
       <div class="tot-row grand"><span>Total</span><span>${PS.money(o.total)}</span></div>

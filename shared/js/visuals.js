@@ -43,7 +43,7 @@
         <text x="60" y="${nameY + (lines.length > 1 ? fs + 16.5 : 18.5)}" text-anchor="middle" font-family="Inter, sans-serif" font-size="6.5" fill="#f4f1ea">${esc(size)}</text>
 `;
     } else {
-      glassTint = 'rgba(224,215,255,.28)'; glassStroke = 'rgba(31,10,89,.18)';
+      glassTint = 'rgba(223,228,248,.28)'; glassStroke = 'rgba(27,45,116,.18)';
       cap = `
         <defs>
           <linearGradient id="${id}m" x1="0" x2="1"><stop offset="0" stop-color="#b9b3c9"/><stop offset=".3" stop-color="#f4f2f8"/><stop offset=".6" stop-color="#cfc9dc"/><stop offset="1" stop-color="#a9a2bc"/></linearGradient>
@@ -56,9 +56,9 @@
       label = `
         <rect x="16" y="104" width="88" height="96" fill="#fff"/>
         <rect x="16" y="104" width="88" height="7" fill="${p.accent}"/>
-        <text x="60" y="126" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-style="italic" font-weight="600" font-size="9" fill="#1f0a59">pepsoma</text>
-        <text x="60" y="${nameY}" text-anchor="middle" font-family="DM Sans, sans-serif" font-weight="700" font-size="${fs}" fill="#1f0a59">${nameText}</text>
-        <text x="60" y="${nameY + (lines.length > 1 ? fs + 16 : 18)}" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="7.5" fill="#5b5277">${esc(size)}${p.purity ? ' · ≥' + Math.floor(p.purity) + '%' : ''}</text>
+        <text x="60" y="126" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-style="italic" font-weight="600" font-size="9" fill="#1b2d74">pepsoma</text>
+        <text x="60" y="${nameY}" text-anchor="middle" font-family="DM Sans, sans-serif" font-weight="700" font-size="${fs}" fill="#1b2d74">${nameText}</text>
+        <text x="60" y="${nameY + (lines.length > 1 ? fs + 16 : 18)}" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="7.5" fill="#56607f">${esc(size)}${p.purity ? ' · ≥' + Math.floor(p.purity) + '%' : ''}</text>
 `;
     }
 

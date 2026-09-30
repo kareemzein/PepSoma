@@ -1,4 +1,4 @@
-/* Pepsoma — Version A “Clinical”: cream, lavender and deep purple, serif-italic accents,
+/* Pepsoma — Version A “Clinical”: navy, periwinkle, cream and olive-yellow, serif-italic accents,
    plan-selector product pages. Follows the device's light/dark setting (toggle overrides).
    Motion vocabulary (rise-and-unblur load-ins, sliding nav pill, live demo window,
    count-ups, corner brackets, footer wordmark). */
@@ -11,12 +11,32 @@
   const it = (s) => `<em class="serif">${s}</em>`; // serif italic accent
   const checkItem = (s) => `<li><span class="yc">${icon('check')}</span><span>${s}</span></li>`;
 
+  // One-time vial deal, shown in the top bar and applied in the cart: 'volume' (3+/5+/10+ vial savings) or 'bogo' (Buy 1 Get 1).
+  // To preview the other one without changing this, add ?deal=bogo or ?deal=volume to the address (before the #).
+  const DEAL = 'volume';
+  const dealParam = new URLSearchParams(location.search).get('deal');
+  PS.config.deal = dealParam === 'bogo' || dealParam === 'volume' ? dealParam : DEAL;
+  if (PS.config.deal === 'bogo') {
+    PS.faqs.forEach((g) => g.items.forEach((q, i) => {
+      if (/volume pricing/i.test(q[0])) g.items[i] = ['Do you run any deals?', 'Yes: Buy 1 Get 1 on single vials. Every second vial of the same compound and size is free, applied automatically in your cart. Research stacks are excluded. Institutions ordering at larger scale can apply for wholesale pricing.'];
+    }));
+  }
+  const dealBar = () => {
+    const bogo = PS.config.deal === 'bogo';
+    const k = bogo ? 'Buy 1 Get 1 · Buy 2 Get 2' : 'Buy more, save more';
+    const v = bogo ? 'Every second vial free, same compound and size' : PS.config.tiers.slice().reverse().map((t) => `${t.min}+ vials ${t.pct}% off`).join(' · ');
+    return `<a class="deal-bar" href="#/shop"><span class="deal-k">${k}</span><span class="deal-v">${v}</span><span class="deal-tag">Auto-applied</span></a>`;
+  };
+
   /* ---------- product card ---------- */
   function card(p, i) {
     const s = p.sizes[0];
     const multi = p.sizes.length > 1;
+    // one navy "Sale" tag wherever the card shows a crossed-out price (stacks keep their "Save x%" pill)
+    const sale = p.badge === 'Sale' || (s.compare && !/save/i.test(p.badge || ''));
+    const badge = p.badge && p.badge !== 'Sale' ? p.badge : '';
     return `<article class="pcard reveal" style="--d:${(i || 0) % 4}">
-      <a class="pcard-img" href="#/product/${p.id}" aria-label="${esc(p.name)}">${p.badge ? `<span class="pill-y">${esc(p.badge)}</span>` : ''}${img(p)}</a>
+      <a class="pcard-img" href="#/product/${p.id}" aria-label="${esc(p.name)}">${badge ? `<span class="pill-y">${esc(badge)}</span>` : ''}${sale ? '<span class="sale-tag">Sale</span>' : ''}${img(p)}</a>
       <div class="pcard-body">
         <span class="pcard-cat">${esc(catName(p.cat))}</span>
         <h3 class="pcard-name"><a href="#/product/${p.id}">${esc(p.name)}</a></h3>
@@ -42,7 +62,7 @@
     const cats = PS.categories.filter((c) => c.id !== 'stacks');
     const stacks = PS.products.filter((p) => p.cat === 'stacks');
     const count = (id) => PS.products.filter((p) => p.cat === id).length;
-    return `<div class="announce"><span class="announce-roll"><span>Free shipping on orders ${PS.money0(PS.config.freeShip)}+</span><span>Orders before ${PS.company.cutoff} ship same day</span><span>A lot-matched COA ships in every box</span></span></div>
+    return `${dealBar()}
     <header class="site-header"><div class="container hdr">
       <a class="logo" href="#/" aria-label="Pepsoma home">pep<i>soma</i></a>
       <nav class="main-nav" aria-label="Main">
@@ -96,7 +116,7 @@
     return `<div class="line">
       <a class="line-img" href="#/product/${l.id}">${img(l.product, l.sizeObj.label)}</a>
       <div><a class="line-name" href="#/product/${l.id}">${esc(l.product.name)}</a>
-        <span class="line-meta">${esc(l.sizeObj.label)} · ${esc(l.planObj.short)}${l.planObj.pct ? ` <b class="save">−${l.planObj.pct}%</b>` : ''}</span>
+        <span class="line-meta">${esc(l.sizeObj.label)} · ${esc(l.planObj.short)}${l.planObj.pct ? ` <b class="save">−${l.planObj.pct}%</b>` : ''}${l.free ? ` <b class="save">${l.free} free</b>` : ''}</span>
         <div class="qty sm"><button class="qty-btn" data-line-dec="${esc(l.key)}" aria-label="Decrease">${icon('minus')}</button><input class="qty-input" value="${l.qty}" data-line-qty="${esc(l.key)}" aria-label="Quantity" inputmode="numeric"><button class="qty-btn" data-line-inc="${esc(l.key)}" aria-label="Increase">${icon('plus')}</button></div></div>
       <div class="line-right"><button class="line-remove" data-line-remove="${esc(l.key)}" aria-label="Remove ${esc(l.product.name)}">${icon('trash')}</button>
         <span class="line-price">${l.compare || l.planObj.pct ? `<s>${money((l.compare || l.base) * l.qty)}</s>` : ''}${money(l.total)}</span></div>
@@ -149,20 +169,23 @@
     const r = (i) => `class="rise" style="--i:${i}"`;
     return {
       html: `
-      <section class="hero"><div class="container hero-grid">
+      <section class="hero"><canvas class="hero-net" data-net aria-hidden="true"></canvas><div class="container hero-grid">
         <div class="hero-copy">
-          <span ${r(0)}><span class="trust-chip"><span class="live"></span>Independently tested · COA on every lot</span></span>
+          <span ${r(0)}><span class="trust-chip"><span class="live"></span>Third-party tested · COA on every lot</span></span>
           <h1><span class="line-mask" style="--i:1"><span>Research peptides,</span></span><span class="line-mask" style="--i:2"><span><span class="swap" data-swap>${['documented', 'verified', 'traceable'].map((w, i) => `<em class="serif ${i ? '' : 'on'}">${w}</em>`).join('')}</span> to the lot.</span></span></h1>
-          <p class="lead rise" style="--i:3">Pepsoma supplies high-purity peptides to laboratories and qualified researchers. Every vial is third-party tested, every lot is traceable, and orders ship within 24 hours.</p>
+          <p class="lead rise" style="--i:3">High-purity peptides for laboratory research. Third-party tested, traceable to the lot, dispatched within 24 hours.</p>
           <div class="btn-row rise" style="--i:4"><a class="btn btn-primary btn-lg" href="#/shop">SHOP PEPTIDES</a><a class="btn btn-yellow btn-lg" href="#/lab-tests"><em class="serif">View lab tests</em></a></div>
-          <ul class="hero-checks rise" style="--i:5">${checkItem(`≥${Math.floor(avgPurity)}% average HPLC purity`)}${checkItem('Lot-matched COA')}${checkItem(`Ships before ${PS.company.cutoff}`)}</ul>
+          <div class="hero-stats rise" style="--i:5">
+            <div><strong data-count="${avgPurity.toFixed(1)}" data-dec="1" data-suffix="%">0%</strong><span>avg. HPLC purity</span></div>
+            <div><strong data-count="${PS.allLots().length}">0</strong><span>lots tested</span></div>
+            <div><strong data-count="24" data-suffix="h">0h</strong><span>dispatch</span></div>
+          </div>
         </div>
         <div class="hero-art rise" style="--i:3" data-parallax>
-          <div class="hero-blob"></div>
+          <div class="hero-glow"></div>
           <div class="hero-vials" data-depth="1"><span class="hv hv1">${PS.vial(PS.getProduct('ghk-cu'), { theme: VT })}</span><span class="hv hv2">${PS.vial(hero, { theme: VT, size: '10 mg' })}</span><span class="hv hv3">${PS.vial(PS.getProduct('nad'), { theme: VT })}</span></div>
           <div class="float-chip fc1" data-depth="2">${icon('shield')}<div><strong>${sampleLot.purity}% purity</strong><small>Current lot · verified</small></div></div>
           <div class="float-chip fc2" data-depth="2.6">${icon('truck')}<div><strong>Ships today</strong><small>Order by ${PS.company.cutoff}</small></div></div>
-          <div class="float-chip fc3" data-depth="1.6">${icon('doc')}<div><strong>COA in the box</strong><small>Matched to your vial</small></div></div>
         </div>
       </div></section>
 
@@ -172,7 +195,7 @@
       </section>
 
       <section class="section"><div class="container">
-        <div class="sec-head center reveal"><h2>Choose your ${it('research stack')}</h2><p class="lead muted">Pre-built kits of complementary compounds, each vial with its own lot-matched COA. Save up to 15% more with a standing order.</p></div>
+        <div class="sec-head center reveal"><h2>Choose your ${it('research stack')}</h2><p class="lead muted">Complementary compounds, pre-kitted. Each vial ships with its own lot-matched COA.</p></div>
         <div class="stack-grid">${stacks.map((p, i) => {
           const s = p.sizes[0];
           return `<article class="stack-card reveal" style="--d:${i % 2}"><a href="#/product/${p.id}" class="stack-img">${img(p)}</a>
@@ -180,13 +203,6 @@
             <ul class="checks">${p.includes.map(([id, sz]) => checkItem(`${esc(PS.getProduct(id).name)} · ${PS.getSize(PS.getProduct(id), sz).label}`)).join('')}${checkItem('Lot-matched COA for each vial')}</ul>
             <div class="stack-foot"><div class="price">${money(s.price)} <s>${money(s.compare)}</s></div><a class="btn btn-primary btn-sm" href="#/product/${p.id}">Select stack</a></div></div></article>`;
         }).join('')}</div>
-      </div></section>
-
-      <section class="container"><div class="stats reveal">
-        <div class="stat"><strong data-count="${avgPurity.toFixed(1)}" data-dec="1" data-suffix="%">0%</strong><span>average HPLC purity, current lots</span></div>
-        <div class="stat"><strong data-count="${PS.allLots().length}">0</strong><span>lots tested and on record</span></div>
-        <div class="stat"><strong data-count="8">0</strong><span>tests on every certificate</span></div>
-        <div class="stat"><strong data-count="24" data-suffix="h">0h</strong><span>dispatch before ${PS.company.cutoff}</span></div>
       </div></section>
 
       <section class="section"><div class="container">
@@ -204,8 +220,8 @@
         <h2 class="center reveal">Inside every ${it('Pepsoma')} order</h2>
         <div class="split reveal" style="margin-top:40px">
           <div class="split-art art-box"><div class="box-card"><div class="box-vials">${PS.productImage(PS.getProduct('stack-recovery'), { theme: VT })}</div><div class="mini-coa"><span>${icon('doc')} Certificate of Analysis</span><strong>${sampleLot.code}</strong><div class="mini-bar"><i style="width:${sampleLot.purity}%"></i></div><small>Purity ${sampleLot.purity}% · Identity conforms</small></div></div></div>
-          <div class="split-copy"><h3 class="big">${it('Every shipment')} is built for researchers who:</h3>
-            <ul class="checks lg">${checkItem('Need documentation they can file. A printed, lot-matched COA ships in every box.')}${checkItem(`Can’t afford delays. Same-day dispatch before ${PS.company.cutoff} with tracking in hours.`)}${checkItem('Expect integrity. Tamper-evident seals, lot labels and protective, discreet packaging.')}</ul>
+          <div class="split-copy"><h3 class="big">${it('Every shipment')} includes</h3>
+            <ul class="checks lg">${checkItem('A printed, lot-matched Certificate of Analysis')}${checkItem(`Same-day dispatch before ${PS.company.cutoff}, with tracking`)}${checkItem('Tamper-evident seal, lot label and discreet packaging')}</ul>
             <a class="btn btn-primary btn-lg" href="#/shop">SHOP PEPTIDES</a></div>
         </div>
       </div></section>
@@ -239,8 +255,8 @@
       </div></section>
 
       <section class="closer" data-observe><span class="bracket tl"></span><span class="bracket br"></span><div class="container">
-        <h2>Research you can trace back to the lot.</h2>
-        <p>Independently tested · COA in every box · ships in 24 hours</p>
+        <h2>Traceable to the lot.</h2>
+        <p>Third-party tested · COA in every box · 24-hour dispatch</p>
         <div class="btn-row" style="justify-content:center"><a class="btn btn-primary btn-lg" href="#/shop">SHOP PEPTIDES</a><a class="btn btn-ghost btn-lg" href="#/lab-tests">Browse COAs</a></div>
       </div></section>`,
     };
@@ -321,7 +337,7 @@
               <div class="plans">${plans.map((pl, i) => `<label class="plan-opt ${i ? '' : 'selected'}"><input type="radio" name="plan" value="${pl.id}" ${i ? '' : 'checked'}>
                 <span class="plan-check">${icon('check')}</span>
                 <span class="plan-body"><strong>${pl.id === 'once' ? 'ONE-TIME PURCHASE' : `STANDING ORDER · ${pl.short.toUpperCase()}`}</strong>
-                <small>${pl.id === 'once' ? 'Billed once · volume savings apply' : `Billed <b data-plan-price="${pl.id}"></b> today, then every ${pl.weeks} weeks<br>Skip or cancel anytime`}</small></span>
+                <small>${pl.id === 'once' ? (PS.config.deal === 'bogo' ? 'Billed once · Buy 1 Get 1 free' : 'Billed once · volume savings apply') : `Billed <b data-plan-price="${pl.id}"></b> today, then every ${pl.weeks} weeks<br>Skip or cancel anytime`}</small></span>
                 <span class="plan-price">${pl.pct ? `<span class="pill-y">Save ${pl.pct}%</span>` : ''}<s data-plan-compare="${pl.id}"></s><b data-plan-price="${pl.id}"></b></span></label>`).join('')}</div>
               <div class="buy-row">${H.qty(1)}<button class="btn btn-primary btn-lg buy-btn" type="submit">ADD TO CART · <span data-line-price></span></button></div>
             </form>
@@ -392,7 +408,7 @@
     PS.$$('[data-mode-cycle]').forEach((b) => { b.dataset.mode = m; b.setAttribute('aria-label', label); const tip = b.querySelector('.theme-tip'); if (tip) tip.textContent = label; });
     PS.$$('[data-mode-set]').forEach((b) => { const on = b.dataset.modeSet === m; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = effective === 'dark' ? '#100a22' : '#ffffff';
+    if (meta) meta.content = effective === 'dark' ? '#0b1026' : '#ffffff';
   }
   function applyMode(m, fromEl) {
     PS.storage.set('mode', m);
@@ -439,7 +455,7 @@
     if (nav && !nav.contains(e.relatedTarget)) movePill(null);
   });
 
-  // header gains a hairline once you scroll
+  // header lifts into a floating rounded bar once you scroll
   addEventListener('scroll', () => { const h = document.querySelector('.site-header'); if (h) h.classList.toggle('scrolled', scrollY > 8); }, { passive: true });
 
   // headline word swap
@@ -479,6 +495,49 @@
     const card = e.target.closest && e.target.closest('.pcard');
     if (card && !card.contains(e.relatedTarget)) card.style.transform = '';
   });
+
+  // molecule network behind the hero headline: nodes drift, nearby ones link, all in the accent color
+  function startNet(cv) {
+    const ctx = cv.getContext('2d');
+    if (!ctx) return;
+    const rnd = PS.rng(7);
+    const nodes = Array.from({ length: 34 }, () => ({ x: rnd(), y: rnd(), vx: (rnd() - 0.5) * 0.000022, vy: (rnd() - 0.5) * 0.000022, r: 1.6 + rnd() * 2.2 }));
+    let w = 0, h = 0, color = '', frame = 0, last = 0, onScreen = true;
+    const size = () => { const r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1); w = r.width; h = r.height; cv.width = w * dpr; cv.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
+    const draw = () => {
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = ctx.fillStyle = ctx.shadowColor = color;
+      const reach = Math.max(120, Math.min(w, 1000) * 0.17);
+      ctx.shadowBlur = 0; ctx.lineWidth = 1;
+      for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i], b = nodes[j], d = Math.hypot((a.x - b.x) * w, (a.y - b.y) * h);
+        if (d > reach) continue;
+        ctx.globalAlpha = (1 - d / reach) * 0.4;
+        ctx.beginPath(); ctx.moveTo(a.x * w, a.y * h); ctx.lineTo(b.x * w, b.y * h); ctx.stroke();
+      }
+      ctx.shadowBlur = 14; ctx.globalAlpha = 0.85;
+      nodes.forEach((n) => { ctx.beginPath(); ctx.arc(n.x * w, n.y * h, n.r, 0, Math.PI * 2); ctx.fill(); });
+    };
+    size(); color = getComputedStyle(cv).color; draw();
+    if (reduced()) return;
+    const obs = 'IntersectionObserver' in window ? new IntersectionObserver(([en]) => { onScreen = en.isIntersecting; }) : null;
+    if (obs) obs.observe(cv);
+    addEventListener('resize', size);
+    const tick = (t) => {
+      if (!cv.isConnected) { removeEventListener('resize', size); if (obs) obs.disconnect(); return; }
+      requestAnimationFrame(tick);
+      const dt = Math.min(50, t - (last || t)); last = t;
+      if (!onScreen || document.hidden) return;
+      nodes.forEach((n) => {
+        n.x += n.vx * dt; n.y += n.vy * dt;
+        if (n.x < 0 || n.x > 1) n.vx *= -1;
+        if (n.y < 0 || n.y > 1) n.vy *= -1;
+      });
+      if (++frame % 30 === 0) color = getComputedStyle(cv).color; // follows light/dark switches
+      draw();
+    };
+    requestAnimationFrame(tick);
+  }
 
   // count-up numbers
   function countUp(el) {
@@ -532,6 +591,8 @@
     if (io) main.querySelectorAll('[data-count]:not([data-replay]), [data-observe], [data-loop]').forEach((el) => io.observe(el));
     else main.querySelectorAll('[data-count]').forEach(countUp);
     PS.$$('.theme-btn, .seg').length && syncModeUI();
+    const net = main.querySelector('[data-net]');
+    if (net) startNet(net);
     movePill(null);
   }
 
