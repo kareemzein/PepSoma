@@ -181,11 +181,11 @@
             <div><strong data-count="24" data-suffix="h">0h</strong><span>dispatch</span></div>
           </div>
         </div>
-        <div class="hero-art rise" style="--i:3" data-parallax>
+        <div class="hero-art rise" style="--i:3">
           <div class="hero-glow"></div>
-          <div class="hero-vials" data-depth="1"><span class="hv hv1">${PS.vial(PS.getProduct('ghk-cu'), { theme: VT })}</span><span class="hv hv2">${PS.vial(hero, { theme: VT, size: '10 mg' })}</span><span class="hv hv3">${PS.vial(PS.getProduct('nad'), { theme: VT })}</span></div>
-          <div class="float-chip fc1" data-depth="2">${icon('shield')}<div><strong>${sampleLot.purity}% purity</strong><small>Current lot · verified</small></div></div>
-          <div class="float-chip fc2" data-depth="2.6">${icon('truck')}<div><strong>Ships today</strong><small>Order by ${PS.company.cutoff}</small></div></div>
+          <div class="hero-vials"><span class="hv hv1">${PS.vial(PS.getProduct('ghk-cu'), { theme: VT })}</span><span class="hv hv2">${PS.vial(hero, { theme: VT, size: '10 mg' })}</span><span class="hv hv3">${PS.vial(PS.getProduct('nad'), { theme: VT })}</span></div>
+          <div class="float-chip fc1">${icon('shield')}<div><strong>${sampleLot.purity}% purity</strong><small>Current lot · verified</small></div></div>
+          <div class="float-chip fc2">${icon('truck')}<div><strong>Ships today</strong><small>Order by ${PS.company.cutoff}</small></div></div>
         </div>
       </div></section>
 
@@ -469,8 +469,7 @@
     words[next].classList.add('on');
   }, 2600);
 
-  // hero depth parallax + card spotlight/tilt
-  let raf = 0;
+  // product card spotlight/tilt
   document.addEventListener('pointermove', (e) => {
     if (e.pointerType === 'touch' || reduced()) return;
     const card = e.target.closest('.pcard');
@@ -479,17 +478,6 @@
       card.style.setProperty('--mx', px * 100 + '%'); card.style.setProperty('--my', py * 100 + '%');
       card.style.transform = `perspective(900px) rotateX(${(0.5 - py) * 5}deg) rotateY(${(px - 0.5) * 6}deg) translateY(-4px)`;
     }
-    const art = document.querySelector('[data-parallax]');
-    if (!art || raf) return;
-    raf = requestAnimationFrame(() => {
-      raf = 0;
-      const r = art.getBoundingClientRect();
-      if (r.bottom < 0 || r.top > innerHeight) return;
-      const dx = (e.clientX - (r.left + r.width / 2)) / innerWidth, dy = (e.clientY - (r.top + r.height / 2)) / innerHeight;
-      art.querySelectorAll('[data-depth]').forEach((el) => { const d = +el.dataset.depth; el.style.translate = `${dx * d * 22}px ${dy * d * 18}px`; });
-      const v = art.querySelector('.hero-vials');
-      if (v) v.style.transform = `rotateY(${dx * 10}deg) rotateX(${-dy * 6}deg)`;
-    });
   });
   document.addEventListener('pointerout', (e) => {
     const card = e.target.closest && e.target.closest('.pcard');

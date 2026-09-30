@@ -191,7 +191,7 @@ h2 { font-size: clamp(1.8rem, 3.4vw, 2.7rem); }
 .hero-glow { position: absolute; left: 50%; top: 56%; width: min(560px, 100%); aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; background: radial-gradient(circle, rgba(216,216,90,.5) 0, rgba(90,115,216,.3) 36%, transparent 68%); filter: blur(12px); animation: glow 7s ease-in-out infinite alternate; }
 .hero-glow::after { content: ''; position: absolute; left: 22%; right: 22%; bottom: 20%; height: 7%; border-radius: 50%; background: radial-gradient(closest-side, rgba(15,25,70,.28), transparent); }
 @keyframes glow { to { transform: scale(1.08); opacity: .85; } }
-.hero-vials { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 70px; transform-style: preserve-3d; transition: transform .6s var(--ease-out); }
+.hero-vials { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 70px; }
 .hv { display: block; transition: transform .6s var(--ease-out); }
 .hv1 { height: 250px; rotate: -16deg; translate: 34px -4px; animation: float 7s ease-in-out -1s infinite; }
 .hv2 { height: 370px; position: relative; z-index: 2; rotate: -5deg; animation: float 6s ease-in-out infinite; }
