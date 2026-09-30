@@ -23,9 +23,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
-      - run: rm -rf .handoffs  # session notes stay in the repo, not on the public site
+      # One site, two links: the store at the main address, the feedback page at /pepsoma-feedback/.
+      # Only these two folders are published (session notes and the README stay in the repo).
+      - name: Assemble site
+        run: |
+          mkdir _site
+          cp -R store/. _site/
+          cp -R pepsoma-feedback _site/pepsoma-feedback
+          touch _site/.nojekyll
+          # links from before the reorganization forward to where those pages live now
+          forward() {
+            mkdir -p "_site/$1"
+            printf '<!doctype html><meta charset="utf-8"><title>Pepsoma</title><script>location.replace("%s" + location.search + location.hash)</script><meta http-equiv="refresh" content="0; url=%s"><a href="%s">Continue</a>\n' "$2" "$2" "$2" > "_site/$1/index.html"
+          }
+          forward a ../
+          forward b ../pepsoma-feedback/designs/b/
+          forward v1 ../pepsoma-feedback/first-draft/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

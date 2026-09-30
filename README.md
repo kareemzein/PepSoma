@@ -3,7 +3,14 @@
 A working demo storefront for **pepsoma.com**, a research-use-only peptide supplier, plus the design feedback page used to choose its look.
 
 - **`store/`** is the storefront we're building. It started as design "Version A" (modeled on brellohealth.com) and was reworked from reviewer feedback: navy, periwinkle, cream and olive-yellow; Fraunces serif italics + DM Sans; follows the device's light/dark mode with a sun/moon toggle; floating header, count-up stats, molecule-network hero, live COA window, fly-to-cart, giant footer wordmark.
-- **`feedback/`** is the design feedback page: the two original designs embedded live, a board of similar sites to Like/Pass, a color picker, and a summary the reviewer sends back. The root URL forwards here for now.
+- **`pepsoma-feedback/`** is the design feedback page: the two original designs embedded live, a board of similar sites to Like/Pass, a color picker, and a summary the reviewer sends back.
+
+Both are published from this repo as one site with two links:
+
+| | Live link | Folder |
+|---|---|---|
+| Pepsoma (the store) | https://kareemzein.github.io/PepSoma/ | `store/` |
+| Pepsoma feedback | https://kareemzein.github.io/PepSoma/pepsoma-feedback/ | `pepsoma-feedback/` |
 
 ## What the store does
 
@@ -28,24 +35,22 @@ Everything is saved in the browser's `localStorage`. There's no backend, no card
 ```bash
 python3 -m http.server 8000
 # store:     http://localhost:8000/store/
-# feedback:  http://localhost:8000/feedback/
+# feedback:  http://localhost:8000/pepsoma-feedback/
 ```
 
-There's no build step and no dependencies.
+There's no build step and no dependencies. (Online, the store is served at the main address instead of `/store/`; the deploy step does that.)
 
 ## Deploy (GitHub Pages)
 
-`.github/workflows/pages.yml` deploys the site on every push to `main`.
+`.github/workflows/pages.yml` deploys on every push to `main`. It copies `store/` to the site root and `pepsoma-feedback/` beside it, adds forwarding pages for the old `/a/`, `/b/` and `/v1/` links, and publishes nothing else.
 1. Merge to `main`.
 2. Repo **Settings → Pages → Source: GitHub Actions**.
-3. For the custom domain: add a `CNAME` file containing `pepsoma.com` and point DNS at GitHub Pages. Only do this once you're ready, because it redirects the github.io URL.
+3. For the custom domain: set `pepsoma.com` under **Settings → Pages → Custom domain** and point DNS at GitHub Pages. The store then lives at pepsoma.com and the feedback page at pepsoma.com/pepsoma-feedback/. Only do this once you're ready, because it redirects the github.io URL.
 
 ## Project structure
 
 ```
-index.html               forwards the root URL to feedback/ (point it at store/ at launch)
-
-store/                   the storefront
+store/                   the storefront (published at the main address)
   index.html             page shell
   app.js                 header, footer, home / shop / product / cart / checkout / about pages, motion
   styles.css             the store's look (colors, type, layout)
@@ -57,7 +62,7 @@ store/                   the storefront
   js/ui.js               forms, default pages, cart drawer/modals, app boot
   css/base.css           base layout that styles.css builds on
 
-feedback/                design feedback page (sent to the reviewer)
+pepsoma-feedback/        design feedback page (published at /pepsoma-feedback/)
   index.html             the page
   first-draft/           the first version of the feedback page, kept so its old link works
   designs/               frozen copy of design A and B exactly as the reviewer saw them (don't edit)
@@ -68,7 +73,6 @@ To change prices, shipping, tiers or promo codes, edit `PS.config` in `store/js/
 
 ## Before a real launch
 
-- [ ] Point the root `index.html` at `store/` instead of `feedback/`
 - [ ] Fill in the bracketed placeholders in `PS.company` (`store/js/data.js`): business address, state of formation, county, and the phone number (currently a 555 placeholder)
 - [ ] **Have a lawyer review every policy.** They're starting templates for a US RUO supplier.
 - [ ] Replace the sample testimonials with real, verifiable reviews, or remove them
