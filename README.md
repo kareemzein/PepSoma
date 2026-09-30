@@ -49,6 +49,7 @@ You can also open `index.html` directly. There's no build step and no dependenci
 
 ```
 index.html            feedback page (live previews + reference board)
+originals/            frozen copy of Versions A and B as the reviewer saw them (used only by the feedback pages; don't edit)
 a/                    Version A: index.html, app.js (layout + pages), styles.css
 b/                    Version B: same shape
 shared/js/data.js     products, prices, categories, FAQs, company info   ← edit content here

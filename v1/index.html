@@ -485,7 +485,7 @@
           <button type="button" data-view="computer" aria-pressed="false">Computer</button>
           <button type="button" data-view="phone" aria-pressed="false">Phone</button>
         </div>
-        <a class="open-full" href="../a/index.html?from=feedback">Open full screen →</a>
+        <a class="open-full" href="../originals/a/index.html?from=feedback">Open full screen →</a>
       </div>
 
       <div class="preview-stage" data-stage="a">
@@ -520,7 +520,7 @@
           <button type="button" data-view="computer" aria-pressed="false">Computer</button>
           <button type="button" data-view="phone" aria-pressed="false">Phone</button>
         </div>
-        <a class="open-full" href="../b/index.html?from=feedback">Open full screen →</a>
+        <a class="open-full" href="../originals/b/index.html?from=feedback">Open full screen →</a>
       </div>
 
       <div class="preview-stage" data-stage="b">
@@ -1225,7 +1225,7 @@
   function ensureIframe(which){
     if (iframes[which]) return;
     var iframe = document.createElement('iframe');
-    iframe.src = '../' + which + '/index.html';
+    iframe.src = '../originals/' + which + '/index.html';
     iframe.title = 'Design ' + which.toUpperCase() + ' preview';
     iframes[which] = iframe;
     // Place it in whichever viewport (computer/phone) is current for this
