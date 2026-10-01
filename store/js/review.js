@@ -1,6 +1,7 @@
 /* Pepsoma — review mode: point at any part of the site and leave a comment on it.
    Turn on with ?review in the address (or the /review/ link); it stays on in this browser until "Exit review".
-   Comments live in localStorage (pepsoma.reviewNotes) and export as plain text. */
+   Comments live in localStorage (pepsoma.reviewNotes) and export as plain text.
+   Each comment is signed with the current commenter; names are kept per device (pepsoma.reviewPeople) and N cycles them. */
 (function () {
   const S = PS.storage;
   if (/[?&]review(=|&|$)/.test(location.search)) S.set('review', true);
@@ -10,7 +11,26 @@
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   let notes = S.get('reviewNotes', []);
   const save = () => S.set('reviewNotes', notes);
-  let mode = 'browse', hoverEl = null, picked = null, widen = [], editing = null;
+  let mode = 'browse', hoverEl = null, picked = null, widen = [], editing = null, filterBy = null;
+  // removing a name from `people` only takes it off the switcher; their comments keep their `by`
+  let people = S.get('reviewPeople', []), who = S.get('reviewWho', null);
+  if (who && !people.includes(who)) who = null;
+  const savePeople = () => { S.set('reviewPeople', people); S.set('reviewWho', who); };
+  const COLORS = ['#ff5a1f', '#2563eb', '#16a34a', '#9333ea', '#db2777', '#0891b2', '#ca8a04', '#4f46e5'];
+  // each new name gets the next unused color, remembered so a person keeps theirs
+  const colorOf = S.get('reviewColors', {});
+  const color = (name) => {
+    if (!name) return '#8a857c';
+    if (!(name in colorOf)) {
+      const used = Object.values(colorOf);
+      let i = 0;
+      while (used.includes(i) && i < COLORS.length) i++;
+      colorOf[name] = i < COLORS.length ? i : used.length % COLORS.length;
+      S.set('reviewColors', colorOf);
+    }
+    return COLORS[colorOf[name]];
+  };
+  const byName = (n) => n.by || 'No name';
 
   /* ---------- styles ---------- */
   document.head.insertAdjacentHTML('beforeend', `<style>
@@ -55,7 +75,42 @@
   .rv-item.rv-done .rv-txt { text-decoration: line-through; color: #8a857c; }
   .rv-empty { color: #6b665d; padding: 24px 0; }
   .rv-flash { outline: 3px solid #ff5a1f !important; outline-offset: 3px; transition: outline-color .6s; }
+  .rv-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+  .rv-bar .rv-who { display: inline-flex; align-items: center; gap: 7px; color: #fff; max-width: 150px; }
+  .rv-bar .rv-who .rv-nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rv-bar .rv-sep { width: 1px; background: rgba(255,255,255,.18); margin: 6px 2px; }
+  .rv-scrim { z-index: 2147483640; inset: 0; background: rgba(10,10,14,.45); display: grid; place-items: center; padding: 16px; }
+  .rv-card { width: min(380px, 100%); padding: 20px; border-radius: 18px; background: #fff; color: #1b1a17; box-shadow: 0 24px 70px rgba(0,0,0,.35); }
+  .rv-card h3 { font-size: 18px; font-weight: 700; margin: 0 0 4px; color: #1b1a17; }
+  .rv-card .rv-sub { font-size: 13px; color: #6b665d; margin: 0 0 14px; }
+  .rv-card input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid #d9d3c8; background: #faf8f4; color: #1b1a17; outline: none; }
+  .rv-card input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.18); }
+  .rv-label { font-size: 12px; font-weight: 700; color: #6b665d; text-transform: uppercase; letter-spacing: .06em; margin: 18px 0 6px; }
+  .rv-person { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .rv-person .rv-pick { flex: 1; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid #eee8de; background: #faf8f4; color: #1b1a17; text-align: left; font-weight: 600; }
+  .rv-person .rv-pick:hover { border-color: #d9d3c8; }
+  .rv-person .rv-pick[aria-current="true"] { border-color: #1b1a17; background: #fff; }
+  .rv-person .rv-pick small { margin-left: auto; font-size: 12px; color: #6b665d; font-weight: 500; }
+  .rv-x { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #e6e1d8; background: #fff; color: #6b665d; padding: 0; font-size: 15px; line-height: 1; }
+  .rv-x:hover { color: #c4321a; border-color: #c4321a; }
+  .rv-kbd { font-size: 12px; color: #6b665d; margin-top: 14px; }
+  .rv-kbd kbd, .rv-hint kbd { font: 700 11px/1 "DM Sans", system-ui, sans-serif; padding: 2px 6px; border-radius: 5px; border: 1px solid currentColor; opacity: .85; }
+  .rv-hud { z-index: 2147483650; left: 50%; top: 50%; transform: translate(-50%, -50%); min-width: 220px; padding: 10px; border-radius: 20px; background: rgba(30,30,32,.82); backdrop-filter: blur(20px) saturate(1.6); -webkit-backdrop-filter: blur(20px) saturate(1.6); box-shadow: 0 20px 60px rgba(0,0,0,.35); pointer-events: none; opacity: 0; transition: opacity .18s; }
+  .rv-hud.rv-show { opacity: 1; transition: none; }
+  .rv-hud div { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 12px; color: rgba(255,255,255,.75); font-size: 16px; font-weight: 600; }
+  .rv-hud div.rv-cur { background: rgba(255,255,255,.18); color: #fff; }
+  .rv-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .rv-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #e6e1d8; background: #fff; color: #1b1a17; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 600; }
+  .rv-chip[aria-pressed="true"] { background: #1b1a17; color: #fff; border-color: #1b1a17; }
+  .rv-item .rv-by { font-weight: 700; color: #1b1a17; }
+  .rv-danger { margin-top: 28px; padding: 14px; border-radius: 12px; border: 1px dashed #e3b3a8; background: #fff8f6; }
+  .rv-danger .rv-label { margin-top: 0; color: #c4321a; }
+  .rv-danger p { font-size: 12px; color: #6b665d; margin: 0 0 10px; }
+  .rv-danger .rv-row { margin-top: 6px; }
   @media (max-width: 600px) {
+    .rv-bar button { padding: 10px 10px; }
+    .rv-bar .rv-who { max-width: 96px; }
+    .rv-bar .rv-lbl { display: none; }
     .rv-bar { left: 50%; right: auto; transform: translateX(-50%); bottom: 12px; }
     .rv-hint { left: 16px; right: 16px; bottom: 70px; text-align: center; }
     .rv-pop { left: 8px !important; right: 8px; top: auto !important; bottom: 8px; width: auto; }
@@ -65,10 +120,14 @@
   /* ---------- UI shell ---------- */
   const ui = (html) => { const d = document.createElement('div'); d.innerHTML = html.trim(); const el = d.firstChild; el.classList.add('rv'); el.dataset.rv = ''; document.body.appendChild(el); return el; };
   const bar = ui(`<div class="rv-bar" role="toolbar" aria-label="Review mode">
+    <button class="rv-who" data-who title="Who's commenting (N to switch)"><span class="rv-dot"></span><span class="rv-nm"></span></button>
+    <span class="rv-sep"></span>
     <button data-m="browse" aria-pressed="true">Browse</button>
     <button data-m="comment" aria-pressed="false">Comment</button>
-    <button data-list>Comments<span class="rv-count">0</span></button></div>`);
-  const hint = ui('<div class="rv-hint" hidden>Click anything to comment on it · C to toggle · Esc to stop</div>');
+    <button data-list><span class="rv-lbl">Comments</span><span class="rv-count">0</span></button></div>`);
+  const hint = ui('<div class="rv-hint" hidden>Click anything to comment on it · <kbd>C</kbd> toggle · <kbd>N</kbd> switch person · <kbd>Esc</kbd> stop</div>');
+  const picker = ui('<div class="rv-scrim" hidden></div>');
+  const hud = ui('<div class="rv-hud" aria-live="polite"></div>');
   const hl = ui('<div class="rv-hl" hidden></div>');
   const tag = ui('<div class="rv-tag" hidden></div>');
   const pins = ui('<div style="inset:0;pointer-events:none"></div>');
@@ -106,6 +165,7 @@
 
   /* ---------- modes ---------- */
   function setMode(m) {
+    if (m === 'comment' && !who) { openPicker('comment'); return; }
     mode = m;
     document.documentElement.classList.toggle('rv-on', m === 'comment');
     bar.querySelectorAll('[data-m]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.m === m)));
@@ -117,7 +177,83 @@
     if (!b) return;
     if (b.dataset.m) { closePop(); setMode(b.dataset.m); }
     if ('list' in b.dataset) openPanel();
+    if ('who' in b.dataset) openPicker();
   });
+
+  /* ---------- who's commenting ---------- */
+  let afterPick = null;
+  function showWho() {
+    $('.rv-dot', bar).style.background = color(who);
+    $('.rv-nm', bar).textContent = who || 'Add name';
+  }
+  function setWho(name, flash) {
+    who = name;
+    savePeople();
+    showWho();
+    if (flash && who) showHud();
+  }
+  function renderPicker() {
+    const count = (p) => notes.filter((n) => n.by === p).length;
+    picker.innerHTML = `<div class="rv-card" role="dialog" aria-modal="true" aria-label="Who's commenting">
+      <h3>Who's commenting?</h3>
+      <p class="rv-sub">Your comments are saved under this name. Switch any time the laptop changes hands.</p>
+      <form class="rv-row" style="margin:0" data-add><input placeholder="Type your name" maxlength="40" autocomplete="off"><button class="rv-btn rv-main">Start</button></form>
+      ${people.length ? `<div class="rv-label">On this device</div>` + people.map((p) => `<div class="rv-person">
+        <button class="rv-pick" data-pick="${esc(p)}" aria-current="${p === who}"><span class="rv-dot" style="background:${color(p)}"></span>${esc(p)}<small>${count(p)} comment${count(p) === 1 ? '' : 's'}</small></button>
+        <button class="rv-x" data-unlist="${esc(p)}" title="Take ${esc(p)} off this list (keeps their comments)" aria-label="Remove ${esc(p)} from the list">×</button></div>`).join('') : ''}
+      <div class="rv-row"><span class="rv-kbd">Press <kbd>N</kbd> to switch people${people.length > 1 ? '' : ' once there are two'}</span><span class="rv-grow"></span><button class="rv-btn rv-sm" data-later>${who ? 'Done' : 'Not now'}</button></div>
+    </div>`;
+  }
+  function openPicker(then) {
+    afterPick = then || null;
+    closePop();
+    closePanel();
+    renderPicker();
+    picker.hidden = false;
+    $('input', picker).focus();
+  }
+  function closePicker() {
+    picker.hidden = true;
+    const then = afterPick;
+    afterPick = null;
+    if (then === 'comment' && who) setMode('comment');
+  }
+  picker.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = $('input', picker).value.replace(/\s+/g, ' ').trim();
+    if (!name) { $('input', picker).focus(); return; }
+    const same = people.find((p) => p.toLowerCase() === name.toLowerCase());
+    if (!same) people.push(name);
+    setWho(same || name, true);
+    closePicker();
+  });
+  picker.addEventListener('click', (e) => {
+    if (e.target === picker || e.target.closest('[data-later]')) { closePicker(); return; }
+    const pick = e.target.closest('[data-pick]'), un = e.target.closest('[data-unlist]');
+    if (pick) { setWho(pick.dataset.pick, true); closePicker(); }
+    if (un) {
+      people = people.filter((p) => p !== un.dataset.unlist);
+      if (who === un.dataset.unlist) who = null;
+      savePeople();
+      showWho();
+      renderPicker();
+      $('input', picker).focus();
+    }
+  });
+
+  // like the keyboard-language switcher: a list mid-screen with the current person lit, fading after the last press
+  let hudTimer = 0;
+  function showHud() {
+    hud.innerHTML = people.map((p) => `<div class="${p === who ? 'rv-cur' : ''}"><span class="rv-dot" style="background:${color(p)}"></span>${esc(p)}</div>`).join('');
+    hud.classList.add('rv-show');
+    clearTimeout(hudTimer);
+    hudTimer = setTimeout(() => hud.classList.remove('rv-show'), 900);
+  }
+  function cycleWho(step) {
+    if (!people.length) { openPicker(); return; }
+    const i = people.indexOf(who);
+    setWho(people[(i + step + people.length) % people.length], true);
+  }
 
   function box(el, cls) {
     const r = el.getBoundingClientRect();
@@ -152,13 +288,15 @@
   document.addEventListener('keydown', (e) => {
     const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement && document.activeElement.tagName) || (document.activeElement && document.activeElement.isContentEditable);
     if (e.key === 'Escape') {
-      if (!pop.hidden) { closePop(); e.preventDefault(); }
+      if (!picker.hidden) closePicker();
+      else if (!pop.hidden) { closePop(); e.preventDefault(); }
       else if (!panel.hidden) closePanel();
       else if (mode === 'comment') setMode('browse');
       return;
     }
-    if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (typing || e.metaKey || e.ctrlKey || e.altKey || !picker.hidden) return;
     if (e.key === 'c' || e.key === 'C') { closePop(); setMode(mode === 'comment' ? 'browse' : 'comment'); }
+    if (e.key === 'n' || e.key === 'N') cycleWho(e.shiftKey ? -1 : 1);
   }, true);
 
   /* ---------- the comment box ---------- */
@@ -215,7 +353,7 @@
         const el = picked;
         notes.push({
           n: notes.reduce((m, x) => Math.max(m, x.n), 0) + 1,
-          page: route(), sel: el ? selectorOf(el) : null, text: el ? snippet(el) : '', what: el ? describe(el) : 'Whole page',
+          by: who, page: route(), sel: el ? selectorOf(el) : null, text: el ? snippet(el) : '', what: el ? describe(el) : 'Whole page',
           cls: el ? el.tagName.toLowerCase() + classes(el) : '',
           body, width: innerWidth, theme: document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
           at: new Date().toISOString(),
@@ -232,7 +370,7 @@
   function paint() {
     bar.querySelector('.rv-count').textContent = notes.filter((n) => !n.done).length;
     const here = notes.filter((n) => n.page === route() && n.sel);
-    pins.innerHTML = here.map((n) => `<button class="rv rv-pin${n.done ? ' rv-done' : ''}" data-n="${n.n}" data-rv title="${esc(n.body)}" style="pointer-events:auto">${n.n}</button>`).join('');
+    pins.innerHTML = here.map((n) => `<button class="rv rv-pin${n.done ? ' rv-done' : ''}" data-n="${n.n}" data-rv title="${esc(byName(n) + ': ' + n.body)}" style="pointer-events:auto${n.done ? '' : ';background:' + color(n.by)}">${n.n}</button>`).join('');
     if (!panel.hidden) renderPanel();
   }
   function track() {
@@ -258,7 +396,11 @@
 
   /* ---------- the list of all comments ---------- */
   function renderPanel() {
-    const pages = [...new Set(notes.map((n) => n.page))];
+    const authors = [...new Set(notes.map(byName))];
+    if (filterBy && !authors.includes(filterBy)) filterBy = null;
+    const shown = filterBy ? notes.filter((n) => byName(n) === filterBy) : notes;
+    const pages = [...new Set(shown.map((n) => n.page))];
+    const count = (a) => notes.filter((n) => byName(n) === a).length;
     panel.innerHTML = `<header>
         <h2><span class="rv-grow">Comments (${notes.length})</span><button class="rv-btn rv-sm" data-p="close" aria-label="Close">✕</button></h2>
         <div class="rv-tools">
@@ -267,11 +409,18 @@
           <button class="rv-btn rv-sm" data-p="download"${notes.length ? '' : ' disabled'}>Download</button>
           <button class="rv-btn rv-sm rv-red" data-p="clear"${notes.length ? '' : ' disabled'}>Clear all</button>
           <button class="rv-btn rv-sm" data-p="exit">Exit review</button>
-        </div></header>
+        </div>
+        ${authors.length > 1 ? `<div class="rv-filters"><button class="rv-chip" data-f="" aria-pressed="${!filterBy}">Everyone (${notes.length})</button>` +
+          authors.map((a) => `<button class="rv-chip" data-f="${esc(a)}" aria-pressed="${a === filterBy}"><span class="rv-dot" style="background:${color(a === 'No name' ? null : a)}"></span>${esc(a)} (${count(a)})</button>`).join('') + '</div>' : ''}
+      </header>
       <div class="rv-list">${notes.length ? pages.map((p) => `<div class="rv-page">${esc(pageName(p))}</div>` +
-        notes.filter((n) => n.page === p).map((n) => `<button class="rv-item${n.done ? ' rv-done' : ''}" data-go="${n.n}">
-          <span class="rv-pin${n.done ? ' rv-done' : ''}">${n.n}</span>
-          <span><div class="rv-el">${esc(n.what)}</div><div class="rv-txt">${esc(n.body)}</div></span></button>`).join('')).join('')
+        shown.filter((n) => n.page === p).map((n) => `<button class="rv-item${n.done ? ' rv-done' : ''}" data-go="${n.n}">
+          <span class="rv-pin${n.done ? ' rv-done' : ''}"${n.done ? '' : ` style="background:${color(n.by)}"`}>${n.n}</span>
+          <span><div class="rv-el"><span class="rv-by">${esc(byName(n))}</span> · ${esc(n.what)}</div><div class="rv-txt">${esc(n.body)}</div></span></button>`).join('')).join('') +
+          `<div class="rv-danger"><div class="rv-label">Delete one person's comments</div>
+            <p>Separate from taking a name off the switcher. This permanently removes what they wrote.</p>
+            ${authors.map((a) => `<div class="rv-row"><span class="rv-dot" style="background:${color(a === 'No name' ? null : a)}"></span><span class="rv-grow">${esc(a)} · ${count(a)}</span><button class="rv-btn rv-sm rv-red" data-del-by="${esc(a)}">Delete ${count(a)}</button></div>`).join('')}
+          </div>`
         : '<p class="rv-empty">No comments yet. Switch to <b>Comment</b> and click any part of the page.</p>'}</div>`;
   }
   function openPanel() { closePop(); setMode('browse'); renderPanel(); panel.hidden = false; }
@@ -279,11 +428,12 @@
 
   function exportText() {
     const day = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    let out = `PEPSOMA — REVIEW COMMENTS (${notes.length}) · ${day}\n`;
+    const authors = [...new Set(notes.map(byName))];
+    let out = `PEPSOMA — REVIEW COMMENTS (${notes.length}) · ${day}\nFrom: ${authors.map((a) => `${a} (${notes.filter((n) => byName(n) === a).length})`).join(', ')}\n`;
     [...new Set(notes.map((n) => n.page))].forEach((p) => {
       out += `\n${pageName(p).toUpperCase()}  (#${p})\n`;
       notes.filter((n) => n.page === p).forEach((n) => {
-        out += `${n.n}. ${n.what}${n.done ? '  [done]' : ''}\n   ${n.body.replace(/\n/g, '\n   ')}\n   (${n.width < 700 ? 'phone' : n.width < 1100 ? 'tablet' : 'desktop'} ${n.width}px, ${n.theme}${n.sel ? ` · ${n.cls} · ${n.sel}` : ''})\n`;
+        out += `${n.n}. [${byName(n)}] ${n.what}${n.done ? '  [done]' : ''}\n   ${n.body.replace(/\n/g, '\n   ')}\n   (${n.width < 700 ? 'phone' : n.width < 1100 ? 'tablet' : 'desktop'} ${n.width}px, ${n.theme}${n.sel ? ` · ${n.cls} · ${n.sel}` : ''})\n`;
       });
     });
     return out;
@@ -300,6 +450,14 @@
         el.scrollIntoView({ block: 'center', behavior: 'smooth' });
         setTimeout(() => openPop(el, n), 450);
       }, 120);
+      return;
+    }
+    const f = e.target.closest('[data-f]');
+    if (f) { filterBy = f.dataset.f || null; renderPanel(); return; }
+    const del = e.target.closest('[data-del-by]');
+    if (del) {
+      const a = del.dataset.delBy, k = notes.filter((n) => byName(n) === a).length;
+      if (confirm(`Delete all ${k} of ${a}'s comments? This can't be undone.`)) { notes = notes.filter((n) => byName(n) !== a); save(); paint(); }
       return;
     }
     const b = e.target.closest('[data-p]');
@@ -327,6 +485,8 @@
     }
   });
 
+  showWho();
   paint();
   requestAnimationFrame(track);
+  if (!who) openPicker();
 })();

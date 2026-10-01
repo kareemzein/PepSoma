@@ -61,7 +61,7 @@ store/                   the storefront (published at the main address)
   js/visuals.js          SVG vials, lot/COA data, chromatograms
   js/policies.js         all policy pages
   js/ui.js               forms, default pages, cart drawer/modals, app boot
-  js/review.js           review mode: Browse/Comment toggle, click any element to comment, export (only runs with ?review)
+  js/review.js           review mode: Browse/Comment toggle, click any element to comment, commenter names (N switches), export (only runs with ?review)
   css/base.css           base layout that styles.css builds on
 
 pepsoma-feedback/        design feedback page (published at /pepsoma-feedback/)
