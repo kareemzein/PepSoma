@@ -590,12 +590,12 @@
   PS.boot({ name: 'a', vialTheme: VT, cartDelay: 560, header, footer, drawer, summary, pageHead, ageGate, ageDenied, cookieBanner, views, afterRender });
   syncModeUI();
 
-  // opening, once per visit (index.html sets html.opening): the mark traces itself, then its middle opens
+  // opening, the first time the site is opened in this browser (index.html sets html.opening): the mark traces itself, then its middle opens
   // and you fly through onto the page while the page's own entrance replays behind it. A tap skips ahead.
   (function opening() {
     const root = document.documentElement;
     if (!root.classList.contains('opening')) return;
-    try { sessionStorage.setItem('pepsoma.opened', '1'); } catch (e) { /* ignore */ }
+    try { localStorage.setItem('pepsoma.opened', '1'); } catch (e) { /* ignore */ }
     const cover = document.createElement('div');
     cover.className = 'opening-cover';
     cover.setAttribute('aria-hidden', 'true');

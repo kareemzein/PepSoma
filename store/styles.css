@@ -116,7 +116,7 @@ h2 { font-size: clamp(1.8rem, 3.4vw, 2.7rem); }
 #view.page-enter { animation: pageIn .5s var(--ease-out); }
 @keyframes pageIn { from { opacity: 0; transform: translateY(10px); } }
 
-/* opening (once per visit): the mark traces itself, then its middle opens and you fly through onto the page.
+/* opening (first visit in this browser only): the mark traces itself, then its middle opens and you fly through onto the page.
    html.opening is set in index.html before first paint; its ::after holds the cover until app.js builds it. */
 html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; background: var(--cream); }
 .opening-cover { position: fixed; inset: 0; z-index: 200; cursor: pointer; }

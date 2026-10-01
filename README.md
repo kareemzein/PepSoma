@@ -2,7 +2,7 @@
 
 A working demo storefront for **pepsoma.com**, a research-use-only peptide supplier, plus the design feedback page used to choose its look.
 
-- **`store/`** is the storefront we're building. It started as design "Version A" (modeled on brellohealth.com) and was reworked from reviewer feedback: navy, periwinkle, cream and olive-yellow; Fraunces serif italics + DM Sans; follows the device's light/dark mode with a sun/moon toggle; a once-per-visit opening that flies through the Pepsoma mark (Robinhood-style); floating header, count-up stats, molecule-network hero, live COA window, fly-to-cart, giant footer wordmark.
+- **`store/`** is the storefront we're building. It started as design "Version A" (modeled on brellohealth.com) and was reworked from reviewer feedback: navy, periwinkle, cream and olive-yellow; Fraunces serif italics + DM Sans; follows the device's light/dark mode with a sun/moon toggle; a first-visit opening that flies through the Pepsoma mark (Robinhood-style); floating header, count-up stats, molecule-network hero, live COA window, fly-to-cart, giant footer wordmark.
 - **`pepsoma-feedback/`** is the design feedback page: the two original designs embedded live, a board of similar sites to Like/Pass, a color picker, and a summary the reviewer sends back.
 
 Both are published from this repo as one site with two links:
