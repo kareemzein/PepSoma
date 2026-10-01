@@ -600,11 +600,9 @@
     cover.className = 'opening-cover';
     cover.setAttribute('aria-hidden', 'true');
     cover.innerHTML = `<svg viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
-      <defs><filter id="oc-blur" filterUnits="userSpaceOnUse" x="420" y="420" width="160" height="160"><feGaussianBlur stdDeviation="3"/></filter><mask id="oc-mask"><rect width="1000" height="1000" fill="#fff"/><g class="oc-hole"><rect x="468" y="468" width="64" height="64" rx="16" fill="#000"/></g></mask></defs>
+      <defs><mask id="oc-mask"><rect width="1000" height="1000" fill="#fff"/><g class="oc-hole"><rect x="468" y="468" width="64" height="64" rx="16" fill="#000"/></g></mask></defs>
       <rect class="oc-bg" width="1000" height="1000" mask="url(#oc-mask)"/>
       <g class="oc-mark"><rect class="oc-fill" x="468" y="468" width="64" height="64" rx="16"/>
-        <path class="oc-line oc-glow" pathLength="100" d="M500 532H516A16 16 0 0 0 532 516V484A16 16 0 0 0 516 468H500" filter="url(#oc-blur)"/>
-        <path class="oc-line oc-glow" pathLength="100" d="M500 532H484A16 16 0 0 1 468 516V484A16 16 0 0 1 484 468H500" filter="url(#oc-blur)"/>
         <path class="oc-line" pathLength="100" d="M500 532H516A16 16 0 0 0 532 516V484A16 16 0 0 0 516 468H500"/>
         <path class="oc-line" pathLength="100" d="M500 532H484A16 16 0 0 1 468 516V484A16 16 0 0 1 484 468H500"/>
         <text class="oc-p" x="500" y="512" text-anchor="middle">p</text></g>

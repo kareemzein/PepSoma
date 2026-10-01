@@ -127,8 +127,6 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 /* two halves start together at the bottom centre and meet at the top, so the outline has no start point or seam;
    the offset starts just past the dash so no round-cap dot shows before the trace begins */
 .oc-line { fill: none; stroke: var(--text); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 100 110; stroke-dashoffset: 101; }
-/* a blurred copy of the line in the accent colour traces underneath it as a soft glow, then fades as the fill blooms */
-.oc-glow { stroke: var(--accent); stroke-width: 7; opacity: .7; }
 .oc-fill { fill: #1b2d74; opacity: 0; transform: scale(.55); }
 .oc-p { font: italic 700 36px Georgia, serif; fill: #d8d85a; opacity: 0; transform: translateY(3px); }
 .oc-word { position: absolute; left: 50%; top: calc(50% + max(100vw, 100vh) * .032 + 24px); transform: translateX(-50%); display: grid; justify-items: center; gap: 6px; opacity: 0; white-space: nowrap; }
@@ -136,7 +134,6 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .oc-word .logo { font-size: 2.6rem; }
 /* play: trace the outline, settle it into the mark's navy as the fill blooms from the middle, then the "p" and the wordmark */
 .opening-cover.play .oc-line { animation: ocTrace .9s .15s cubic-bezier(.65,0,.35,1) forwards, ocInk .5s .95s ease forwards; }
-.opening-cover.play .oc-glow { animation: ocTrace .9s .15s cubic-bezier(.65,0,.35,1) forwards, ocOut .6s .95s ease forwards; }
 .opening-cover.play .oc-fill { animation: ocBloom .6s .9s var(--ease-out) forwards; }
 .opening-cover.play .oc-p { animation: ocRise .5s 1.3s var(--ease-out) forwards; }
 .opening-cover.play .oc-word { animation: ocWordIn .7s 1.55s var(--ease-out) forwards; }

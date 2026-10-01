@@ -2,7 +2,7 @@
    Turn on with ?review in the address (or the /review/ link); it stays on in that tab until "Exit review" or the tab closes.
    Comments live in localStorage (pepsoma.reviewNotes) and export as plain text.
    Each comment is signed with the current commenter; names are kept per device (pepsoma.reviewPeople) and N cycles them.
-   With SHEET_URL set, every comment is also sent to a Google Sheet (setup: tools/review-sheet.gs), and the panel can show everyone's comments from it. */
+   With SHEET_URL set, every comment is also sent to a Google Sheet (setup: tools/review-sheet.gs), and the panel can show everyone's comments from it (password checked by the script). */
 (function () {
   const S = PS.storage;
   // per tab (sessionStorage), so the plain link always opens the normal store
@@ -87,6 +87,9 @@
   .rv-sync { font-size: 12px; color: #6b665d; margin: -4px 0 10px; }
   .rv-sync.rv-warn { color: #c4321a; }
   .rv-sync .rv-btn { margin-left: 6px; }
+  .rv-key { display: flex; gap: 6px; margin: 0 0 10px; }
+  .rv-key input { flex: 1; min-width: 0; padding: 7px 10px; border-radius: 10px; border: 1px solid #d9d3c8; background: #faf8f4; color: #1b1a17; outline: none; }
+  .rv-key input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.18); }
   .rv-panel .rv-tools { display: flex; flex-wrap: wrap; gap: 6px; }
   .rv-list { flex: 1; overflow-y: auto; padding: 8px 18px 24px; }
   .rv-page { font-size: 12px; font-weight: 700; color: #6b665d; text-transform: uppercase; letter-spacing: .06em; margin: 18px 0 6px; }
@@ -455,6 +458,7 @@
 
   /* ---------- the list of all comments ---------- */
   function renderPanel() {
+    const typed = $('[data-key] input', panel), keep = typed && [typed.value, document.activeElement === typed];
     const all = list(), mine = source === 'local';
     const authors = [...new Set(all.map(byName))];
     const shown = filterBy ? all.filter((n) => byName(n) === filterBy) : all;
@@ -463,10 +467,11 @@
     panel.innerHTML = `<header>
         <h2><span class="rv-grow">Comments (${all.length})</span><button class="rv-btn rv-sm" data-p="close" aria-label="Close">✕</button></h2>
         ${SHEET_URL ? `<div class="rv-filters" style="margin:0 0 10px"><button class="rv-chip" data-src="local" aria-pressed="${mine}">This laptop</button><button class="rv-chip" data-src="sheet" aria-pressed="${!mine}">Everyone (sheet)</button></div>
-        <p class="rv-sync">${syncText()}</p>` : ''}
+        <div class="rv-sync">${syncText()}</div>
+        ${!mine && sheetState === 'locked' ? `<form class="rv-key" data-key><input type="password" placeholder="Password" aria-label="Password for everyone's comments" autocomplete="current-password"><button class="rv-btn rv-sm rv-main">Unlock</button></form>` : ''}` : ''}
         <div class="rv-tools">
           <button class="rv-btn rv-sm rv-main" data-p="page">+ Comment on this page</button>
-          ${mine ? '' : '<button class="rv-btn rv-sm" data-p="refresh">Refresh</button>'}
+          ${mine || sheetState === 'locked' ? '' : '<button class="rv-btn rv-sm" data-p="refresh">Refresh</button><button class="rv-btn rv-sm" data-p="lock">Lock</button>'}
           <button class="rv-btn rv-sm" data-p="copy"${all.length ? '' : ' disabled'}>Copy all</button>
           <button class="rv-btn rv-sm" data-p="download"${all.length ? '' : ' disabled'}>Download</button>
           ${mine ? `<button class="rv-btn rv-sm rv-red" data-p="clear"${all.length ? '' : ' disabled'}>Clear all</button>` : ''}
@@ -484,6 +489,8 @@
             ${authors.map((a) => `<div class="rv-row"><span class="rv-dot" style="background:${color(a === 'No name' ? null : a)}"></span><span class="rv-grow">${esc(a)} · ${count(a)}</span><button class="rv-btn rv-sm rv-red" data-del-by="${esc(a)}">Delete ${count(a)}</button></div>`).join('')}
           </div>` : '')
         : mine || sheetState === 'ok' ? '<p class="rv-empty">No comments yet. Switch to <b>Comment</b> and click any part of the page.</p>' : ''}</div>`;
+    const input = $('[data-key] input', panel);
+    if (input && keep) { input.value = keep[0]; if (keep[1]) input.focus(); }
   }
   function openPanel() { closePop(); setMode('browse'); renderPanel(); panel.hidden = false; }
   function closePanel() { panel.hidden = true; }
@@ -529,6 +536,7 @@
     if (act === 'close') closePanel();
     else if (act === 'page') { widen = []; openPop(null); }
     else if (act === 'refresh') load();
+    else if (act === 'lock') { setKey(''); keyMsg = ''; sheet = []; sheetState = 'locked'; paint(); }
     else if (act === 'copy') {
       try { await navigator.clipboard.writeText(exportText()); b.textContent = 'Copied ✓'; }
       catch (err) { prompt('Copy the comments:', exportText()); }
@@ -557,6 +565,7 @@
   const unsent = () => notes.filter((n) => n.sent !== n.rev);
   function syncText() {
     if (source === 'sheet' && sheetState === 'loading') return 'Loading comments from the sheet…';
+    if (source === 'sheet' && sheetState === 'locked') return keyMsg ? `<span class="rv-warn">${esc(keyMsg)}</span>` : "Enter the password to see everyone's comments.";
     if (source === 'sheet' && sheetState === 'error') return `<span class="rv-warn">Couldn't load the sheet — check the connection</span><button class="rv-btn rv-sm" data-p="refresh">Retry</button>`;
     const k = unsent().length + gone.length;
     if (syncing) return 'Sending to the Google Sheet…';
@@ -603,14 +612,22 @@
   /* ---------- everyone's comments, read from the sheet ---------- */
   // sheet rows hold the full address; only rows from this site's own page count, and the part after # becomes the route
   const where = (u) => { try { const x = new URL(u); return [x.origin + x.pathname, x.hash.slice(1).split('?')[0] || '/']; } catch (e) { return []; } };
+  // the password is checked by the Apps Script (its ADMIN_KEY property); this tab remembers it until it closes or Lock
+  const KEY = 'pepsoma.reviewKey';
+  let key = '', keyMsg = '';
+  try { key = sessionStorage.getItem(KEY) || ''; } catch (e) { /* blocked storage: ask each time */ }
+  const setKey = (k) => { key = k; try { k ? sessionStorage.setItem(KEY, k) : sessionStorage.removeItem(KEY); } catch (e) { /* ignore */ } };
   async function load() {
     const mine = ++loads;
+    if (!key) { sheet = []; sheetState = 'locked'; paint(); return; }
     sheetState = 'loading';
     paint();
     try {
-      const out = await (await fetch(SHEET_URL + '?list=1')).json();
-      if (!out.ok) throw new Error(out.error);
+      // POST so the password never sits in a URL
+      const out = await (await fetch(SHEET_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ list: true, key }) })).json();
       if (mine !== loads) return;
+      if (out.locked) { setKey(''); keyMsg = out.error || 'Wrong password.'; sheet = []; sheetState = 'locked'; paint(); const i = $('[data-key] input', panel); if (i) i.focus(); return; }
+      if (!out.ok) throw new Error(out.error);
       const here = location.origin + location.pathname;
       sheet = out.comments.filter((c) => where(c.page)[0] === here).map((c, i) => ({ ...c, ro: true, n: i + 1, page: where(c.page)[1] }));
       sheetState = 'ok';
@@ -625,7 +642,18 @@
     S.set('reviewSource', s);
     closePop();
     if (s === 'sheet') load(); else paint();
+    const input = $('[data-key] input', panel);
+    if (input) input.focus();
   }
+  panel.addEventListener('submit', (e) => {
+    if (!e.target.closest('[data-key]')) return;
+    e.preventDefault();
+    const v = $('input', e.target).value;
+    if (!v) return;
+    setKey(v);
+    keyMsg = '';
+    load();
+  });
 
   showWho();
   setFilter(filterBy);

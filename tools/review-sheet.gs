@@ -9,20 +9,24 @@
         Who has access: Anyone
       Click Deploy, allow access when Google asks, and copy the Web app URL (ends in /exec).
    4. Put that URL in SHEET_URL at the top of store/js/review.js and push.
+   5. Password for the "Everyone" view: Project Settings (gear) → Script properties → Add script property,
+      Property: ADMIN_KEY, Value: the password. It lives only here, never in this file (the repo is public).
 
    After editing this script you must redeploy, or the live URL keeps running the old code:
    Deploy → Manage deployments → edit (pencil) → Version: New version → Deploy. That keeps the same URL.
 
-   Anyone with the URL can read the comments (review mode's "Everyone" view fetches ?list=1). That's accepted: feedback comments aren't sensitive. */
+   Anyone with the URL can add comments (that's how review mode works). Reading them all back needs ADMIN_KEY. */
 
 const SHEET_NAME = 'Comments';
 const HEADERS = ['ID', 'Time', 'Name', 'Page', 'Element', 'Comment', 'Status', 'Device', 'Selector', 'Last updated'];
 
 function doPost(e) {
+  let data;
+  try { data = JSON.parse(e.postData.contents); } catch (err) { return json_({ ok: false, error: String(err) }); }
+  if (data.list) return list_(data.key);
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    const data = JSON.parse(e.postData.contents);
     const sh = sheet_();
     const last = sh.getLastRow();
     const ids = last > 1 ? sh.getRange(2, 1, last - 1, 1).getValues().map((r) => String(r[0])) : [];
@@ -46,9 +50,16 @@ function doPost(e) {
   }
 }
 
-// Opening the /exec URL in a browser is a quick check that the deployment works; ?list=1 returns the comments as JSON.
-function doGet(e) {
-  if (!(e && e.parameter && e.parameter.list)) return ContentService.createTextOutput('Pepsoma review sheet is running.');
+// Opening the /exec URL in a browser is a quick check that the deployment works.
+function doGet() {
+  return ContentService.createTextOutput('Pepsoma review sheet is running.');
+}
+
+// Every comment, for the "Everyone" view. Sent as a POST so the password never sits in a URL.
+function list_(key) {
+  const want = PropertiesService.getScriptProperties().getProperty('ADMIN_KEY');
+  if (!want) return json_({ ok: false, locked: true, error: 'No password set: add the ADMIN_KEY script property.' });
+  if (String(key || '') !== want) return json_({ ok: false, locked: true, error: 'Wrong password.' });
   try {
     const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME); // not sheet_(): reading shouldn't create it
     const last = sh ? sh.getLastRow() : 0;
