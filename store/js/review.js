@@ -11,7 +11,7 @@
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // Google Apps Script web app URL from tools/review-sheet.gs; empty keeps comments on this device only
-  const SHEET_URL = '';
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyIdUV2k7x63p800wluyHXTep0wn75DTpMdP9AAMuqC_VhSArNgiq0Kh2GTXICJj96e/exec';
   const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   let notes = S.get('reviewNotes', []);
   notes.forEach((n) => { n.id = n.id || newId(); n.rev = n.rev || 1; });
