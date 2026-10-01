@@ -13,6 +13,8 @@
   if (!on) return;
 
   const $ = (s, r = document) => r.querySelector(s);
+  // review mode's own timers keep the real clock, so slow motion only slows the store
+  const later = window.setTimeout.bind(window), frame = window.requestAnimationFrame.bind(window);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // Google Apps Script web app URL from tools/review-sheet.gs; empty keeps comments on this device only
   const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyIdUV2k7x63p800wluyHXTep0wn75DTpMdP9AAMuqC_VhSArNgiq0Kh2GTXICJj96e/exec';
@@ -138,7 +140,66 @@
   .rv-danger .rv-label { margin-top: 0; color: #c4321a; }
   .rv-danger p { font-size: 12px; color: #6b665d; margin: 0 0 10px; }
   .rv-danger .rv-row { margin-top: 6px; }
+  .rv-ico { width: 16px; height: 16px; vertical-align: -3px; margin-right: 6px; }
+  .rv-welcome { overflow-y: auto; align-items: start; }
+  .rv-wl { width: min(980px, 100%); margin: auto; padding: 28px 30px 26px; border-radius: 22px; background: #fff; color: #1b1a17; box-shadow: 0 24px 70px rgba(0,0,0,.35); }
+  .rv-wl .rv-kick { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #ff5a1f; margin: 0 0 8px; }
+  .rv-wl h2 { font-size: 30px; line-height: 1.15; font-weight: 700; letter-spacing: -.01em; margin: 0 0 8px; color: #1b1a17; }
+  .rv-wl .rv-lede { font-size: 15px; color: #6b665d; margin: 0 0 20px; max-width: 62ch; }
+  .rv-wl-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .rv-wl-step { background: #faf8f4; border: 1px solid #eee8de; border-radius: 18px; padding: 14px 14px 16px; }
+  .rv-wl-step .rv-n { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #1b1a17; color: #fff; font-size: 12px; font-weight: 700; margin: 12px 0 6px; }
+  .rv-wl-step h3 { font-size: 15px; font-weight: 700; margin: 0 0 4px; color: #1b1a17; }
+  .rv-wl-step p { font-size: 13px; color: #6b665d; margin: 0; }
+  .rv-wl-keys { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 18px 0 0; font-size: 13px; color: #6b665d; }
+  .rv-wl-keys kbd { font: 700 11px/1 "DM Sans", system-ui, sans-serif; padding: 3px 7px; border-radius: 6px; border: 1px solid #d9d3c8; border-bottom-width: 2px; color: #1b1a17; margin-right: 6px; }
+  .rv-wl-foot { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-top: 20px; }
+  .rv-wl-foot p { font-size: 13px; color: #6b665d; margin: 0; }
+  .rv-wl-go { font-size: 15px; padding: 12px 22px; }
+  /* the step drawings: little looping demos */
+  .rv-art { position: relative; height: 112px; border-radius: 12px; background: #fff; border: 1px solid #eee8de; overflow: hidden; }
+  .rv-art i { position: absolute; display: block; font-style: normal; }
+  .wl-field { left: 14px; right: 14px; top: 22px; height: 30px; border-radius: 9px; border: 1.5px solid #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.15); padding: 0 10px; font-size: 13px; font-weight: 600; line-height: 28px; white-space: nowrap; }
+  .wl-field b { display: inline-block; overflow: hidden; vertical-align: top; width: 0; animation: wlType 6s steps(6) infinite; }
+  .wl-field u { display: inline-block; width: 1.5px; height: 15px; background: #1b1a17; vertical-align: -3px; text-decoration: none; animation: wlBlink 1s steps(1) infinite; }
+  .wl-chip { top: 66px; height: 24px; padding: 0 10px 0 8px; border-radius: 99px; border: 1px solid #e6e1d8; font-size: 12px; font-weight: 600; line-height: 22px; background: #fff; }
+  .wl-chip::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--c); }
+  .wl-chip.c1 { left: 14px; --c: #ff5a1f; animation: wlPop 6s ease infinite; }
+  .wl-chip.c2 { left: 96px; --c: #2563eb; }
+  .wl-bar { left: 0; right: 0; top: 0; height: 14px; background: #f1ede5; }
+  .wl-head { left: 14px; top: 26px; width: 58%; height: 16px; border-radius: 4px; background: #e6e1d8; }
+  .wl-txt { left: 14px; top: 48px; width: 44%; height: 7px; border-radius: 3px; background: #efeae1; }
+  .wl-btn { left: 14px; top: 66px; width: 32%; height: 18px; border-radius: 9px; background: #c9d2ff; }
+  .wl-out { border: 2px solid #3b82f6; background: rgba(59,130,246,.1); border-radius: 5px; animation: wlOut 7s ease infinite; }
+  .wl-bub { left: 44%; top: 58px; padding: 5px 9px; border-radius: 9px; background: #1b1a17; color: #fff; font-size: 11px; font-weight: 600; white-space: nowrap; opacity: 0; animation: wlBub 7s ease infinite; }
+  .wl-cur { width: 16px; height: 16px; animation: wlCur 7s cubic-bezier(.45,0,.25,1) infinite; }
+  .wl-hud { left: 50%; top: 12px; width: 120px; margin-left: -60px; padding: 5px; border-radius: 12px; background: #2a2a2d; }
+  .wl-hud span { position: relative; z-index: 1; display: flex; align-items: center; gap: 7px; height: 22px; padding: 0 8px; color: #fff; font-size: 12px; font-weight: 600; }
+  .wl-hud span::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+  .wl-sel { left: 5px; right: 5px; top: 5px; height: 22px; border-radius: 8px; background: rgba(255,255,255,.2); animation: wlSel 6s cubic-bezier(.3,0,.2,1) infinite; }
+  .wl-key { left: 50%; bottom: 10px; margin-left: -13px; width: 26px; height: 22px; border-radius: 6px; border: 1px solid #d9d3c8; border-bottom-width: 3px; background: #fff; font-size: 12px; font-weight: 700; text-align: center; line-height: 18px; animation: wlKey 6s ease infinite; }
+  .wl-row { left: 14px; right: 14px; height: 16px; border-bottom: 1px solid #f1ede5; opacity: 0; animation: wlRow 7s ease infinite; }
+  .wl-row::before { content: ''; position: absolute; left: 0; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+  .wl-row::after { content: ''; position: absolute; left: 16px; top: 5px; height: 6px; width: var(--w); border-radius: 3px; background: #e6e1d8; }
+  .wl-th { left: 14px; right: 14px; top: 12px; height: 14px; border-radius: 4px; background: #f1ede5; }
+  @keyframes wlType { 0%, 8% { width: 0; } 40%, 92% { width: 3.6em; } 100% { width: 0; } }
+  @keyframes wlBlink { 50% { opacity: 0; } }
+  @keyframes wlPop { 0%, 44% { transform: scale(.6); opacity: 0; } 52%, 92% { transform: none; opacity: 1; } 100% { opacity: 0; } }
+  @keyframes wlOut { 0%, 6% { left: 12px; top: 24px; width: 58%; height: 20px; opacity: 0; } 12%, 30% { left: 12px; top: 24px; width: 58%; height: 20px; opacity: 1; border-color: #3b82f6; }
+    42% { left: 12px; top: 64px; width: 33%; height: 22px; border-color: #3b82f6; background: rgba(59,130,246,.1); } 47%, 86% { left: 12px; top: 64px; width: 33%; height: 22px; border-color: #ff5a1f; background: rgba(255,90,31,.12); opacity: 1; } 94%, 100% { left: 12px; top: 64px; width: 33%; height: 22px; opacity: 0; } }
+  @keyframes wlBub { 0%, 48% { opacity: 0; transform: translateY(6px) scale(.9); } 54%, 86% { opacity: 1; transform: none; } 94%, 100% { opacity: 0; } }
+  @keyframes wlCur { 0% { left: 88%; top: 80%; opacity: 0; } 8% { opacity: 1; } 22%, 30% { left: 52%; top: 30px; } 42% { left: 30%; top: 70px; transform: none; } 45% { transform: scale(.8); } 48%, 86% { left: 30%; top: 70px; transform: none; opacity: 1; } 96%, 100% { left: 30%; top: 70px; opacity: 0; } }
+  @keyframes wlSel { 0%, 22% { transform: none; } 30%, 55% { transform: translateY(22px); } 63%, 88% { transform: translateY(44px); } 96%, 100% { transform: none; } }
+  @keyframes wlKey { 0%, 20%, 28%, 53%, 61%, 86%, 94%, 100% { transform: none; border-bottom-width: 3px; } 24%, 57%, 90% { transform: translateY(2px); border-bottom-width: 1px; } }
+  @keyframes wlRow { 0% { opacity: 0; transform: translateY(6px); } 10%, 90% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .rv-art *, .rv-art *::before { animation: none !important; } .wl-field b { width: 3.6em; } .wl-out { left: 12px; top: 64px; width: 33%; height: 22px; border-color: #ff5a1f; } .wl-bub, .wl-row, .wl-chip.c1 { opacity: 1; } .wl-cur { left: 30%; top: 70px; } }
+  @media (max-width: 860px) { .rv-wl-steps { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 600px) {
+    .rv-wl { padding: 22px 18px 18px; }
+    .rv-wl h2 { font-size: 24px; }
+    .rv-wl-steps { grid-template-columns: 1fr; }
+    .rv-wl-go { width: 100%; }
+    .rv-bar [data-slow] .rv-ico { margin-right: 0; }
     .rv-bar button { padding: 10px 10px; }
     .rv-bar .rv-who { max-width: 96px; }
     .rv-bar .rv-lbl { display: none; }
@@ -161,10 +222,12 @@
     <button class="rv-only" data-only hidden title="Show everyone's comments again"><span class="rv-who"><span class="rv-dot"></span><span class="rv-lbl">Hiding:</span><span class="rv-nm"></span>×</span></button>
     <button data-m="browse" aria-pressed="true">Browse</button>
     <button data-m="comment" aria-pressed="false">Comment</button>
+    <button data-slow aria-pressed="false" title="Slow motion (S): the store's animations at quarter speed"><svg class="rv-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="14" r="7.5"/><path d="M12 14V10.5M10 3h4M12 3v3.5M18.5 7l1.5-1.5"/></svg><span class="rv-lbl">Slow-mo</span></button>
     <button data-list><span class="rv-lbl">Comments</span><span class="rv-count">0</span></button></div>`);
-  const hint = ui('<div class="rv-hint" hidden>Click anything to comment on it · <kbd>C</kbd> toggle · <kbd>F</kbd> whole page · <kbd>B</kbd> browse · <kbd>N</kbd> person · <kbd>Esc</kbd> stop</div>');
+  const hint = ui('<div class="rv-hint" hidden>Click anything to comment on it · <kbd>C</kbd> toggle · <kbd>F</kbd> whole page · <kbd>B</kbd> browse · <kbd>N</kbd> person · <kbd>S</kbd> slow-mo · <kbd>Esc</kbd> stop</div>');
   const picker = ui('<div class="rv-scrim" hidden></div>');
   const hud = ui('<div class="rv-hud" aria-live="polite"></div>');
+  const welcome = ui('<div class="rv-scrim rv-welcome" hidden></div>');
   const hl = ui('<div class="rv-hl" hidden></div>');
   const tag = ui('<div class="rv-tag" hidden></div>');
   const pins = ui('<div style="inset:0;pointer-events:none"></div>');
@@ -215,6 +278,7 @@
     if (b.dataset.m) { closePop(); setMode(b.dataset.m); }
     if ('list' in b.dataset) openPanel();
     if ('who' in b.dataset) openPicker();
+    if ('slow' in b.dataset) setSlow(rate === 1, true);
     if ('only' in b.dataset) { setHidden([]); paint(); }
   });
 
@@ -282,11 +346,11 @@
 
   // like the keyboard-language switcher: a list mid-screen with the current person lit, fading after the last press
   let hudTimer = 0;
-  function showHud() {
-    hud.innerHTML = people.map((p) => `<div class="${p === who ? 'rv-cur' : ''}"><span class="rv-dot" style="background:${color(p)}"></span>${esc(p)}</div>`).join('');
+  function showHud(html) {
+    hud.innerHTML = html || people.map((p) => `<div class="${p === who ? 'rv-cur' : ''}"><span class="rv-dot" style="background:${color(p)}"></span>${esc(p)}</div>`).join('');
     hud.classList.add('rv-show');
     clearTimeout(hudTimer);
-    hudTimer = setTimeout(() => hud.classList.remove('rv-show'), 900);
+    hudTimer = later(() => hud.classList.remove('rv-show'), 900);
   }
   function cycleWho(step) {
     if (!people.length) { openPicker(); return; }
@@ -327,13 +391,16 @@
   document.addEventListener('keydown', (e) => {
     const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement && document.activeElement.tagName) || (document.activeElement && document.activeElement.isContentEditable);
     if (e.key === 'Escape') {
-      if (!picker.hidden) closePicker();
+      if (!welcome.hidden) closeWelcome();
+      else if (!picker.hidden) closePicker();
       else if (!pop.hidden) { closePop(); e.preventDefault(); }
       else if (!panel.hidden) closePanel();
       else if (mode === 'comment') setMode('browse');
       return;
     }
-    if (typing || e.metaKey || e.ctrlKey || e.altKey || !picker.hidden) return;
+    if (typing || e.metaKey || e.ctrlKey || e.altKey || !picker.hidden || !welcome.hidden) return;
+    if (e.key === 's' || e.key === 'S') setSlow(rate === 1, true);
+    if (e.key === '?') openWelcome();
     if (e.key === 'c' || e.key === 'C') { closePop(); setMode(mode === 'comment' ? 'browse' : 'comment'); }
     if (e.key === 'b' || e.key === 'B') { closePop(); setMode('browse'); }
     if (e.key === 'f' || e.key === 'F') {
@@ -453,7 +520,8 @@
       p.style.visibility = r.bottom < 0 || r.top > innerHeight ? 'hidden' : '';
     });
     if (picked && !pop.hidden) box(picked, 'rv-picked');
-    requestAnimationFrame(track);
+    if (rate !== 1) retime();
+    frame(track);
   }
   pins.addEventListener('click', (e) => {
     const p = e.target.closest('.rv-pin');
@@ -461,7 +529,7 @@
     const n = list().find((x) => x.n === +p.dataset.n);
     if (n) openPop(find(n), n);
   });
-  window.addEventListener('hashchange', () => { closePop(); setTimeout(paint, 50); });
+  window.addEventListener('hashchange', () => { closePop(); later(paint, 50); });
 
   /* ---------- the list of all comments ---------- */
   function renderPanel() {
@@ -482,6 +550,7 @@
           <button class="rv-btn rv-sm" data-p="copy"${all.length ? '' : ' disabled'}>Copy all</button>
           <button class="rv-btn rv-sm" data-p="download"${all.length ? '' : ' disabled'}>Download</button>
           ${mine ? `<button class="rv-btn rv-sm rv-red" data-p="clear"${all.length ? '' : ' disabled'}>Clear all</button>` : ''}
+          <button class="rv-btn rv-sm" data-p="guide">How it works</button>
           <button class="rv-btn rv-sm" data-p="exit">Exit review</button>
         </div>
         ${authors.length > 1 ? `<div class="rv-filters">` +
@@ -521,11 +590,11 @@
       const n = list().find((x) => x.n === +go.dataset.go);
       closePanel();
       if (route() !== n.page) location.hash = '#' + n.page;
-      setTimeout(() => {
+      later(() => {
         const el = find(n);
         if (!el) { openPop(null, n); return; }
         el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        setTimeout(() => openPop(el, n), 450);
+        later(() => openPop(el, n), 450);
       }, 120);
       return;
     }
@@ -544,18 +613,19 @@
     if (act === 'close') closePanel();
     else if (act === 'page') { widen = []; openPop(null); }
     else if (act === 'refresh') load();
+    else if (act === 'guide') openWelcome();
     else if (act === 'lock') { setKey(''); keyMsg = ''; sheet = []; sheetState = 'locked'; paint(); }
     else if (act === 'copy') {
       try { await navigator.clipboard.writeText(exportText()); b.textContent = 'Copied ✓'; }
       catch (err) { prompt('Copy the comments:', exportText()); }
-      setTimeout(() => { b.textContent = 'Copy all'; }, 1600);
+      later(() => { b.textContent = 'Copy all'; }, 1600);
     }
     else if (act === 'download') {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([exportText()], { type: 'text/plain' }));
       a.download = `pepsoma-review-${new Date().toISOString().slice(0, 10)}.txt`;
       a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      later(() => URL.revokeObjectURL(a.href), 1000);
     }
     else if (act === 'clear') { if (confirm(`Delete all ${notes.length} comments? Copy or download them first if you need them.`)) { drop(() => true); paint(); } }
     else if (act === 'exit') {
@@ -609,7 +679,7 @@
     } catch (e) {
       syncFailed = true;
       clearTimeout(retry);
-      retry = setTimeout(sync, 15000);
+      retry = later(sync, 15000);
     }
     syncing = false;
     showSync();
@@ -663,10 +733,77 @@
     load();
   });
 
+  /* ---------- slow motion (S): the store's animations at quarter speed ---------- */
+  // CSS and Web Animations get a playbackRate; rAF timestamps, performance.now and timer delays stretch to match, so
+  // JS-driven motion (count-up stats, the molecule network) and timed steps (the cart opening after the fly-in) stay in step
+  const SLOW = 0.25, SLOW_KEY = 'pepsoma.reviewSlow';
+  const realNow = performance.now.bind(performance), realInterval = window.setInterval.bind(window);
+  let rate = 1, vBase = 0, rBase = 0;
+  const vnow = () => vBase + (realNow() - rBase) * rate;
+  performance.now = vnow;
+  window.requestAnimationFrame = (cb) => frame((t) => cb(vBase + (t - rBase) * rate));
+  window.setTimeout = (fn, ms, ...a) => later(fn, (ms || 0) / rate, ...a);
+  window.setInterval = (fn, ms, ...a) => realInterval(fn, (ms || 0) / rate, ...a);
+  function retime() {
+    document.getAnimations().forEach((a) => {
+      const want = (a.playbackRate < 0 ? -1 : 1) * rate;
+      if (a.playbackRate !== want && !isUI(a.effect && a.effect.target)) a.playbackRate = want;
+    });
+  }
+  function setSlow(on, flash) {
+    vBase = vnow();
+    rBase = realNow();
+    rate = on ? SLOW : 1;
+    retime();
+    const b = $('[data-slow]', bar);
+    b.setAttribute('aria-pressed', String(on));
+    $('.rv-lbl', b).textContent = on ? '¼ speed' : 'Slow-mo';
+    try { on ? sessionStorage.setItem(SLOW_KEY, '1') : sessionStorage.removeItem(SLOW_KEY); } catch (e) { /* ignore */ }
+    if (flash) showHud(`<div class="rv-cur">${on ? 'Slow motion · ¼ speed' : 'Normal speed'}</div>`);
+  }
+
+  /* ---------- the welcome guide: first visit on this device, then "How it works" or ? ---------- */
+  const STEPS = [
+    ['Add your name', 'Each comment is signed, so we know who said what. You\'ll type it next.',
+      '<i class="wl-field"><b>Kareem</b><u></u></i><i class="wl-chip c1">Kareem</i><i class="wl-chip c2">Sam</i>'],
+    ['Press C, then click anything', 'Hovering outlines what you\'ll comment on. Click it, write a note, save. Bigger ↑ grabs the whole section.',
+      '<i class="wl-bar"></i><i class="wl-head"></i><i class="wl-txt"></i><i class="wl-btn"></i><i class="wl-out"></i><i class="wl-bub">Make it navy?</i><i class="wl-cur"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 3l13 7.5-5.6 1.4 3.3 6-2.4 1.3-3.3-6L6 17z" fill="#1b1a17" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg></i>'],
+    ['Passing the laptop? Press N', 'N switches to the next person and Shift+N goes back. Everyone gets their own color.',
+      '<i class="wl-hud"><i class="wl-sel"></i><span style="--c:#ff5a1f">Kareem</span><span style="--c:#2563eb">Sam</span><span style="--c:#16a34a">Alex</span></i><i class="wl-key">N</i>'],
+    ['It all lands in one sheet', 'Comments save as you go. The Comments panel lists them and can show or hide each person.',
+      '<i class="wl-th"></i>' + [['#ff5a1f', '62%', 0], ['#2563eb', '48%', .5], ['#16a34a', '70%', 1], ['#ff5a1f', '40%', 1.5]].map(([c, w, d], i) => `<i class="wl-row" style="top:${32 + i * 18}px;--c:${c};--w:${w};animation-delay:${d}s"></i>`).join('')],
+  ];
+  const WELCOME = `<div class="rv-wl" role="dialog" aria-modal="true" aria-label="How review mode works">
+    <p class="rv-kick">Pepsoma · review mode</p>
+    <h2>Leave notes right on the site</h2>
+    <p class="rv-lede">This is the real store with a comment layer on top. Point at anything you'd change, say why, and it lands in a shared sheet. There are no wrong answers.</p>
+    <div class="rv-wl-steps">${STEPS.map(([h, p, art], i) => `<div class="rv-wl-step"><div class="rv-art" aria-hidden="true">${art}</div><span class="rv-n">${i + 1}</span><h3>${h}</h3><p>${p}</p></div>`).join('')}</div>
+    <div class="rv-wl-keys"><span><kbd>C</kbd>Comment mode</span><span><kbd>F</kbd>Whole page</span><span><kbd>B</kbd>Back to browsing</span><span><kbd>N</kbd>Next person</span><span><kbd>S</kbd>Slow motion</span><span><kbd>?</kbd>This guide</span></div>
+    <div class="rv-wl-foot"><p>Saved automatically. Nothing on the store itself changes.</p><button class="rv-btn rv-main rv-wl-go" data-start>Let's start →</button></div>
+  </div>`;
+  function openWelcome() {
+    closePop();
+    closePanel();
+    picker.hidden = true;
+    welcome.innerHTML = WELCOME;
+    welcome.hidden = false;
+    welcome.scrollTop = 0;
+    $('[data-start]', welcome).focus({ preventScroll: true });
+  }
+  function closeWelcome() {
+    welcome.hidden = true;
+    welcome.innerHTML = '';
+    S.set('reviewWelcomed', true);
+    if (!who) openPicker();
+  }
+  welcome.addEventListener('click', (e) => { if (e.target === welcome || e.target.closest('[data-start]')) closeWelcome(); });
+
   showWho();
   setHidden(hidden);
   if (source === 'sheet') load(); else paint();
-  requestAnimationFrame(track);
+  frame(track);
   sync();
-  if (!who) openPicker();
+  try { if (sessionStorage.getItem(SLOW_KEY)) setSlow(true); } catch (e) { /* ignore */ }
+  if (!S.get('reviewWelcomed', false)) openWelcome();
+  else if (!who) openPicker();
 })();
