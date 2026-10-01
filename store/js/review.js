@@ -27,7 +27,10 @@
     notes = notes.filter((n) => !test(n));
     save();
   };
-  let mode = 'browse', hoverEl = null, picked = null, widen = [], editing = null, filterBy = S.get('reviewFilter', null);
+  let mode = 'browse', hoverEl = null, picked = null, widen = [], editing = null;
+  // people whose comments are hidden everywhere (pins and list), in either view; click their chip to toggle
+  let hidden = S.get('reviewHidden', []);
+  const shown = (n) => !hidden.includes(byName(n));
   // "sheet" shows everyone's comments (read-only) as fetched from the Google Sheet instead of this laptop's
   let source = SHEET_URL && S.get('reviewSource', 'local') === 'sheet' ? 'sheet' : 'local', sheet = [], sheetState = source === 'sheet' ? 'loading' : 'idle', loads = 0;
   const list = () => (source === 'sheet' ? sheet : notes);
@@ -128,6 +131,8 @@
   .rv-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
   .rv-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #e6e1d8; background: #fff; color: #1b1a17; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 600; }
   .rv-chip[aria-pressed="true"] { background: #1b1a17; color: #fff; border-color: #1b1a17; }
+  .rv-chip.rv-off { color: #8a857c; border-style: dashed; text-decoration: line-through; }
+  .rv-chip.rv-off .rv-dot { opacity: .35; }
   .rv-item .rv-by { font-weight: 700; color: #1b1a17; }
   .rv-danger { margin-top: 28px; padding: 14px; border-radius: 12px; border: 1px dashed #e3b3a8; background: #fff8f6; }
   .rv-danger .rv-label { margin-top: 0; color: #c4321a; }
@@ -153,7 +158,7 @@
   const bar = ui(`<div class="rv-bar" role="toolbar" aria-label="Review mode">
     <button class="rv-who" data-who title="Who's commenting (N to switch)"><span class="rv-dot"></span><span class="rv-nm"></span></button>
     <span class="rv-sep"></span>
-    <button class="rv-only" data-only hidden title="Show everyone's pins again"><span class="rv-who"><span class="rv-dot"></span><span class="rv-lbl">Only:</span><span class="rv-nm"></span>×</span></button>
+    <button class="rv-only" data-only hidden title="Show everyone's comments again"><span class="rv-who"><span class="rv-dot"></span><span class="rv-lbl">Hiding:</span><span class="rv-nm"></span>×</span></button>
     <button data-m="browse" aria-pressed="true">Browse</button>
     <button data-m="comment" aria-pressed="false">Comment</button>
     <button data-list><span class="rv-lbl">Comments</span><span class="rv-count">0</span></button></div>`);
@@ -210,7 +215,7 @@
     if (b.dataset.m) { closePop(); setMode(b.dataset.m); }
     if ('list' in b.dataset) openPanel();
     if ('who' in b.dataset) openPicker();
-    if ('only' in b.dataset) { setFilter(null); paint(); }
+    if ('only' in b.dataset) { setHidden([]); paint(); }
   });
 
   /* ---------- who's commenting ---------- */
@@ -401,7 +406,7 @@
       if (editing) { editing.body = body; editing.rev++; }
       else {
         const el = picked;
-        if (filterBy && filterBy !== (who || 'No name')) setFilter(null);
+        if (hidden.includes(who || 'No name')) setHidden(hidden.filter((h) => h !== (who || 'No name')));
         notes.push({
           id: newId(), rev: 1, n: notes.reduce((m, x) => Math.max(m, x.n), 0) + 1,
           by: who, page: route(), sel: el ? selectorOf(el) : null, text: el ? snippet(el) : '', what: el ? describe(el) : 'Whole page',
@@ -418,20 +423,22 @@
   pop.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('[data-a="save"]', pop).click(); });
 
   /* ---------- pins, kept on their elements as the page scrolls and re-renders ---------- */
-  function setFilter(f) {
-    filterBy = f;
-    S.set('reviewFilter', f);
-    const b = $('[data-only]', bar);
-    b.hidden = !f;
-    bar.classList.toggle('rv-filtered', !!f);
-    if (f) { $('.rv-dot', b).style.background = color(f === 'No name' ? null : f); $('.rv-nm', b).textContent = f; }
+  function setHidden(h) {
+    hidden = h;
+    S.set('reviewHidden', h);
+    const b = $('[data-only]', bar), one = h.length === 1;
+    b.hidden = !h.length;
+    bar.classList.toggle('rv-filtered', !!h.length);
+    $('.rv-dot', b).style.display = one ? '' : 'none'; // the class sets display, so `hidden` wouldn't hide it
+    if (one) $('.rv-dot', b).style.background = color(h[0] === 'No name' ? null : h[0]);
+    $('.rv-nm', b).textContent = one ? h[0] : `${h.length} people`;
   }
   function paint() {
     const all = list();
-    // a filter on someone who's gone clears itself, but only once the list it applies to has loaded
-    if (filterBy && (source === 'local' || sheetState === 'ok') && !all.some((n) => byName(n) === filterBy)) setFilter(null);
+    // a hidden name with no comments left drops off, but only once the list it applies to has loaded
+    if (hidden.length && (source === 'local' || sheetState === 'ok')) { const left = hidden.filter((h) => all.some((n) => byName(n) === h)); if (left.length !== hidden.length) setHidden(left); }
     bar.querySelector('.rv-count').textContent = all.filter((n) => !n.done).length;
-    const here = all.filter((n) => n.page === route() && n.sel && (!filterBy || byName(n) === filterBy));
+    const here = all.filter((n) => n.page === route() && n.sel && shown(n));
     pins.innerHTML = here.map((n) => `<button class="rv rv-pin${n.done ? ' rv-done' : ''}" data-n="${n.n}" data-rv title="${esc(byName(n) + ': ' + n.body)}" style="pointer-events:auto${n.done ? '' : ';background:' + color(n.by)}">${n.n}</button>`).join('');
     if (!panel.hidden) renderPanel();
   }
@@ -461,8 +468,8 @@
     const typed = $('[data-key] input', panel), keep = typed && [typed.value, document.activeElement === typed];
     const all = list(), mine = source === 'local';
     const authors = [...new Set(all.map(byName))];
-    const shown = filterBy ? all.filter((n) => byName(n) === filterBy) : all;
-    const pages = [...new Set(shown.map((n) => n.page))];
+    const visible = all.filter(shown);
+    const pages = [...new Set(visible.map((n) => n.page))];
     const count = (a) => all.filter((n) => byName(n) === a).length;
     panel.innerHTML = `<header>
         <h2><span class="rv-grow">Comments (${all.length})</span><button class="rv-btn rv-sm" data-p="close" aria-label="Close">✕</button></h2>
@@ -477,11 +484,12 @@
           ${mine ? `<button class="rv-btn rv-sm rv-red" data-p="clear"${all.length ? '' : ' disabled'}>Clear all</button>` : ''}
           <button class="rv-btn rv-sm" data-p="exit">Exit review</button>
         </div>
-        ${authors.length > 1 ? `<div class="rv-filters"><button class="rv-chip" data-f="" aria-pressed="${!filterBy}">All (${all.length})</button>` +
-          authors.map((a) => `<button class="rv-chip" data-f="${esc(a)}" aria-pressed="${a === filterBy}"><span class="rv-dot" style="background:${color(a === 'No name' ? null : a)}"></span>${esc(a)} (${count(a)})</button>`).join('') + '</div>' : ''}
+        ${authors.length > 1 ? `<div class="rv-filters">` +
+          authors.map((a) => `<button class="rv-chip${hidden.includes(a) ? ' rv-off' : ''}" data-f="${esc(a)}" aria-pressed="${!hidden.includes(a)}" title="${hidden.includes(a) ? 'Show' : 'Hide'} ${esc(a)}'s comments"><span class="rv-dot" style="background:${color(a === 'No name' ? null : a)}"></span>${esc(a)} (${count(a)})</button>`).join('') +
+          (hidden.length ? '<button class="rv-chip" data-f="">Show everyone</button>' : '') + '</div>' : ''}
       </header>
       <div class="rv-list">${all.length ? pages.map((p) => `<div class="rv-page">${esc(pageName(p))}</div>` +
-        shown.filter((n) => n.page === p).map((n) => `<button class="rv-item${n.done ? ' rv-done' : ''}" data-go="${n.n}">
+        visible.filter((n) => n.page === p).map((n) => `<button class="rv-item${n.done ? ' rv-done' : ''}" data-go="${n.n}">
           <span class="rv-pin${n.done ? ' rv-done' : ''}"${n.done ? '' : ` style="background:${color(n.by)}"`}>${n.n}</span>
           <span><div class="rv-el"><span class="rv-by">${esc(byName(n))}</span> · ${esc(n.what)}</div><div class="rv-txt">${esc(n.body)}</div></span></button>`).join('')).join('') +
           (mine ? `<div class="rv-danger"><div class="rv-label">Delete one person's comments</div>
@@ -522,7 +530,7 @@
       return;
     }
     const f = e.target.closest('[data-f]'), src = e.target.closest('[data-src]');
-    if (f) { setFilter(f.dataset.f || null); paint(); return; }
+    if (f) { const a = f.dataset.f; setHidden(!a ? [] : hidden.includes(a) ? hidden.filter((h) => h !== a) : [...hidden, a]); paint(); return; }
     if (src) { setSource(src.dataset.src); return; }
     const del = e.target.closest('[data-del-by]');
     if (del) {
@@ -656,7 +664,7 @@
   });
 
   showWho();
-  setFilter(filterBy);
+  setHidden(hidden);
   if (source === 'sheet') load(); else paint();
   requestAnimationFrame(track);
   sync();
