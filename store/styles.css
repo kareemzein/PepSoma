@@ -124,7 +124,7 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .oc-bg { fill: var(--cream); }
 .oc-hole, .oc-mark, .oc-fill, .oc-p { transform-box: fill-box; transform-origin: center; }
 .oc-hole { transform: scale(.001); }
-/* two halves start together at the top centre and meet at the bottom, so the outline has no start point or seam;
+/* two halves start together at the bottom centre and meet at the top, so the outline has no start point or seam;
    the offset starts just past the dash so no round-cap dot shows before the trace begins */
 .oc-line { fill: none; stroke: var(--text); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 100 110; stroke-dashoffset: 101; }
 .oc-fill { fill: #1b2d74; opacity: 0; transform: scale(.55); }
