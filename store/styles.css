@@ -116,33 +116,31 @@ h2 { font-size: clamp(1.8rem, 3.4vw, 2.7rem); }
 #view.page-enter { animation: pageIn .5s var(--ease-out); }
 @keyframes pageIn { from { opacity: 0; transform: translateY(10px); } }
 
-/* opening (once per visit): the mark draws itself, then its middle opens and you fly through onto the page.
+/* opening (once per visit): the mark fades in, then its middle opens and you fly through onto the page.
    html.opening is set in index.html before first paint; its ::after holds the cover until app.js builds it. */
 html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; background: var(--cream); }
 .opening-cover { position: fixed; inset: 0; z-index: 200; cursor: pointer; }
 .opening-cover svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .oc-bg { fill: var(--cream); }
-.oc-hole, .oc-mark, .oc-p { transform-box: fill-box; transform-origin: center; }
+.oc-hole, .oc-mark { transform-box: fill-box; transform-origin: center; }
 .oc-hole { transform: scale(.001); }
-.oc-frame { fill: #1b2d74; fill-opacity: 0; stroke: var(--text); stroke-width: 3.5; stroke-linejoin: round; stroke-dasharray: 200; stroke-dashoffset: 200; }
-.oc-p { font: italic 700 36px Georgia, serif; fill: #d8d85a; opacity: 0; transform: scale(.4); }
+.oc-mark { opacity: 0; }
+.oc-frame { fill: #1b2d74; stroke: #1b2d74; stroke-width: 3.5; stroke-linejoin: round; }
+.oc-p { font: italic 700 36px Georgia, serif; fill: #d8d85a; }
 .oc-word { position: absolute; left: 50%; top: calc(50% + max(100vw, 100vh) * .032 + 24px); transform: translateX(-50%); display: grid; justify-items: center; gap: 6px; opacity: 0; white-space: nowrap; }
 .oc-kicker { font-size: .72rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
 .oc-word .logo { font-size: 2.6rem; }
-/* play: draw the outline, fill it into the navy mark, pop the "p", then the wordmark */
-.opening-cover.play .oc-frame { animation: ocDraw .8s .1s cubic-bezier(.4,0,.2,1) forwards, ocFill .4s .9s ease forwards; }
-.opening-cover.play .oc-p { animation: ocPop .45s 1.25s cubic-bezier(.2,1.3,.4,1) forwards; }
-.opening-cover.play .oc-word { animation: ocWordIn .7s 1.5s var(--ease-out) forwards; }
+/* play: the whole mark (square and "p") fades in as one piece, then the wordmark */
+.opening-cover.play .oc-mark { animation: ocLogoIn 1.15s .15s var(--ease-out) forwards; }
+.opening-cover.play .oc-word { animation: ocWordIn .7s 1.15s var(--ease-out) forwards; }
 /* zoom: the hole opens through the mark (the play animations stay listed first so their end states hold) */
 .opening-cover.zoom .oc-hole { animation: ocHole 1.15s cubic-bezier(.75,0,.22,1) forwards; }
-.opening-cover.zoom .oc-mark { animation: ocMark 1s cubic-bezier(.75,0,.3,1) forwards; }
-.opening-cover.play.zoom .oc-frame { animation: ocDraw .8s .1s cubic-bezier(.4,0,.2,1) forwards, ocFill .4s .9s ease forwards, ocUnfill .25s ease forwards; }
-.opening-cover.play.zoom .oc-p { animation: ocPop .45s 1.25s cubic-bezier(.2,1.3,.4,1) forwards, ocOut .2s ease forwards; }
-.opening-cover.play.zoom .oc-word { animation: ocWordIn .7s 1.5s var(--ease-out) forwards, ocOut .3s ease forwards; }
-@keyframes ocDraw { to { stroke-dashoffset: 0; } }
-@keyframes ocFill { to { fill-opacity: 1; stroke: #1b2d74; } }
+.opening-cover.zoom .oc-frame { animation: ocUnfill .25s ease forwards; }
+.opening-cover.zoom .oc-p { animation: ocOut .2s ease forwards; }
+.opening-cover.play.zoom .oc-mark { animation: ocLogoIn 1.15s .15s var(--ease-out) forwards, ocMark 1s cubic-bezier(.75,0,.3,1) forwards; }
+.opening-cover.play.zoom .oc-word { animation: ocWordIn .7s 1.15s var(--ease-out) forwards, ocOut .3s ease forwards; }
+@keyframes ocLogoIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes ocUnfill { to { fill-opacity: 0; } }
-@keyframes ocPop { to { opacity: 1; transform: none; } }
 @keyframes ocWordIn { from { opacity: 0; transform: translate(-50%, 14px); } to { opacity: 1; transform: translateX(-50%); } }
 @keyframes ocOut { to { opacity: 0; } }
 @keyframes ocHole { to { transform: scale(46); } }
