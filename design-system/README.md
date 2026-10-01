@@ -28,8 +28,8 @@ Inline stroke SVGs, 1.15em, `currentColor`, stroke-based; checks inside yellow d
 
 ## Components
 
-Button, Badge, Chip, Field, ProductCard, DealBar, Header, QuantityStepper, OptionRow, Checkbox, OrderTotals, FreeShippingBar, DataTable, Timeline, FooterWordmark. Previews are static renditions of the store's classes; `bundle.js` is an empty stub.
+Badge, Breadcrumbs, Button, CartLine, Checkbox, Chip, CoaWindow, CookieBanner, DataTable, DealBar, FaqItem, Field, FloatChip, FooterWordmark, FreeShippingBar, Header, InfoBox, MarqueeChip, Modal, Notice, OptionRow, OrderTotals, PlanOption, ProductCard, QuantityStepper, SearchField, SegmentedControl, SizeOption, StackCard, StatTile, StepCard, TestimonialCard, Timeline, Toast, TrustChip. Previews are static renditions of the store's classes; `bundle.js` is an empty stub.
 
 ## Not synced
 
-Motion tokens (not supported by the format), the vial/chromatogram SVG generators in `store/js/visuals.js`, the feedback site's tokens (`pepsoma-feedback/`, a separate neutral theme), and the review-mode UI. `accent` at small sizes is 4.3:1 on white; flagged in its note, kept as in source. `faint` was darkened from the store's original to pass 4.5:1.
+Motion tokens (not supported by the format), the vial/chromatogram SVG generators in `store/js/visuals.js`, and the review-mode UI. `accent` at small sizes is 4.3:1 on white; flagged in its note, kept as in source. `faint` was darkened from the store's original to pass 4.5:1.
