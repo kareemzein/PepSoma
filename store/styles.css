@@ -124,26 +124,29 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .oc-bg { fill: var(--cream); }
 .oc-hole, .oc-mark, .oc-fill, .oc-p { transform-box: fill-box; transform-origin: center; }
 .oc-hole { transform: scale(.001); }
-/* one line from the middle of the top-left corner, clockwise all the way round; its round caps close over each other, so there's no seam;
+/* two halves start together at the bottom centre and meet at the top, so the outline has no start point or seam;
    the offset starts just past the dash so no round-cap dot shows before the trace begins */
 .oc-line { fill: none; stroke: var(--text); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 100 110; stroke-dashoffset: 101; }
+/* a blurred copy of the line in the accent colour traces underneath it as a soft glow, then fades as the fill blooms */
+.oc-glow { stroke: var(--accent); stroke-width: 7; opacity: .7; }
 .oc-fill { fill: #1b2d74; opacity: 0; transform: scale(.55); }
 .oc-p { font: italic 700 36px Georgia, serif; fill: #d8d85a; opacity: 0; transform: translateY(3px); }
 .oc-word { position: absolute; left: 50%; top: calc(50% + max(100vw, 100vh) * .032 + 24px); transform: translateX(-50%); display: grid; justify-items: center; gap: 6px; opacity: 0; white-space: nowrap; }
 .oc-kicker { font-size: .72rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
 .oc-word .logo { font-size: 2.6rem; }
 /* play: trace the outline, settle it into the mark's navy as the fill blooms from the middle, then the "p" and the wordmark */
-.opening-cover.play .oc-line { animation: ocTrace 1.25s .15s cubic-bezier(.65,0,.35,1) forwards, ocInk .5s 1.3s ease forwards; }
-.opening-cover.play .oc-fill { animation: ocBloom .6s 1.25s var(--ease-out) forwards; }
-.opening-cover.play .oc-p { animation: ocRise .5s 1.65s var(--ease-out) forwards; }
-.opening-cover.play .oc-word { animation: ocWordIn .7s 1.9s var(--ease-out) forwards; }
+.opening-cover.play .oc-line { animation: ocTrace .9s .15s cubic-bezier(.65,0,.35,1) forwards, ocInk .5s .95s ease forwards; }
+.opening-cover.play .oc-glow { animation: ocTrace .9s .15s cubic-bezier(.65,0,.35,1) forwards, ocOut .6s .95s ease forwards; }
+.opening-cover.play .oc-fill { animation: ocBloom .6s .9s var(--ease-out) forwards; }
+.opening-cover.play .oc-p { animation: ocRise .5s 1.3s var(--ease-out) forwards; }
+.opening-cover.play .oc-word { animation: ocWordIn .7s 1.55s var(--ease-out) forwards; }
 /* zoom: the fill and "p" clear, the outline flies past as a ring while the hole opens
    (the play animations stay listed first so their end states hold) */
 .opening-cover.zoom .oc-hole { animation: ocHole 1.15s cubic-bezier(.75,0,.22,1) forwards; }
 .opening-cover.zoom .oc-mark { animation: ocMark 1s cubic-bezier(.75,0,.3,1) forwards; }
-.opening-cover.play.zoom .oc-fill { animation: ocBloom .6s 1.25s var(--ease-out) forwards, ocOut .25s ease forwards; }
-.opening-cover.play.zoom .oc-p { animation: ocRise .5s 1.65s var(--ease-out) forwards, ocOut .2s ease forwards; }
-.opening-cover.play.zoom .oc-word { animation: ocWordIn .7s 1.9s var(--ease-out) forwards, ocOut .3s ease forwards; }
+.opening-cover.play.zoom .oc-fill { animation: ocBloom .6s .9s var(--ease-out) forwards, ocOut .25s ease forwards; }
+.opening-cover.play.zoom .oc-p { animation: ocRise .5s 1.3s var(--ease-out) forwards, ocOut .2s ease forwards; }
+.opening-cover.play.zoom .oc-word { animation: ocWordIn .7s 1.55s var(--ease-out) forwards, ocOut .3s ease forwards; }
 @keyframes ocTrace { to { stroke-dashoffset: 0; } }
 @keyframes ocInk { to { stroke: #1b2d74; } }
 @keyframes ocBloom { to { opacity: 1; transform: none; } }
