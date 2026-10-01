@@ -622,7 +622,7 @@
       }, 150);
       setTimeout(() => { cover.remove(); root.style.overflow = ''; }, 1250);
     };
-    const wait = setTimeout(open, 2500);
+    const wait = setTimeout(open, 3000);
     cover.addEventListener('click', open);
   })();
 })();
