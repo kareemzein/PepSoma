@@ -116,31 +116,38 @@ h2 { font-size: clamp(1.8rem, 3.4vw, 2.7rem); }
 #view.page-enter { animation: pageIn .5s var(--ease-out); }
 @keyframes pageIn { from { opacity: 0; transform: translateY(10px); } }
 
-/* opening (once per visit): the mark fades in, then its middle opens and you fly through onto the page.
+/* opening (once per visit): the mark traces itself, then its middle opens and you fly through onto the page.
    html.opening is set in index.html before first paint; its ::after holds the cover until app.js builds it. */
 html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; background: var(--cream); }
 .opening-cover { position: fixed; inset: 0; z-index: 200; cursor: pointer; }
 .opening-cover svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .oc-bg { fill: var(--cream); }
-.oc-hole, .oc-mark { transform-box: fill-box; transform-origin: center; }
+.oc-hole, .oc-mark, .oc-fill, .oc-p { transform-box: fill-box; transform-origin: center; }
 .oc-hole { transform: scale(.001); }
-.oc-mark { opacity: 0; }
-.oc-frame { fill: #1b2d74; stroke: #1b2d74; stroke-width: 3.5; stroke-linejoin: round; }
-.oc-p { font: italic 700 36px Georgia, serif; fill: #d8d85a; }
+/* two halves start together at the top centre and meet at the bottom, so the outline has no start point or seam;
+   the offset starts just past the dash so no round-cap dot shows before the trace begins */
+.oc-line { fill: none; stroke: var(--text); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 100 110; stroke-dashoffset: 101; }
+.oc-fill { fill: #1b2d74; opacity: 0; transform: scale(.55); }
+.oc-p { font: italic 700 36px Georgia, serif; fill: #d8d85a; opacity: 0; transform: translateY(3px); }
 .oc-word { position: absolute; left: 50%; top: calc(50% + max(100vw, 100vh) * .032 + 24px); transform: translateX(-50%); display: grid; justify-items: center; gap: 6px; opacity: 0; white-space: nowrap; }
 .oc-kicker { font-size: .72rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
 .oc-word .logo { font-size: 2.6rem; }
-/* play: the whole mark (square and "p") fades in as one piece, then the wordmark */
-.opening-cover.play .oc-mark { animation: ocLogoIn 1.15s .15s var(--ease-out) forwards; }
-.opening-cover.play .oc-word { animation: ocWordIn .7s 1.15s var(--ease-out) forwards; }
-/* zoom: the hole opens through the mark (the play animations stay listed first so their end states hold) */
+/* play: trace the outline, settle it into the mark's navy as the fill blooms from the middle, then the "p" and the wordmark */
+.opening-cover.play .oc-line { animation: ocTrace .9s .15s cubic-bezier(.65,0,.35,1) forwards, ocInk .5s .95s ease forwards; }
+.opening-cover.play .oc-fill { animation: ocBloom .6s .9s var(--ease-out) forwards; }
+.opening-cover.play .oc-p { animation: ocRise .5s 1.3s var(--ease-out) forwards; }
+.opening-cover.play .oc-word { animation: ocWordIn .7s 1.55s var(--ease-out) forwards; }
+/* zoom: the fill and "p" clear, the outline flies past as a ring while the hole opens
+   (the play animations stay listed first so their end states hold) */
 .opening-cover.zoom .oc-hole { animation: ocHole 1.15s cubic-bezier(.75,0,.22,1) forwards; }
-.opening-cover.zoom .oc-frame { animation: ocUnfill .25s ease forwards; }
-.opening-cover.zoom .oc-p { animation: ocOut .2s ease forwards; }
-.opening-cover.play.zoom .oc-mark { animation: ocLogoIn 1.15s .15s var(--ease-out) forwards, ocMark 1s cubic-bezier(.75,0,.3,1) forwards; }
-.opening-cover.play.zoom .oc-word { animation: ocWordIn .7s 1.15s var(--ease-out) forwards, ocOut .3s ease forwards; }
-@keyframes ocLogoIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
-@keyframes ocUnfill { to { fill-opacity: 0; } }
+.opening-cover.zoom .oc-mark { animation: ocMark 1s cubic-bezier(.75,0,.3,1) forwards; }
+.opening-cover.play.zoom .oc-fill { animation: ocBloom .6s .9s var(--ease-out) forwards, ocOut .25s ease forwards; }
+.opening-cover.play.zoom .oc-p { animation: ocRise .5s 1.3s var(--ease-out) forwards, ocOut .2s ease forwards; }
+.opening-cover.play.zoom .oc-word { animation: ocWordIn .7s 1.55s var(--ease-out) forwards, ocOut .3s ease forwards; }
+@keyframes ocTrace { to { stroke-dashoffset: 0; } }
+@keyframes ocInk { to { stroke: #1b2d74; } }
+@keyframes ocBloom { to { opacity: 1; transform: none; } }
+@keyframes ocRise { to { opacity: 1; transform: none; } }
 @keyframes ocWordIn { from { opacity: 0; transform: translate(-50%, 14px); } to { opacity: 1; transform: translateX(-50%); } }
 @keyframes ocOut { to { opacity: 0; } }
 @keyframes ocHole { to { transform: scale(46); } }

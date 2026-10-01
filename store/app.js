@@ -590,7 +590,7 @@
   PS.boot({ name: 'a', vialTheme: VT, cartDelay: 560, header, footer, drawer, summary, pageHead, ageGate, ageDenied, cookieBanner, views, afterRender });
   syncModeUI();
 
-  // opening, once per visit (index.html sets html.opening): the mark fades in, then its middle opens
+  // opening, once per visit (index.html sets html.opening): the mark traces itself, then its middle opens
   // and you fly through onto the page while the page's own entrance replays behind it. A tap skips ahead.
   (function opening() {
     const root = document.documentElement;
@@ -602,7 +602,10 @@
     cover.innerHTML = `<svg viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
       <defs><mask id="oc-mask"><rect width="1000" height="1000" fill="#fff"/><g class="oc-hole"><rect x="468" y="468" width="64" height="64" rx="16" fill="#000"/></g></mask></defs>
       <rect class="oc-bg" width="1000" height="1000" mask="url(#oc-mask)"/>
-      <g class="oc-mark"><rect class="oc-frame" x="468" y="468" width="64" height="64" rx="16"/><text class="oc-p" x="500" y="512" text-anchor="middle">p</text></g>
+      <g class="oc-mark"><rect class="oc-fill" x="468" y="468" width="64" height="64" rx="16"/>
+        <path class="oc-line" pathLength="100" d="M500 468H516A16 16 0 0 1 532 484V516A16 16 0 0 1 516 532H500"/>
+        <path class="oc-line" pathLength="100" d="M500 468H484A16 16 0 0 0 468 484V516A16 16 0 0 0 484 532H500"/>
+        <text class="oc-p" x="500" y="512" text-anchor="middle">p</text></g>
     </svg><div class="oc-word"><span class="oc-kicker">Research-grade peptides</span><span class="logo">pep<i>soma</i></span></div>`;
     document.body.appendChild(cover);
     root.classList.remove('opening');
