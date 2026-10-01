@@ -1,12 +1,16 @@
 /* Pepsoma — review mode: point at any part of the site and leave a comment on it.
-   Turn on with ?review in the address (or the /review/ link); it stays on in this browser until "Exit review".
+   Turn on with ?review in the address (or the /review/ link); it stays on in that tab until "Exit review" or the tab closes.
    Comments live in localStorage (pepsoma.reviewNotes) and export as plain text.
    Each comment is signed with the current commenter; names are kept per device (pepsoma.reviewPeople) and N cycles them.
    With SHEET_URL set, every comment is also sent to a Google Sheet (setup: tools/review-sheet.gs). */
 (function () {
   const S = PS.storage;
-  if (/[?&]review(=|&|$)/.test(location.search)) S.set('review', true);
-  if (!S.get('review', false)) return;
+  // per tab (sessionStorage), so the plain link always opens the normal store
+  const ON = 'pepsoma.review', asked = /[?&]review(=|&|$)/.test(location.search);
+  S.remove('review'); // earlier builds kept review on for the whole browser
+  let on = asked;
+  try { if (asked) sessionStorage.setItem(ON, '1'); on = sessionStorage.getItem(ON) === '1'; } catch (e) { /* blocked storage: only with ?review */ }
+  if (!on) return;
 
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -494,9 +498,10 @@
     }
     else if (act === 'clear') { if (confirm(`Delete all ${notes.length} comments? Copy or download them first if you need them.`)) { drop(() => true); paint(); } }
     else if (act === 'exit') {
-      if (!confirm('Turn off review mode in this browser? Your comments stay saved; add ?review to the address to come back.')) return;
-      S.set('review', false);
-      location.href = location.pathname + location.hash;
+      if (!confirm('Turn off review mode in this tab? Your comments stay saved; add ?review to the address to come back.')) return;
+      try { sessionStorage.removeItem(ON); } catch (e) { /* ignore */ }
+      // drop ?review if it's there; otherwise the address doesn't change, so reload outright
+      if (location.search) location.href = location.pathname + location.hash; else location.reload();
     }
   });
 
