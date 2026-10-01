@@ -61,7 +61,7 @@ store/                   the storefront (published at the main address)
   js/visuals.js          SVG vials, lot/COA data, chromatograms
   js/policies.js         all policy pages
   js/ui.js               forms, default pages, cart drawer/modals, app boot
-  js/review.js           review mode: Browse/Comment toggle, click any element to comment, commenter names (N switches), export (only runs with ?review)
+  js/review.js           review mode: Browse/Comment toggle, click any element to comment, commenter names (N switches), person filter, everyone's comments from the sheet, export (only runs with ?review)
   css/base.css           base layout that styles.css builds on
 
 tools/review-sheet.gs    Google Apps Script that collects review-mode comments in a Google Sheet (not published; setup steps inside)

@@ -2,7 +2,7 @@
    Turn on with ?review in the address (or the /review/ link); it stays on in that tab until "Exit review" or the tab closes.
    Comments live in localStorage (pepsoma.reviewNotes) and export as plain text.
    Each comment is signed with the current commenter; names are kept per device (pepsoma.reviewPeople) and N cycles them.
-   With SHEET_URL set, every comment is also sent to a Google Sheet (setup: tools/review-sheet.gs). */
+   With SHEET_URL set, every comment is also sent to a Google Sheet (setup: tools/review-sheet.gs), and the panel can show everyone's comments from it. */
 (function () {
   const S = PS.storage;
   // per tab (sessionStorage), so the plain link always opens the normal store
@@ -27,7 +27,10 @@
     notes = notes.filter((n) => !test(n));
     save();
   };
-  let mode = 'browse', hoverEl = null, picked = null, widen = [], editing = null, filterBy = null;
+  let mode = 'browse', hoverEl = null, picked = null, widen = [], editing = null, filterBy = S.get('reviewFilter', null);
+  // "sheet" shows everyone's comments (read-only) as fetched from the Google Sheet instead of this laptop's
+  let source = SHEET_URL && S.get('reviewSource', 'local') === 'sheet' ? 'sheet' : 'local', sheet = [], sheetState = source === 'sheet' ? 'loading' : 'idle', loads = 0;
+  const list = () => (source === 'sheet' ? sheet : notes);
   // removing a name from `people` only takes it off the switcher; their comments keep their `by`
   let people = S.get('reviewPeople', []), who = S.get('reviewWho', null);
   if (who && !people.includes(who)) who = null;
@@ -69,6 +72,7 @@
   .rv-pop { width: min(360px, calc(100vw - 32px)); padding: 14px; border-radius: 16px; background: #fff; color: #1b1a17; box-shadow: 0 18px 50px rgba(0,0,0,.3); border: 1px solid #e6e1d8; }
   .rv-pop .rv-what { font-size: 12px; color: #6b665d; margin-bottom: 8px; display: flex; gap: 6px; align-items: center; }
   .rv-pop .rv-what b { font-weight: 700; color: #1b1a17; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rv-pop .rv-txt { white-space: pre-wrap; word-break: break-word; max-height: 40vh; overflow-y: auto; }
   .rv-pop textarea { width: 100%; min-height: 92px; resize: vertical; padding: 10px 12px; border-radius: 10px; border: 1px solid #d9d3c8; background: #faf8f4; color: #1b1a17; outline: none; }
   .rv-pop textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.18); }
   .rv-row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
@@ -82,6 +86,7 @@
   .rv-panel h2 { font-size: 18px; font-weight: 700; margin: 0 0 10px; display: flex; align-items: center; color: #1b1a17; }
   .rv-sync { font-size: 12px; color: #6b665d; margin: -4px 0 10px; }
   .rv-sync.rv-warn { color: #c4321a; }
+  .rv-sync .rv-btn { margin-left: 6px; }
   .rv-panel .rv-tools { display: flex; flex-wrap: wrap; gap: 6px; }
   .rv-list { flex: 1; overflow-y: auto; padding: 8px 18px 24px; }
   .rv-page { font-size: 12px; font-weight: 700; color: #6b665d; text-transform: uppercase; letter-spacing: .06em; margin: 18px 0 6px; }
@@ -130,6 +135,11 @@
     .rv-bar .rv-who { max-width: 96px; }
     .rv-bar .rv-lbl { display: none; }
     .rv-bar { left: 50%; right: auto; transform: translateX(-50%); bottom: 12px; }
+    .rv-bar.rv-filtered { flex-wrap: wrap; justify-content: center; width: calc(100vw - 24px); border-radius: 26px; }
+    .rv-bar.rv-filtered [data-only] { order: -1; flex: 0 0 100%; }
+    .rv-bar.rv-filtered .rv-only .rv-who { max-width: 240px; }
+    .rv-bar.rv-filtered .rv-only .rv-lbl { display: inline; }
+    .rv-bar.rv-filtered ~ .rv-hint { bottom: 124px; }
     .rv-hint { left: 16px; right: 16px; bottom: 70px; text-align: center; }
     .rv-pop { left: 8px !important; right: 8px; top: auto !important; bottom: 8px; width: auto; }
   }
@@ -140,10 +150,11 @@
   const bar = ui(`<div class="rv-bar" role="toolbar" aria-label="Review mode">
     <button class="rv-who" data-who title="Who's commenting (N to switch)"><span class="rv-dot"></span><span class="rv-nm"></span></button>
     <span class="rv-sep"></span>
+    <button class="rv-only" data-only hidden title="Show everyone's pins again"><span class="rv-who"><span class="rv-dot"></span><span class="rv-lbl">Only:</span><span class="rv-nm"></span>×</span></button>
     <button data-m="browse" aria-pressed="true">Browse</button>
     <button data-m="comment" aria-pressed="false">Comment</button>
     <button data-list><span class="rv-lbl">Comments</span><span class="rv-count">0</span></button></div>`);
-  const hint = ui('<div class="rv-hint" hidden>Click anything to comment on it · <kbd>C</kbd> toggle · <kbd>N</kbd> switch person · <kbd>Esc</kbd> stop</div>');
+  const hint = ui('<div class="rv-hint" hidden>Click anything to comment on it · <kbd>C</kbd> toggle · <kbd>F</kbd> whole page · <kbd>B</kbd> browse · <kbd>N</kbd> person · <kbd>Esc</kbd> stop</div>');
   const picker = ui('<div class="rv-scrim" hidden></div>');
   const hud = ui('<div class="rv-hud" aria-live="polite"></div>');
   const hl = ui('<div class="rv-hl" hidden></div>');
@@ -196,6 +207,7 @@
     if (b.dataset.m) { closePop(); setMode(b.dataset.m); }
     if ('list' in b.dataset) openPanel();
     if ('who' in b.dataset) openPicker();
+    if ('only' in b.dataset) { setFilter(null); paint(); }
   });
 
   /* ---------- who's commenting ---------- */
@@ -235,6 +247,7 @@
     const then = afterPick;
     afterPick = null;
     if (then === 'comment' && who) setMode('comment');
+    if (then === 'page' && who) { widen = []; openPop(null); }
   }
   picker.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -297,7 +310,7 @@
   };
   ['pointerdown', 'mousedown', 'mouseup', 'pointerup', 'click', 'dblclick', 'auxclick', 'contextmenu', 'submit'].forEach((t) => window.addEventListener(t, block, true));
   window.addEventListener('mouseover', (e) => {
-    if (mode !== 'comment' || picked || !pickable(e.target)) return;
+    if (mode !== 'comment' || !pop.hidden || !pickable(e.target)) return;
     hoverEl = target(e.target);
     box(hoverEl);
   }, true);
@@ -314,6 +327,12 @@
     }
     if (typing || e.metaKey || e.ctrlKey || e.altKey || !picker.hidden) return;
     if (e.key === 'c' || e.key === 'C') { closePop(); setMode(mode === 'comment' ? 'browse' : 'comment'); }
+    if (e.key === 'b' || e.key === 'B') { closePop(); setMode('browse'); }
+    if (e.key === 'f' || e.key === 'F') {
+      e.preventDefault(); // else the "f" is typed into the box that just took focus
+      closePop();
+      if (who) { widen = []; openPop(null); } else openPicker('page');
+    }
     if (e.key === 'n' || e.key === 'N') cycleWho(e.shiftKey ? -1 : 1);
   }, true);
 
@@ -334,6 +353,16 @@
     editing = note || null;
     if (el) { el.scrollIntoView({ block: 'nearest' }); box(el, 'rv-picked'); } else { hl.hidden = tag.hidden = true; }
     const what = el ? describe(el) : 'This whole page';
+    if (note && note.ro) {
+      pop.innerHTML = `
+      <div class="rv-what"><span class="rv-dot" style="background:${color(note.by)}"></span><b title="${esc(byName(note) + ' · ' + note.what)}">${esc(byName(note))} · ${esc(note.what)}</b></div>
+      <div class="rv-txt">${esc(note.body)}</div>
+      <div class="rv-row"><span class="rv-grow"></span><button class="rv-btn rv-main" data-a="cancel">Close</button></div>`;
+      pop.hidden = false;
+      placePop(el);
+      $('[data-a="cancel"]', pop).focus();
+      return;
+    }
     pop.innerHTML = `
       <div class="rv-what"><b title="${esc(what)}">${esc(what)}</b>
         ${el && !note ? '<button class="rv-btn rv-sm" data-a="wider" title="Select the area around it">Bigger ↑</button><button class="rv-btn rv-sm" data-a="narrower" title="Back to the smaller piece"' + (widen.length ? '' : ' disabled') + '>Smaller ↓</button>' : ''}</div>
@@ -358,17 +387,18 @@
   pop.addEventListener('click', (e) => {
     const a = e.target.closest('[data-a]');
     if (!a) return;
-    const act = a.dataset.a, body = $('textarea', pop).value.trim();
+    const act = a.dataset.a, ta = $('textarea', pop), body = ta ? ta.value.trim() : '';
     if (act === 'wider' && picked.parentElement && pickable(picked.parentElement)) { const p = picked.parentElement; widen.push(picked); openPop(p); }
     else if (act === 'narrower' && widen.length) openPop(widen.pop());
     else if (act === 'cancel') closePop();
     else if (act === 'delete') { if (confirm('Delete this comment?')) { const gone1 = editing; drop((n) => n === gone1); closePop(); paint(); } }
     else if (act === 'done') { editing.done = !editing.done; editing.rev++; save(); closePop(); paint(); }
     else if (act === 'save') {
-      if (!body) { $('textarea', pop).focus(); return; }
+      if (!body) { ta.focus(); return; }
       if (editing) { editing.body = body; editing.rev++; }
       else {
         const el = picked;
+        if (filterBy && filterBy !== (who || 'No name')) setFilter(null);
         notes.push({
           id: newId(), rev: 1, n: notes.reduce((m, x) => Math.max(m, x.n), 0) + 1,
           by: who, page: route(), sel: el ? selectorOf(el) : null, text: el ? snippet(el) : '', what: el ? describe(el) : 'Whole page',
@@ -385,15 +415,26 @@
   pop.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('[data-a="save"]', pop).click(); });
 
   /* ---------- pins, kept on their elements as the page scrolls and re-renders ---------- */
+  function setFilter(f) {
+    filterBy = f;
+    S.set('reviewFilter', f);
+    const b = $('[data-only]', bar);
+    b.hidden = !f;
+    bar.classList.toggle('rv-filtered', !!f);
+    if (f) { $('.rv-dot', b).style.background = color(f === 'No name' ? null : f); $('.rv-nm', b).textContent = f; }
+  }
   function paint() {
-    bar.querySelector('.rv-count').textContent = notes.filter((n) => !n.done).length;
-    const here = notes.filter((n) => n.page === route() && n.sel);
+    const all = list();
+    // a filter on someone who's gone clears itself, but only once the list it applies to has loaded
+    if (filterBy && (source === 'local' || sheetState === 'ok') && !all.some((n) => byName(n) === filterBy)) setFilter(null);
+    bar.querySelector('.rv-count').textContent = all.filter((n) => !n.done).length;
+    const here = all.filter((n) => n.page === route() && n.sel && (!filterBy || byName(n) === filterBy));
     pins.innerHTML = here.map((n) => `<button class="rv rv-pin${n.done ? ' rv-done' : ''}" data-n="${n.n}" data-rv title="${esc(byName(n) + ': ' + n.body)}" style="pointer-events:auto${n.done ? '' : ';background:' + color(n.by)}">${n.n}</button>`).join('');
     if (!panel.hidden) renderPanel();
   }
   function track() {
     pins.querySelectorAll('.rv-pin').forEach((p) => {
-      const n = notes.find((x) => x.n === +p.dataset.n), el = n && find(n);
+      const n = list().find((x) => x.n === +p.dataset.n), el = n && find(n);
       const r = el && el.getBoundingClientRect();
       if (!r || (!r.width && !r.height)) { p.style.display = 'none'; return; }
       p.style.display = '';
@@ -407,52 +448,54 @@
   pins.addEventListener('click', (e) => {
     const p = e.target.closest('.rv-pin');
     if (!p) return;
-    const n = notes.find((x) => x.n === +p.dataset.n);
+    const n = list().find((x) => x.n === +p.dataset.n);
     if (n) openPop(find(n), n);
   });
   window.addEventListener('hashchange', () => { closePop(); setTimeout(paint, 50); });
 
   /* ---------- the list of all comments ---------- */
   function renderPanel() {
-    const authors = [...new Set(notes.map(byName))];
-    if (filterBy && !authors.includes(filterBy)) filterBy = null;
-    const shown = filterBy ? notes.filter((n) => byName(n) === filterBy) : notes;
+    const all = list(), mine = source === 'local';
+    const authors = [...new Set(all.map(byName))];
+    const shown = filterBy ? all.filter((n) => byName(n) === filterBy) : all;
     const pages = [...new Set(shown.map((n) => n.page))];
-    const count = (a) => notes.filter((n) => byName(n) === a).length;
+    const count = (a) => all.filter((n) => byName(n) === a).length;
     panel.innerHTML = `<header>
-        <h2><span class="rv-grow">Comments (${notes.length})</span><button class="rv-btn rv-sm" data-p="close" aria-label="Close">✕</button></h2>
-        ${SHEET_URL ? `<p class="rv-sync">${syncText()}</p>` : ''}
+        <h2><span class="rv-grow">Comments (${all.length})</span><button class="rv-btn rv-sm" data-p="close" aria-label="Close">✕</button></h2>
+        ${SHEET_URL ? `<div class="rv-filters" style="margin:0 0 10px"><button class="rv-chip" data-src="local" aria-pressed="${mine}">This laptop</button><button class="rv-chip" data-src="sheet" aria-pressed="${!mine}">Everyone (sheet)</button></div>
+        <p class="rv-sync">${syncText()}</p>` : ''}
         <div class="rv-tools">
           <button class="rv-btn rv-sm rv-main" data-p="page">+ Comment on this page</button>
-          <button class="rv-btn rv-sm" data-p="copy"${notes.length ? '' : ' disabled'}>Copy all</button>
-          <button class="rv-btn rv-sm" data-p="download"${notes.length ? '' : ' disabled'}>Download</button>
-          <button class="rv-btn rv-sm rv-red" data-p="clear"${notes.length ? '' : ' disabled'}>Clear all</button>
+          ${mine ? '' : '<button class="rv-btn rv-sm" data-p="refresh">Refresh</button>'}
+          <button class="rv-btn rv-sm" data-p="copy"${all.length ? '' : ' disabled'}>Copy all</button>
+          <button class="rv-btn rv-sm" data-p="download"${all.length ? '' : ' disabled'}>Download</button>
+          ${mine ? `<button class="rv-btn rv-sm rv-red" data-p="clear"${all.length ? '' : ' disabled'}>Clear all</button>` : ''}
           <button class="rv-btn rv-sm" data-p="exit">Exit review</button>
         </div>
-        ${authors.length > 1 ? `<div class="rv-filters"><button class="rv-chip" data-f="" aria-pressed="${!filterBy}">Everyone (${notes.length})</button>` +
+        ${authors.length > 1 ? `<div class="rv-filters"><button class="rv-chip" data-f="" aria-pressed="${!filterBy}">All (${all.length})</button>` +
           authors.map((a) => `<button class="rv-chip" data-f="${esc(a)}" aria-pressed="${a === filterBy}"><span class="rv-dot" style="background:${color(a === 'No name' ? null : a)}"></span>${esc(a)} (${count(a)})</button>`).join('') + '</div>' : ''}
       </header>
-      <div class="rv-list">${notes.length ? pages.map((p) => `<div class="rv-page">${esc(pageName(p))}</div>` +
+      <div class="rv-list">${all.length ? pages.map((p) => `<div class="rv-page">${esc(pageName(p))}</div>` +
         shown.filter((n) => n.page === p).map((n) => `<button class="rv-item${n.done ? ' rv-done' : ''}" data-go="${n.n}">
           <span class="rv-pin${n.done ? ' rv-done' : ''}"${n.done ? '' : ` style="background:${color(n.by)}"`}>${n.n}</span>
           <span><div class="rv-el"><span class="rv-by">${esc(byName(n))}</span> · ${esc(n.what)}</div><div class="rv-txt">${esc(n.body)}</div></span></button>`).join('')).join('') +
-          `<div class="rv-danger"><div class="rv-label">Delete one person's comments</div>
+          (mine ? `<div class="rv-danger"><div class="rv-label">Delete one person's comments</div>
             <p>Separate from taking a name off the switcher. This permanently removes what they wrote.</p>
             ${authors.map((a) => `<div class="rv-row"><span class="rv-dot" style="background:${color(a === 'No name' ? null : a)}"></span><span class="rv-grow">${esc(a)} · ${count(a)}</span><button class="rv-btn rv-sm rv-red" data-del-by="${esc(a)}">Delete ${count(a)}</button></div>`).join('')}
-          </div>`
-        : '<p class="rv-empty">No comments yet. Switch to <b>Comment</b> and click any part of the page.</p>'}</div>`;
+          </div>` : '')
+        : mine || sheetState === 'ok' ? '<p class="rv-empty">No comments yet. Switch to <b>Comment</b> and click any part of the page.</p>' : ''}</div>`;
   }
   function openPanel() { closePop(); setMode('browse'); renderPanel(); panel.hidden = false; }
   function closePanel() { panel.hidden = true; }
 
   function exportText() {
     const day = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    const authors = [...new Set(notes.map(byName))];
-    let out = `PEPSOMA — REVIEW COMMENTS (${notes.length}) · ${day}\nFrom: ${authors.map((a) => `${a} (${notes.filter((n) => byName(n) === a).length})`).join(', ')}\n`;
-    [...new Set(notes.map((n) => n.page))].forEach((p) => {
+    const all = list(), authors = [...new Set(all.map(byName))];
+    let out = `PEPSOMA — REVIEW COMMENTS (${all.length}) · ${day}\nFrom: ${authors.map((a) => `${a} (${all.filter((n) => byName(n) === a).length})`).join(', ')}\n`;
+    [...new Set(all.map((n) => n.page))].forEach((p) => {
       out += `\n${pageName(p).toUpperCase()}  (#${p})\n`;
-      notes.filter((n) => n.page === p).forEach((n) => {
-        out += `${n.n}. [${byName(n)}] ${n.what}${n.done ? '  [done]' : ''}\n   ${n.body.replace(/\n/g, '\n   ')}\n   (${n.width < 700 ? 'phone' : n.width < 1100 ? 'tablet' : 'desktop'} ${n.width}px, ${n.theme}${n.sel ? ` · ${n.cls} · ${n.sel}` : ''})\n`;
+      all.filter((n) => n.page === p).forEach((n) => {
+        out += `${n.n}. [${byName(n)}] ${n.what}${n.done ? '  [done]' : ''}\n   ${n.body.replace(/\n/g, '\n   ')}\n   (${device(n)}${n.sel ? ` · ${[n.cls, n.sel].filter(Boolean).join(' · ')}` : ''})\n`;
       });
     });
     return out;
@@ -460,7 +503,7 @@
   panel.addEventListener('click', async (e) => {
     const go = e.target.closest('[data-go]');
     if (go) {
-      const n = notes.find((x) => x.n === +go.dataset.go);
+      const n = list().find((x) => x.n === +go.dataset.go);
       closePanel();
       if (route() !== n.page) location.hash = '#' + n.page;
       setTimeout(() => {
@@ -471,8 +514,9 @@
       }, 120);
       return;
     }
-    const f = e.target.closest('[data-f]');
-    if (f) { filterBy = f.dataset.f || null; renderPanel(); return; }
+    const f = e.target.closest('[data-f]'), src = e.target.closest('[data-src]');
+    if (f) { setFilter(f.dataset.f || null); paint(); return; }
+    if (src) { setSource(src.dataset.src); return; }
     const del = e.target.closest('[data-del-by]');
     if (del) {
       const a = del.dataset.delBy, k = notes.filter((n) => byName(n) === a).length;
@@ -484,6 +528,7 @@
     const act = b.dataset.p;
     if (act === 'close') closePanel();
     else if (act === 'page') { widen = []; openPop(null); }
+    else if (act === 'refresh') load();
     else if (act === 'copy') {
       try { await navigator.clipboard.writeText(exportText()); b.textContent = 'Copied ✓'; }
       catch (err) { prompt('Copy the comments:', exportText()); }
@@ -508,9 +553,11 @@
   /* ---------- sending to the Google Sheet ---------- */
   // Plain-text POST keeps it a "simple" request, so the browser skips the CORS preflight Apps Script can't answer.
   let syncing = false, syncFailed = false, retry = 0;
-  const device = (n) => `${n.width < 700 ? 'phone' : n.width < 1100 ? 'tablet' : 'desktop'} ${n.width}px, ${n.theme}`;
+  const device = (n) => n.device || `${n.width < 700 ? 'phone' : n.width < 1100 ? 'tablet' : 'desktop'} ${n.width}px, ${n.theme}`;
   const unsent = () => notes.filter((n) => n.sent !== n.rev);
   function syncText() {
+    if (source === 'sheet' && sheetState === 'loading') return 'Loading comments from the sheet…';
+    if (source === 'sheet' && sheetState === 'error') return `<span class="rv-warn">Couldn't load the sheet — check the connection</span><button class="rv-btn rv-sm" data-p="refresh">Retry</button>`;
     const k = unsent().length + gone.length;
     if (syncing) return 'Sending to the Google Sheet…';
     if (!k) return 'All comments sent to the Google Sheet ✓';
@@ -541,6 +588,7 @@
       S.set('reviewNotes', notes);
       S.set('reviewGone', gone);
       syncFailed = false;
+      if (source === 'sheet') load();
     } catch (e) {
       syncFailed = true;
       clearTimeout(retry);
@@ -552,8 +600,36 @@
   }
   window.addEventListener('online', sync);
 
+  /* ---------- everyone's comments, read from the sheet ---------- */
+  // sheet rows hold the full address; only rows from this site's own page count, and the part after # becomes the route
+  const where = (u) => { try { const x = new URL(u); return [x.origin + x.pathname, x.hash.slice(1).split('?')[0] || '/']; } catch (e) { return []; } };
+  async function load() {
+    const mine = ++loads;
+    sheetState = 'loading';
+    paint();
+    try {
+      const out = await (await fetch(SHEET_URL + '?list=1')).json();
+      if (!out.ok) throw new Error(out.error);
+      if (mine !== loads) return;
+      const here = location.origin + location.pathname;
+      sheet = out.comments.filter((c) => where(c.page)[0] === here).map((c, i) => ({ ...c, ro: true, n: i + 1, page: where(c.page)[1] }));
+      sheetState = 'ok';
+    } catch (e) {
+      if (mine !== loads) return;
+      sheetState = 'error';
+    }
+    paint();
+  }
+  function setSource(s) {
+    source = s;
+    S.set('reviewSource', s);
+    closePop();
+    if (s === 'sheet') load(); else paint();
+  }
+
   showWho();
-  paint();
+  setFilter(filterBy);
+  if (source === 'sheet') load(); else paint();
   requestAnimationFrame(track);
   sync();
   if (!who) openPicker();

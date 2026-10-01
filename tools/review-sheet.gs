@@ -10,8 +10,10 @@
       Click Deploy, allow access when Google asks, and copy the Web app URL (ends in /exec).
    4. Put that URL in SHEET_URL at the top of store/js/review.js and push.
 
-   If you change this script later: Deploy → Manage deployments → edit (pencil) → Version: New version → Deploy.
-   That keeps the same URL. */
+   After editing this script you must redeploy, or the live URL keeps running the old code:
+   Deploy → Manage deployments → edit (pencil) → Version: New version → Deploy. That keeps the same URL.
+
+   Anyone with the URL can read the comments (review mode's "Everyone" view fetches ?list=1). That's accepted: feedback comments aren't sensitive. */
 
 const SHEET_NAME = 'Comments';
 const HEADERS = ['ID', 'Time', 'Name', 'Page', 'Element', 'Comment', 'Status', 'Device', 'Selector', 'Last updated'];
@@ -44,9 +46,21 @@ function doPost(e) {
   }
 }
 
-// Opening the /exec URL in a browser is a quick check that the deployment works.
-function doGet() {
-  return ContentService.createTextOutput('Pepsoma review sheet is running.');
+// Opening the /exec URL in a browser is a quick check that the deployment works; ?list=1 returns the comments as JSON.
+function doGet(e) {
+  if (!(e && e.parameter && e.parameter.list)) return ContentService.createTextOutput('Pepsoma review sheet is running.');
+  try {
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME); // not sheet_(): reading shouldn't create it
+    const last = sh ? sh.getLastRow() : 0;
+    const rows = last > 1 ? sh.getRange(2, 1, last - 1, HEADERS.length).getValues() : [];
+    const text = (v) => String(v).replace(/^'(?=[=+\-@])/, ''); // undo safe_
+    return json_({
+      ok: true,
+      comments: rows.map((r) => ({ id: text(r[0]), at: r[1] instanceof Date ? r[1].toISOString() : text(r[1]), by: text(r[2]), page: text(r[3]), what: text(r[4]), body: text(r[5]), done: r[6] === 'Done', device: text(r[7]), sel: text(r[8]) })),
+    });
+  } catch (err) {
+    return json_({ ok: false, error: String(err) });
+  }
 }
 
 function sheet_() {
