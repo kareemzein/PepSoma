@@ -11,6 +11,7 @@ Both are published from this repo as one site with two links:
 |---|---|---|
 | Pepsoma (the store) | https://kareemzein.github.io/PepSoma/ | `store/` |
 | Pepsoma feedback | https://kareemzein.github.io/PepSoma/pepsoma-feedback/ | `pepsoma-feedback/` |
+| Store in review mode | https://kareemzein.github.io/PepSoma/review/ | `store/js/review.js` |
 
 ## What the store does
 
@@ -60,6 +61,7 @@ store/                   the storefront (published at the main address)
   js/visuals.js          SVG vials, lot/COA data, chromatograms
   js/policies.js         all policy pages
   js/ui.js               forms, default pages, cart drawer/modals, app boot
+  js/review.js           review mode: Browse/Comment toggle, click any element to comment, export (only runs with ?review)
   css/base.css           base layout that styles.css builds on
 
 pepsoma-feedback/        design feedback page (published at /pepsoma-feedback/)

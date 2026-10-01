@@ -39,6 +39,8 @@ jobs:
           forward a ../
           forward b ../pepsoma-feedback/designs/b/
           forward v1 ../pepsoma-feedback/first-draft/
+          # the store with comment mode on (see store/js/review.js)
+          forward review "../?review"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
