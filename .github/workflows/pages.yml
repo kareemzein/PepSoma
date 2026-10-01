@@ -29,6 +29,10 @@ jobs:
         run: |
           mkdir _site
           cp -R store/. _site/
+          # cache busting: Pages lets browsers reuse files for 10 minutes, so stamp this deploy's commit
+          # on the store's CSS/JS links; a reload then always fetches the new files instead of mixing old and new
+          v="${GITHUB_SHA::7}"
+          sed -i -E "s#(href|src)=\"((css|js)/[^\"?]+|styles\.css|app\.js)\"#\1=\"\2?v=$v\"#g" _site/index.html
           cp -R pepsoma-feedback _site/pepsoma-feedback
           touch _site/.nojekyll
           # links from before the reorganization forward to where those pages live now
