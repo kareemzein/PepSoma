@@ -1,7 +1,8 @@
 /* Pepsoma — review mode: point at any part of the site and leave a comment on it.
    Turn on with ?review in the address (or the /review/ link); it stays on in this browser until "Exit review".
    Comments live in localStorage (pepsoma.reviewNotes) and export as plain text.
-   Each comment is signed with the current commenter; names are kept per device (pepsoma.reviewPeople) and N cycles them. */
+   Each comment is signed with the current commenter; names are kept per device (pepsoma.reviewPeople) and N cycles them.
+   With SHEET_URL set, every comment is also sent to a Google Sheet (setup: tools/review-sheet.gs). */
 (function () {
   const S = PS.storage;
   if (/[?&]review(=|&|$)/.test(location.search)) S.set('review', true);
@@ -9,8 +10,19 @@
 
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  // Google Apps Script web app URL from tools/review-sheet.gs; empty keeps comments on this device only
+  const SHEET_URL = '';
+  const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   let notes = S.get('reviewNotes', []);
-  const save = () => S.set('reviewNotes', notes);
+  notes.forEach((n) => { n.id = n.id || newId(); n.rev = n.rev || 1; });
+  // n.sent is the revision the sheet has; `gone` holds ids deleted here that the sheet still shows
+  let gone = S.get('reviewGone', []);
+  const save = () => { S.set('reviewNotes', notes); S.set('reviewGone', gone); sync(); };
+  const drop = (test) => {
+    notes.forEach((n) => { if (test(n) && n.sent) gone.push(n.id); });
+    notes = notes.filter((n) => !test(n));
+    save();
+  };
   let mode = 'browse', hoverEl = null, picked = null, widen = [], editing = null, filterBy = null;
   // removing a name from `people` only takes it off the switcher; their comments keep their `by`
   let people = S.get('reviewPeople', []), who = S.get('reviewWho', null);
@@ -64,6 +76,8 @@
   .rv-panel { top: 0; right: 0; bottom: 0; width: min(400px, 100vw); background: #fff; color: #1b1a17; box-shadow: -20px 0 60px rgba(0,0,0,.2); display: flex; flex-direction: column; }
   .rv-panel header { padding: 18px 18px 12px; border-bottom: 1px solid #eee8de; }
   .rv-panel h2 { font-size: 18px; font-weight: 700; margin: 0 0 10px; display: flex; align-items: center; color: #1b1a17; }
+  .rv-sync { font-size: 12px; color: #6b665d; margin: -4px 0 10px; }
+  .rv-sync.rv-warn { color: #c4321a; }
   .rv-panel .rv-tools { display: flex; flex-wrap: wrap; gap: 6px; }
   .rv-list { flex: 1; overflow-y: auto; padding: 8px 18px 24px; }
   .rv-page { font-size: 12px; font-weight: 700; color: #6b665d; text-transform: uppercase; letter-spacing: .06em; margin: 18px 0 6px; }
@@ -344,15 +358,15 @@
     if (act === 'wider' && picked.parentElement && pickable(picked.parentElement)) { const p = picked.parentElement; widen.push(picked); openPop(p); }
     else if (act === 'narrower' && widen.length) openPop(widen.pop());
     else if (act === 'cancel') closePop();
-    else if (act === 'delete') { if (confirm('Delete this comment?')) { notes = notes.filter((n) => n !== editing); save(); closePop(); paint(); } }
-    else if (act === 'done') { editing.done = !editing.done; save(); closePop(); paint(); }
+    else if (act === 'delete') { if (confirm('Delete this comment?')) { const gone1 = editing; drop((n) => n === gone1); closePop(); paint(); } }
+    else if (act === 'done') { editing.done = !editing.done; editing.rev++; save(); closePop(); paint(); }
     else if (act === 'save') {
       if (!body) { $('textarea', pop).focus(); return; }
-      if (editing) editing.body = body;
+      if (editing) { editing.body = body; editing.rev++; }
       else {
         const el = picked;
         notes.push({
-          n: notes.reduce((m, x) => Math.max(m, x.n), 0) + 1,
+          id: newId(), rev: 1, n: notes.reduce((m, x) => Math.max(m, x.n), 0) + 1,
           by: who, page: route(), sel: el ? selectorOf(el) : null, text: el ? snippet(el) : '', what: el ? describe(el) : 'Whole page',
           cls: el ? el.tagName.toLowerCase() + classes(el) : '',
           body, width: innerWidth, theme: document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
@@ -403,6 +417,7 @@
     const count = (a) => notes.filter((n) => byName(n) === a).length;
     panel.innerHTML = `<header>
         <h2><span class="rv-grow">Comments (${notes.length})</span><button class="rv-btn rv-sm" data-p="close" aria-label="Close">✕</button></h2>
+        ${SHEET_URL ? `<p class="rv-sync">${syncText()}</p>` : ''}
         <div class="rv-tools">
           <button class="rv-btn rv-sm rv-main" data-p="page">+ Comment on this page</button>
           <button class="rv-btn rv-sm" data-p="copy"${notes.length ? '' : ' disabled'}>Copy all</button>
@@ -457,7 +472,7 @@
     const del = e.target.closest('[data-del-by]');
     if (del) {
       const a = del.dataset.delBy, k = notes.filter((n) => byName(n) === a).length;
-      if (confirm(`Delete all ${k} of ${a}'s comments? This can't be undone.`)) { notes = notes.filter((n) => byName(n) !== a); save(); paint(); }
+      if (confirm(`Delete all ${k} of ${a}'s comments? This can't be undone.`)) { drop((n) => byName(n) === a); paint(); }
       return;
     }
     const b = e.target.closest('[data-p]');
@@ -477,7 +492,7 @@
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     }
-    else if (act === 'clear') { if (confirm(`Delete all ${notes.length} comments? Copy or download them first if you need them.`)) { notes = []; save(); paint(); } }
+    else if (act === 'clear') { if (confirm(`Delete all ${notes.length} comments? Copy or download them first if you need them.`)) { drop(() => true); paint(); } }
     else if (act === 'exit') {
       if (!confirm('Turn off review mode in this browser? Your comments stay saved; add ?review to the address to come back.')) return;
       S.set('review', false);
@@ -485,8 +500,56 @@
     }
   });
 
+  /* ---------- sending to the Google Sheet ---------- */
+  // Plain-text POST keeps it a "simple" request, so the browser skips the CORS preflight Apps Script can't answer.
+  let syncing = false, syncFailed = false, retry = 0;
+  const device = (n) => `${n.width < 700 ? 'phone' : n.width < 1100 ? 'tablet' : 'desktop'} ${n.width}px, ${n.theme}`;
+  const unsent = () => notes.filter((n) => n.sent !== n.rev);
+  function syncText() {
+    const k = unsent().length + gone.length;
+    if (syncing) return 'Sending to the Google Sheet…';
+    if (!k) return 'All comments sent to the Google Sheet ✓';
+    return `<span class="rv-warn">${k} change${k === 1 ? '' : 's'} not sent to the Google Sheet yet${syncFailed ? ' (offline? retrying)' : ''}</span>`;
+  }
+  function showSync() { const el = $('.rv-sync', panel); if (el) el.innerHTML = syncText(); }
+  async function sync() {
+    if (!SHEET_URL || syncing) return;
+    const rows = unsent().map((n) => ({ n, rev: n.rev })), removing = gone.slice();
+    if (!rows.length && !removing.length) return;
+    syncing = true;
+    showSync();
+    try {
+      const req = {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          save: rows.map(({ n }) => ({ id: n.id, at: n.at, by: byName(n), page: location.origin + location.pathname + '#' + n.page, what: n.what, body: n.body, done: !!n.done, device: device(n), sel: n.sel || '' })),
+          remove: removing,
+        }),
+      };
+      let res = null;
+      try { res = await fetch(SHEET_URL, req); } catch (e) { /* the reply may not be readable cross-site; send again without reading it */ }
+      if (res) { const out = await res.json(); if (!out.ok) throw new Error(out.error); }
+      else await fetch(SHEET_URL, { ...req, mode: 'no-cors' }); // still throws when offline; saves are matched by id, so a repeat can't duplicate
+      rows.forEach(({ n, rev }) => { n.sent = rev; });
+      gone = gone.filter((id) => !removing.includes(id));
+      S.set('reviewNotes', notes);
+      S.set('reviewGone', gone);
+      syncFailed = false;
+    } catch (e) {
+      syncFailed = true;
+      clearTimeout(retry);
+      retry = setTimeout(sync, 15000);
+    }
+    syncing = false;
+    showSync();
+    if (!syncFailed && (unsent().length || gone.length)) sync();
+  }
+  window.addEventListener('online', sync);
+
   showWho();
   paint();
   requestAnimationFrame(track);
+  sync();
   if (!who) openPicker();
 })();
