@@ -162,6 +162,7 @@
   .rv-dock-top { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
   .rv-dock-group { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #ff5a1f; }
   .rv-dock h3 { font-size: 17px; font-weight: 700; line-height: 1.25; margin: 0 0 4px; color: #1b1a17; display: flex; align-items: center; gap: 8px; }
+  .rv-pos { font-size: 12px; font-weight: 600; color: #8a857c; }
   .rv-ask { font-size: 13px; color: #6b665d; margin: 0 0 10px; }
   .rv-thumb { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #d9d3c8; background: #fff; color: #6b665d; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 600; }
   .rv-thumb svg { width: 15px; height: 15px; }
@@ -1054,14 +1055,15 @@
   function renderDock() {
     dock.hidden = !guided;
     if (!guided) return;
-    const p = myProg(), it = curItem(), group = GUIDE.find(([g]) => g === it.g)[1];
-    const seen = group.filter(([id]) => p.seen[id]).length, th = p.thumb[it.id];
+    const p = myProg(), it = curItem(), gi = GUIDE.findIndex(([g]) => g === it.g), group = GUIDE[gi][1], th = p.thumb[it.id];
+    // where you are, not how much is done: section n of all sections, and the item's place in its section
+    const sec = `${gi + 1}/${GUIDE.length}`, pos = `${group.findIndex(([id]) => id === it.id) + 1}/${group.length}`;
     const old = $('textarea', dock), typed = old ? old.value : '', focused = old && document.activeElement === old;
     dock.className = 'rv rv-dock' + (dockMin ? ' rv-min' : '');
     dock.innerHTML = dockMin
-      ? `<button class="rv-dock-pill" data-g="expand" title="Open the checklist card"><span>${esc(it.g)} ${seen}/${group.length}</span> · ${esc(it.t)}</button>`
-      : `<div class="rv-dock-top"><span class="rv-dock-group">${esc(it.g)} · ${seen}/${group.length}</span><span class="rv-grow"></span><button class="rv-btn rv-sm" data-g="list">Checklist</button><button class="rv-x" data-g="min" aria-label="Shrink" title="Shrink">–</button></div>
-        <h3>${esc(it.t)}${cmark(itemNotes(it.id).length)}</h3>
+      ? `<button class="rv-dock-pill" data-g="expand" title="Open the checklist card"><span>${esc(it.g)} ${sec}</span> · ${esc(it.t)} ${pos}</button>`
+      : `<div class="rv-dock-top"><span class="rv-dock-group" title="Section ${gi + 1} of ${GUIDE.length}">${esc(it.g)} · ${sec}</span><span class="rv-grow"></span><button class="rv-btn rv-sm" data-g="list">Checklist</button><button class="rv-x" data-g="min" aria-label="Shrink" title="Shrink">–</button></div>
+        <h3>${esc(it.t)}<span class="rv-pos" title="Item ${pos.replace('/', ' of ')} in ${esc(it.g)}">${pos}</span>${cmark(itemNotes(it.id).length)}</h3>
         <p class="rv-ask">${esc(it.ask)}</p>
         <div class="rv-row" style="margin:0"><button class="rv-thumb" data-g="up" aria-pressed="${th === 'up'}">${THUMB}Good</button><button class="rv-thumb" data-g="down" aria-pressed="${th === 'down'}">${THUMB_DOWN}Needs work</button></div>
         <textarea placeholder="Anything to change? If it's fine, just hit Next."></textarea>
