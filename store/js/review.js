@@ -83,6 +83,8 @@
   .rv-pop .rv-what b { font-weight: 700; color: #1b1a17; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rv-pop .rv-txt { white-space: pre-wrap; word-break: break-word; max-height: 40vh; overflow-y: auto; }
   .rv-pop textarea { width: 100%; min-height: 92px; resize: vertical; padding: 10px 12px; border-radius: 10px; border: 1px solid #d9d3c8; background: #faf8f4; color: #1b1a17; outline: none; }
+  .rv-file { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: #6b665d; }
+  .rv-file select { flex: 1; min-width: 0; padding: 6px 8px; border-radius: 8px; border: 1px solid #d9d3c8; background: #fff; color: #1b1a17; font-size: 12px; }
   .rv-pop textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.18); }
   .rv-row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
   .rv-btn { border: 1px solid #d9d3c8; background: #fff; color: #1b1a17; border-radius: 999px; padding: 8px 14px; font-weight: 600; }
@@ -466,6 +468,7 @@
     pop.style.top = top + 'px';
   }
   function openPop(el, note) {
+    const was = $('[data-file]', pop), keepFile = !pop.hidden && was && was.dataset.touched ? was.value : undefined; // Bigger/Smaller keep a hand-picked choice
     closePanel();
     picked = el;
     editing = note || null;
@@ -485,6 +488,7 @@
       <div class="rv-what"><b title="${esc(what)}">${esc(what)}</b>
         ${el && !note ? '<button class="rv-btn rv-sm" data-a="wider" title="Select the area around it">Bigger ↑</button><button class="rv-btn rv-sm" data-a="narrower" title="Back to the smaller piece"' + (widen.length ? '' : ' disabled') + '>Smaller ↓</button>' : ''}</div>
       <textarea placeholder="What should change here?">${note ? esc(note.body) : ''}</textarea>
+      ${note ? '' : fileUnder(el, keepFile)}
       <div class="rv-row">
         ${note ? `<button class="rv-btn rv-sm rv-red" data-a="delete">Delete</button><button class="rv-btn rv-sm" data-a="done">${note.done ? 'Reopen' : 'Mark done'}</button>` : ''}
         <span class="rv-grow"></span>
@@ -505,7 +509,7 @@
   pop.addEventListener('click', (e) => {
     const a = e.target.closest('[data-a]');
     if (!a) return;
-    const act = a.dataset.a, ta = $('textarea', pop), body = ta ? ta.value.trim() : '';
+    const act = a.dataset.a, ta = $('textarea', pop), body = ta ? ta.value.trim() : '', file = $('[data-file]', pop);
     if (act === 'wider' && picked.parentElement && pickable(picked.parentElement)) { const p = picked.parentElement; widen.push(picked); openPop(p); }
     else if (act === 'narrower' && widen.length) openPop(widen.pop());
     else if (act === 'cancel') closePop();
@@ -514,7 +518,7 @@
     else if (act === 'save') {
       if (!body) { ta.focus(); return; }
       if (editing) { editing.body = body; editing.rev++; }
-      else addNote(picked, body, guided ? curItem() : null);
+      else addNote(picked, body, file && file.value ? itemOf(file.value) : null);
       save();
       closePop();
       paint();
@@ -522,6 +526,7 @@
     }
   });
   pop.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('[data-a="save"]', pop).click(); });
+  pop.addEventListener('change', (e) => { if (e.target.matches('[data-file]')) e.target.dataset.touched = '1'; });
   function addNote(el, body, item) {
     if (hidden.includes(who || 'No name')) setHidden(hidden.filter((h) => h !== (who || 'No name')));
     const what = el ? describe(el) : 'Whole page';
@@ -533,7 +538,11 @@
       body, width: innerWidth, theme: document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
       at: new Date().toISOString(),
     });
-    if (item) touch(item.id);
+    if (item) {
+      const p = myProg();
+      if (!p.seen[item.id]) p.seen[item.id] = new Date().toISOString();
+      touch(item.id);
+    }
   }
 
   /* ---------- pins, kept on their elements as the page scrolls and re-renders ---------- */
@@ -834,14 +843,14 @@
     ]],
     ['Type and color', [
       ['type-head', 'Headline font', 'Headlines across the site. Do the weight, size and spacing feel right?', '/', '.hero-copy'],
-      ['type-serif', 'Italic accent words', 'The italic serif words used for emphasis, like the rotating headline word and the stat numbers.', '/', '.hero-stats'],
+      ['type-serif', 'Italic accent words', 'The italic serif words used for emphasis, like the rotating headline word and the stat numbers.', '/', '.hero-copy em'],
       ['type-body', 'Body text', 'Paragraphs and descriptions. Comfortable to read? Too small or too light anywhere?', '/about'],
       ['type-btn', 'Buttons and small labels', 'Button text, small labels and the uppercase words above titles.', '/', '.hero-copy'],
-      ['type-num', 'Prices and numbers', 'Prices, discounts and totals on the shop page. Easy to scan?', '/shop', '.pcard'],
+      ['type-num', 'Prices and numbers', 'Prices, discounts and totals on the shop page. Easy to scan?', '/shop', '.pcard .price'],
       ['color-mix', 'Overall colors', 'Navy, periwinkle, cream and olive-yellow. Does the mix feel like one brand?', '/'],
-      ['color-yellow', 'Yellow highlights', 'Olive-yellow marks deals and the main button. Used enough, or too much?', '/', '.deal-bar'],
-      ['color-light', 'Light mode', 'Switch to light mode with the sun/moon button in the header and look around.', '/', '.site-header'],
-      ['color-dark', 'Dark mode', 'Same in dark mode. Does anything look off or hard to read?', '/', '.site-header'],
+      ['color-yellow', 'Yellow highlights', 'Olive-yellow marks deals and the main button. Used enough, or too much?', '/'],
+      ['color-light', 'Light mode', 'Switch to light mode with the sun/moon button in the header and look around.', '/'],
+      ['color-dark', 'Dark mode', 'Same in dark mode. Does anything look off or hard to read?', '/'],
       ['color-read', 'Readability', 'Any text that is hard to read against its background, in either mode?', '/'],
     ]],
     ['Layout and spacing', [
@@ -849,35 +858,35 @@
       ['lay-float', 'Floating header', 'Scroll down: the header lifts into a floating pill. Smooth? Does it cover anything?', '/', '.site-header'],
       ['lay-width', 'Page width and margins', 'How wide the content sits on a big screen. Too narrow or too wide?', '/'],
       ['lay-gaps', 'Space between sections', 'The gaps between the bands on the home page. Even? Too much empty space anywhere?', '/'],
-      ['lay-cards', 'Card grids', 'Product cards on the shop page: same sizes, edges lining up, nothing stretched.', '/shop', '.pcard'],
+      ['lay-cards', 'Card grids', 'Product cards on the shop page: same sizes, edges lining up, nothing stretched.', '/shop', '.pgrid'],
       ['lay-phone', 'Phone layout', 'Narrow the window to phone width (or open it on a phone). Anything cramped, cut off or overlapping?', '/'],
       ['lay-tablet', 'Tablet layout', 'An in-between width, about a tablet. Anything awkward?', '/'],
     ]],
     ['Header and menus', [
       ['nav-menus', 'Dropdown menus', 'Hover Shop Peptides, Research Stacks and Resources. Clear and easy to use?', '/', '.main-nav'],
-      ['nav-search', 'Search', 'Click the search button in the header and search for a compound.', '/', '.site-header'],
-      ['nav-track', 'Track order', 'Hover the truck button in the header.', '/', '.site-header'],
-      ['nav-account', 'Account Login', 'The Account Login button and where it takes you.', '/', '.site-header'],
-      ['nav-explore', 'Explore Peptides button', 'The main yellow button in the header.', '/', '.site-header'],
-      ['nav-cart', 'Cart button', 'The cart icon and its item count.', '/', '.site-header'],
-      ['nav-theme', 'Light/dark switch', 'The sun/moon button.', '/', '.site-header'],
+      ['nav-search', 'Search', 'Click the search button in the header and search for a compound.', '/', '[data-search-open]'],
+      ['nav-track', 'Track order', 'Hover the truck button in the header.', '/', '.track-wrap'],
+      ['nav-account', 'Account Login', 'The Account Login button and where it takes you.', '/', '.hdr-actions a[href="#/account"]'],
+      ['nav-explore', 'Explore Peptides button', 'The main yellow button in the header.', '/', '.hdr-actions .btn-yellow'],
+      ['nav-cart', 'Cart button', 'The cart icon and its item count.', '/', '.cart-btn'],
+      ['nav-theme', 'Light/dark switch', 'The sun/moon button.', '/', '.theme-btn'],
       ['nav-phone', 'Phone menu', 'At phone width, open the ☰ menu. Easy to get around?', '/'],
     ]],
     ['Motion', [
       ['mo-enter', 'Page entrance', 'Content rises in when a page opens. Switch between a few pages. Press S to watch it in slow motion.', '/shop'],
-      ['mo-hover', 'Hover effects', 'Hover buttons and product cards. Do they respond nicely?', '/shop', '.pcard'],
+      ['mo-hover', 'Hover effects', 'Hover buttons and product cards. Do they respond nicely?', '/shop'],
       ['mo-pill', 'Menu highlight', 'Move across the top menu: a pill slides under the links.', '/', '.main-nav'],
-      ['mo-fly', 'Add-to-cart fly-in', 'Add something to the cart and watch the little circle fly to the cart icon.', '/shop', '.pcard'],
+      ['mo-fly', 'Add-to-cart fly-in', 'Add something to the cart and watch the little circle fly to the cart icon.', '/shop'],
       ['mo-drawer', 'Cart sliding open', 'The cart panel sliding in from the side after adding.', '/shop'],
       ['mo-modal', 'Pop-ups', 'Open and close a pop-up, like a lab certificate PDF or the sign-in box.', '/lab-tests'],
-      ['mo-theme', 'Theme change', 'Click the sun/moon button: the new theme spreads out in a circle.', '/', '.site-header'],
+      ['mo-theme', 'Theme change', 'Click the sun/moon button: the new theme spreads out in a circle.', '/', '.theme-btn'],
       ['mo-toast', 'Little notices', 'The small "added to cart" message at the bottom of the screen.', '/shop'],
       ['mo-amount', 'Amount of motion', 'All together: too much movement, too little, or about right?', '/'],
     ]],
     ['Shop and products', [
-      ['shop-filter', 'Category filters', 'The category chips on the shop page.', '/shop', '.shop-tools'],
-      ['shop-search', 'Shop search', 'Search within the shop.', '/shop', '.shop-tools'],
-      ['shop-sort', 'Sorting', 'Sort by price and by name.', '/shop', '.shop-tools'],
+      ['shop-filter', 'Category filters', 'The category chips on the shop page.', '/shop', '.shop-bar .chips'],
+      ['shop-search', 'Shop search', 'Search within the shop.', '/shop', '.shop-search'],
+      ['shop-sort', 'Sorting', 'Sort by price and by name.', '/shop', '[data-sort]'],
       ['shop-card', 'Product cards', 'Name, picture, sizes, price and the add button on each card.', '/shop', '.pcard'],
       ['pdp-layout', 'Product page', 'A product page as a whole. Is the layout clear?', '/product/bpc-157', '.pdp-grid'],
       ['pdp-size', 'Sizes', 'Pick different sizes. Does the price update clearly?', '/product/bpc-157', '.size-row'],
@@ -888,7 +897,7 @@
       ['stacks', 'Research stacks', 'A research stack: several compounds sold together.', '/product/stack-recovery'],
     ]],
     ['Cart and checkout', [
-      ['cart-add', 'Adding to cart', 'Add a product from the shop page and from a product page.', '/shop'],
+      ['cart-add', 'Adding to cart', 'Add a product from the shop page and from a product page.', '/shop', '.pcard [data-add]'],
       ['cart-drawer', 'Cart panel', 'What the cart panel shows, and changing quantities in it.', '/shop'],
       ['cart-free', 'Free-shipping bar', 'With something in the cart, the progress bar toward free shipping at $150.', '/cart'],
       ['cart-deal', 'Bulk discount', 'Add 3, 5 or 10 vials and check that the discount shows up.', '/cart'],
@@ -957,6 +966,31 @@
   const tmark = (t) => (t ? `<span class="rv-tmark" style="color:${t === 'up' ? '#16a34a' : '#c4321a'}" title="Thumbs ${t}">${t === 'up' ? THUMB : THUMB_DOWN}</span>` : '');
   const modeSwitch = () => `<div class="rv-filters" style="margin:0 0 10px"><button class="rv-chip" data-rvmode="free" aria-pressed="${!guided}">Free</button><button class="rv-chip" data-rvmode="guided" aria-pressed="${guided}">Guided checklist</button></div>`;
 
+  // which checklist item a clicked element belongs to: the tightest spot containing it, on this page or in the header/footer;
+  // when several items share one spot, the first listed owns it, except that in guided mode the current item wins
+  function matchItem(el) {
+    if (!el) return null;
+    const cur = curItem(), here = (x) => x.go === route() || (document.querySelector(x.sel) || el).closest('#app-header, #app-footer');
+    const spots = [];
+    ITEMS.forEach((x) => {
+      if (!x.sel || !here(x)) return;
+      const s = document.querySelector(x.sel);
+      if (s && s.contains(el)) spots.push([x, s]);
+    });
+    if (!spots.length) return null;
+    const tight = spots.filter(([, s]) => !spots.some(([, o]) => o !== s && s.contains(o)));
+    if (guided && tight.some(([x]) => x === cur)) return cur;
+    return tight[0][0];
+  }
+  function fileUnder(el, keep) {
+    const pick = keep !== undefined ? keep : (matchItem(el) || {}).id || '', cur = curItem();
+    const opt = (x) => `<option value="${x.id}"${x.id === pick ? ' selected' : ''}>${esc(x.t)}</option>`;
+    return `<label class="rv-file">Filed under<select data-file aria-label="Which checklist item this note is about">
+      <option value=""${pick ? '' : ' selected'}>Extra note (not on the checklist)</option>
+      ${guided ? `<optgroup label="Current item">${opt(cur)}</optgroup>` : ''}
+      ${GUIDE.map(([g, items]) => `<optgroup label="${esc(g)}">${items.map(([id]) => opt(itemOf(id))).join('')}</optgroup>`).join('')}
+    </select></label>`;
+  }
   function setGuided(on) {
     if (on && !who) { openPicker('guided'); return; } // a checklist belongs to a person
     guided = on;
