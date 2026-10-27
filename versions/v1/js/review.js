@@ -18,6 +18,8 @@
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // Google Apps Script web app URL from tools/review-sheet.gs; empty keeps comments on this device only
   const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyIdUV2k7x63p800wluyHXTep0wn75DTpMdP9AAMuqC_VhSArNgiq0Kh2GTXICJj96e/exec';
+  // V1's comments are filed under the store's own address (where they were made before V1 was frozen), two folders up from versions/v1/
+  const HOME = new URL('../../', location.href).href;
   const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   let notes = S.get('reviewNotes', []);
   notes.forEach((n) => { n.id = n.id || newId(); n.rev = n.rev || 1; });
@@ -662,7 +664,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
-          save: rows.map(({ n }) => ({ id: n.id, at: n.at, by: byName(n), page: location.origin + location.pathname + '#' + n.page, what: n.what, body: n.body, done: !!n.done, device: device(n), sel: n.sel || '' })),
+          save: rows.map(({ n }) => ({ id: n.id, at: n.at, by: byName(n), page: HOME + '#' + n.page, what: n.what, body: n.body, done: !!n.done, device: device(n), sel: n.sel || '' })),
           remove: removing,
         }),
       };
@@ -688,8 +690,8 @@
   window.addEventListener('online', sync);
 
   /* ---------- everyone's comments, read from the sheet ---------- */
-  // sheet rows hold the full address; only rows from this site's own page count, and the part after # becomes the route
-  const where = (u) => { try { const x = new URL(u); return [x.origin + x.pathname, x.hash.slice(1).split('?')[0] || '/']; } catch (e) { return []; } };
+  // sheet rows hold the full address; only rows filed under this version's HOME count, and the part after # becomes the route
+  const where = (u) => { try { const x = new URL(u); return [u.split('#')[0], x.hash.slice(1).split('?')[0] || '/']; } catch (e) { return []; } };
   // the password is checked by the Apps Script (its ADMIN_KEY property); this tab remembers it until it closes or Lock
   const KEY = 'pepsoma.reviewKey';
   let key = '', keyMsg = '';
@@ -706,8 +708,7 @@
       if (mine !== loads) return;
       if (out.locked) { setKey(''); keyMsg = out.error || 'Wrong password.'; sheet = []; sheetState = 'locked'; paint(); const i = $('[data-key] input', panel); if (i) i.focus(); return; }
       if (!out.ok) throw new Error(out.error);
-      const here = location.origin + location.pathname;
-      sheet = out.comments.filter((c) => where(c.page)[0] === here).map((c, i) => ({ ...c, ro: true, n: i + 1, page: where(c.page)[1] }));
+      sheet = out.comments.filter((c) => where(c.page)[0] === HOME).map((c, i) => ({ ...c, ro: true, n: i + 1, page: where(c.page)[1] }));
       sheetState = 'ok';
     } catch (e) {
       if (mine !== loads) return;

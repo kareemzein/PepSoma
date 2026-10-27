@@ -1,6 +1,6 @@
 /* Pepsoma — review mode: point at any part of the site and leave a comment on it.
    Turn on with ?review in the address (or the /review/ link); it stays on in that tab until "Exit review" or the tab closes.
-   Comments live in localStorage (pepsoma.reviewNotes) and export as plain text.
+   Comments live in localStorage (pepsoma.v2.reviewNotes; V1's stay in pepsoma.reviewNotes) and export as plain text.
    Each comment is signed with the current commenter; names are kept per device (pepsoma.reviewPeople) and N cycles them.
    With SHEET_URL set, every comment is also sent to a Google Sheet (setup: tools/review-sheet.gs), and the panel can show everyone's comments from it (password checked by the script). */
 (function () {
@@ -18,12 +18,15 @@
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // Google Apps Script web app URL from tools/review-sheet.gs; empty keeps comments on this device only
   const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyIdUV2k7x63p800wluyHXTep0wn75DTpMdP9AAMuqC_VhSArNgiq0Kh2GTXICJj96e/exec';
+  // this version's comments are filed in the sheet under HOME and kept apart from V1's (versions/v1/, filed under the bare store address)
+  // when the live store becomes the next version, bump VERSION here and keep the frozen copy's HOME as it was
+  const VERSION = 'v2', HOME = location.origin + location.pathname + '?version=' + VERSION;
   const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  let notes = S.get('reviewNotes', []);
+  let notes = S.get(VERSION + '.reviewNotes', []);
   notes.forEach((n) => { n.id = n.id || newId(); n.rev = n.rev || 1; });
   // n.sent is the revision the sheet has; `gone` holds ids deleted here that the sheet still shows
-  let gone = S.get('reviewGone', []);
-  const save = () => { S.set('reviewNotes', notes); S.set('reviewGone', gone); sync(); };
+  let gone = S.get(VERSION + '.reviewGone', []);
+  const save = () => { S.set(VERSION + '.reviewNotes', notes); S.set(VERSION + '.reviewGone', gone); sync(); };
   const drop = (test) => {
     notes.forEach((n) => { if (test(n) && n.sent) gone.push(n.id); });
     notes = notes.filter((n) => !test(n));
@@ -662,7 +665,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
-          save: rows.map(({ n }) => ({ id: n.id, at: n.at, by: byName(n), page: location.origin + location.pathname + '#' + n.page, what: n.what, body: n.body, done: !!n.done, device: device(n), sel: n.sel || '' })),
+          save: rows.map(({ n }) => ({ id: n.id, at: n.at, by: byName(n), page: HOME + '#' + n.page, what: n.what, body: n.body, done: !!n.done, device: device(n), sel: n.sel || '' })),
           remove: removing,
         }),
       };
@@ -672,8 +675,8 @@
       else await fetch(SHEET_URL, { ...req, mode: 'no-cors' }); // still throws when offline; saves are matched by id, so a repeat can't duplicate
       rows.forEach(({ n, rev }) => { n.sent = rev; });
       gone = gone.filter((id) => !removing.includes(id));
-      S.set('reviewNotes', notes);
-      S.set('reviewGone', gone);
+      S.set(VERSION + '.reviewNotes', notes);
+      S.set(VERSION + '.reviewGone', gone);
       syncFailed = false;
       if (source === 'sheet') load();
     } catch (e) {
@@ -688,8 +691,8 @@
   window.addEventListener('online', sync);
 
   /* ---------- everyone's comments, read from the sheet ---------- */
-  // sheet rows hold the full address; only rows from this site's own page count, and the part after # becomes the route
-  const where = (u) => { try { const x = new URL(u); return [x.origin + x.pathname, x.hash.slice(1).split('?')[0] || '/']; } catch (e) { return []; } };
+  // sheet rows hold the full address; only rows filed under this version's HOME count, and the part after # becomes the route
+  const where = (u) => { try { const x = new URL(u); return [u.split('#')[0], x.hash.slice(1).split('?')[0] || '/']; } catch (e) { return []; } };
   // the password is checked by the Apps Script (its ADMIN_KEY property); this tab remembers it until it closes or Lock
   const KEY = 'pepsoma.reviewKey';
   let key = '', keyMsg = '';
@@ -706,8 +709,7 @@
       if (mine !== loads) return;
       if (out.locked) { setKey(''); keyMsg = out.error || 'Wrong password.'; sheet = []; sheetState = 'locked'; paint(); const i = $('[data-key] input', panel); if (i) i.focus(); return; }
       if (!out.ok) throw new Error(out.error);
-      const here = location.origin + location.pathname;
-      sheet = out.comments.filter((c) => where(c.page)[0] === here).map((c, i) => ({ ...c, ro: true, n: i + 1, page: where(c.page)[1] }));
+      sheet = out.comments.filter((c) => where(c.page)[0] === HOME).map((c, i) => ({ ...c, ro: true, n: i + 1, page: where(c.page)[1] }));
       sheetState = 'ok';
     } catch (e) {
       if (mine !== loads) return;
