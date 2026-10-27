@@ -2,7 +2,8 @@
    Turn on with ?review in the address (or the /review/ link); it stays on in that tab until "Exit review" or the tab closes.
    Comments live in localStorage (pepsoma.v2.reviewNotes; V1's stay in pepsoma.reviewNotes) and export as plain text.
    Each comment is signed with the current commenter; names are kept per device (pepsoma.reviewPeople) and N cycles them.
-   With SHEET_URL set, every comment is also sent to a Google Sheet (setup: tools/review-sheet.gs), and the panel can show everyone's comments from it (password checked by the script). */
+   With SHEET_URL set, every comment is also sent to a Google Sheet (setup: tools/review-sheet.gs), and the panel can show everyone's comments from it (password checked by the script).
+   Guided mode walks a checklist of everything to review (GUIDE below), one item at a time, with progress kept per person and sent to the sheet's Checklist tab. */
 (function () {
   const S = PS.storage;
   // per tab (sessionStorage), so the plain link always opens the normal store
@@ -28,7 +29,7 @@
   let gone = S.get(VERSION + '.reviewGone', []);
   const save = () => { S.set(VERSION + '.reviewNotes', notes); S.set(VERSION + '.reviewGone', gone); sync(); };
   const drop = (test) => {
-    notes.forEach((n) => { if (test(n) && n.sent) gone.push(n.id); });
+    notes.forEach((n) => { if (test(n) && n.sent) gone.push(n.id); if (test(n) && n.item) touch(n.item, byName(n)); });
     notes = notes.filter((n) => !test(n));
     save();
   };
@@ -77,7 +78,7 @@
   .rv-tag { pointer-events: none; padding: 3px 8px; border-radius: 6px; background: #3b82f6; color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
   .rv-pin { width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; background: #ff5a1f; color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 700; border: 2px solid #fff; box-shadow: 0 3px 10px rgba(0,0,0,.3); padding: 0; z-index: 2147483500; }
   .rv-pin.rv-done { background: #8a857c; }
-  .rv-pop { width: min(360px, calc(100vw - 32px)); padding: 14px; border-radius: 16px; background: #fff; color: #1b1a17; box-shadow: 0 18px 50px rgba(0,0,0,.3); border: 1px solid #e6e1d8; }
+  .rv-pop { z-index: 2147483630; width: min(360px, calc(100vw - 32px)); padding: 14px; border-radius: 16px; background: #fff; color: #1b1a17; box-shadow: 0 18px 50px rgba(0,0,0,.3); border: 1px solid #e6e1d8; }
   .rv-pop .rv-what { font-size: 12px; color: #6b665d; margin-bottom: 8px; display: flex; gap: 6px; align-items: center; }
   .rv-pop .rv-what b { font-weight: 700; color: #1b1a17; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rv-pop .rv-txt { white-space: pre-wrap; word-break: break-word; max-height: 40vh; overflow-y: auto; }
@@ -89,7 +90,7 @@
   .rv-btn.rv-sm { padding: 4px 9px; font-size: 12px; }
   .rv-btn.rv-red { color: #c4321a; }
   .rv-grow { flex: 1; }
-  .rv-panel { top: 0; right: 0; bottom: 0; width: min(400px, 100vw); background: #fff; color: #1b1a17; box-shadow: -20px 0 60px rgba(0,0,0,.2); display: flex; flex-direction: column; }
+  .rv-panel { z-index: 2147483630; top: 0; right: 0; bottom: 0; width: min(400px, 100vw); background: #fff; color: #1b1a17; box-shadow: -20px 0 60px rgba(0,0,0,.2); display: flex; flex-direction: column; }
   .rv-panel header { padding: 18px 18px 12px; border-bottom: 1px solid #eee8de; }
   .rv-panel h2 { font-size: 18px; font-weight: 700; margin: 0 0 10px; display: flex; align-items: center; color: #1b1a17; }
   .rv-sync { font-size: 12px; color: #6b665d; margin: -4px 0 10px; }
@@ -144,6 +145,35 @@
   .rv-danger p { font-size: 12px; color: #6b665d; margin: 0 0 10px; }
   .rv-danger .rv-row { margin-top: 6px; }
   .rv-ico { width: 16px; height: 16px; vertical-align: -3px; margin-right: 6px; }
+  .rv-dock { z-index: 2147483610; left: 16px; bottom: 16px; width: 344px; max-height: calc(100vh - 120px); overflow-y: auto; padding: 14px; border-radius: 18px; background: #fff; color: #1b1a17; box-shadow: 0 18px 50px rgba(0,0,0,.3); border: 1px solid #e6e1d8; }
+  .rv-dock-top { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .rv-dock-group { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #ff5a1f; }
+  .rv-dock h3 { font-size: 17px; font-weight: 700; line-height: 1.25; margin: 0 0 4px; color: #1b1a17; display: flex; align-items: center; gap: 8px; }
+  .rv-ask { font-size: 13px; color: #6b665d; margin: 0 0 10px; }
+  .rv-thumb { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #d9d3c8; background: #fff; color: #6b665d; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 600; }
+  .rv-thumb svg { width: 15px; height: 15px; }
+  .rv-thumb[aria-pressed="true"][data-g="up"] { background: #16a34a; border-color: #16a34a; color: #fff; }
+  .rv-thumb[aria-pressed="true"][data-g="down"] { background: #c4321a; border-color: #c4321a; color: #fff; }
+  .rv-dock textarea { width: 100%; min-height: 72px; margin-top: 8px; resize: vertical; padding: 10px 12px; border-radius: 10px; border: 1px solid #d9d3c8; background: #faf8f4; color: #1b1a17; outline: none; }
+  .rv-dock textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.18); }
+  .rv-pointing { font-size: 12px; color: #6b665d; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rv-pointing b { color: #ff5a1f; }
+  .rv-dock-nav { display: flex; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee8de; }
+  .rv-cmark { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: #2563eb; flex: none; }
+  .rv-cmark svg { width: 13px; height: 13px; }
+  .rv-tmark { display: inline-flex; flex: none; }
+  .rv-tmark svg { width: 13px; height: 13px; }
+  .rv-dock.rv-min { width: auto; padding: 0; border-radius: 999px; overflow: visible; }
+  .rv-dock-pill { border: 0; background: transparent; border-radius: 999px; padding: 10px 16px; font-size: 13px; font-weight: 600; color: #1b1a17; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rv-dock-pill span { color: #ff5a1f; }
+  .rv-grp { margin: 18px 0 0; }
+  .rv-grp-h { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #6b665d; margin-bottom: 5px; }
+  .rv-grp-bar { height: 4px; border-radius: 4px; background: #eee8de; overflow: hidden; margin-bottom: 6px; }
+  .rv-grp-bar i { display: block; height: 100%; background: #ff5a1f; }
+  .rv-ck { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 8px 10px; margin-bottom: 2px; border-radius: 10px; border: 1.5px solid transparent; background: transparent; color: #1b1a17; font-size: 13px; }
+  .rv-ck:hover { background: #f4f0e8; }
+  .rv-ck.rv-seen { background: #e9edfb; color: #33407a; }
+  .rv-ck.rv-cur { border-color: #1b1a17; }
   .rv-welcome { overflow-y: auto; align-items: start; }
   .rv-wl { width: min(980px, 100%); margin: auto; padding: 28px 30px 26px; border-radius: 22px; background: #fff; color: #1b1a17; box-shadow: 0 24px 70px rgba(0,0,0,.35); }
   .rv-wl .rv-kick { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #ff5a1f; margin: 0 0 8px; }
@@ -197,12 +227,14 @@
   @keyframes wlRow { 0% { opacity: 0; transform: translateY(6px); } 10%, 90% { opacity: 1; transform: none; } 100% { opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .rv-art *, .rv-art *::before { animation: none !important; } .wl-field b { width: 3.6em; } .wl-out { left: 12px; top: 64px; width: 33%; height: 22px; border-color: #ff5a1f; } .wl-bub, .wl-row, .wl-chip.c1 { opacity: 1; } .wl-cur { left: 30%; top: 70px; } }
   @media (max-width: 860px) { .rv-wl-steps { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 1100px) { .rv-dock { bottom: 84px; } }
   @media (max-width: 600px) {
     .rv-wl { padding: 22px 18px 18px; }
     .rv-wl h2 { font-size: 24px; }
     .rv-wl-steps { grid-template-columns: 1fr; }
     .rv-wl-go { width: 100%; }
     .rv-bar [data-slow] .rv-ico { margin-right: 0; }
+    .rv-dock { left: 8px; right: 8px; width: auto; bottom: 72px; max-height: 48vh; }
     .rv-bar button { padding: 10px 10px; }
     .rv-bar .rv-who { max-width: 96px; }
     .rv-bar .rv-lbl { display: none; }
@@ -231,6 +263,7 @@
   const picker = ui('<div class="rv-scrim" hidden></div>');
   const hud = ui('<div class="rv-hud" aria-live="polite"></div>');
   const welcome = ui('<div class="rv-scrim rv-welcome" hidden></div>');
+  const dock = ui('<div class="rv-dock" hidden aria-label="Guided review"></div>');
   const hl = ui('<div class="rv-hl" hidden></div>');
   const tag = ui('<div class="rv-tag" hidden></div>');
   const pins = ui('<div style="inset:0;pointer-events:none"></div>');
@@ -270,6 +303,7 @@
   function setMode(m) {
     if (m === 'comment' && !who) { openPicker('comment'); return; }
     mode = m;
+    if (m !== 'comment') gPicking = false;
     document.documentElement.classList.toggle('rv-on', m === 'comment');
     bar.querySelectorAll('[data-m]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.m === m)));
     hint.hidden = m !== 'comment';
@@ -296,6 +330,8 @@
     savePeople();
     showWho();
     if (flash && who) showHud();
+    renderDock();
+    if (!panel.hidden) renderPanel();
   }
   function renderPicker() {
     const count = (p) => notes.filter((n) => n.by === p).length;
@@ -323,6 +359,7 @@
     afterPick = null;
     if (then === 'comment' && who) setMode('comment');
     if (then === 'page' && who) { widen = []; openPop(null); }
+    if (then === 'guided' && who) setGuided(true);
   }
   picker.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -381,7 +418,10 @@
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
-    if (e.type === 'click' && pickable(e.target)) { widen = []; openPop(target(e.target)); }
+    if (e.type === 'click' && pickable(e.target)) {
+      if (gPicking) { gPick = target(e.target); setMode('browse'); renderDock(); const t = $('textarea', dock); if (t) t.focus(); return; }
+      widen = []; openPop(target(e.target));
+    }
   };
   ['pointerdown', 'mousedown', 'mouseup', 'pointerup', 'click', 'dblclick', 'auxclick', 'contextmenu', 'submit'].forEach((t) => window.addEventListener(t, block, true));
   window.addEventListener('mouseover', (e) => {
@@ -474,23 +514,27 @@
     else if (act === 'save') {
       if (!body) { ta.focus(); return; }
       if (editing) { editing.body = body; editing.rev++; }
-      else {
-        const el = picked;
-        if (hidden.includes(who || 'No name')) setHidden(hidden.filter((h) => h !== (who || 'No name')));
-        notes.push({
-          id: newId(), rev: 1, n: notes.reduce((m, x) => Math.max(m, x.n), 0) + 1,
-          by: who, page: route(), sel: el ? selectorOf(el) : null, text: el ? snippet(el) : '', what: el ? describe(el) : 'Whole page',
-          cls: el ? el.tagName.toLowerCase() + classes(el) : '',
-          body, width: innerWidth, theme: document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
-          at: new Date().toISOString(),
-        });
-      }
+      else addNote(picked, body, guided ? curItem() : null);
       save();
       closePop();
       paint();
+      renderDock();
     }
   });
   pop.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('[data-a="save"]', pop).click(); });
+  function addNote(el, body, item) {
+    if (hidden.includes(who || 'No name')) setHidden(hidden.filter((h) => h !== (who || 'No name')));
+    const what = el ? describe(el) : 'Whole page';
+    notes.push({
+      id: newId(), rev: 1, n: notes.reduce((m, x) => Math.max(m, x.n), 0) + 1,
+      by: who, page: route(), sel: el ? selectorOf(el) : null, text: el ? snippet(el) : '',
+      what: item ? `${item.g} › ${item.t}${el ? ' · ' + what : ''}` : what, item: item ? item.id : undefined,
+      cls: el ? el.tagName.toLowerCase() + classes(el) : '',
+      body, width: innerWidth, theme: document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+      at: new Date().toISOString(),
+    });
+    if (item) touch(item.id);
+  }
 
   /* ---------- pins, kept on their elements as the page scrolls and re-renders ---------- */
   function setHidden(h) {
@@ -523,6 +567,8 @@
       p.style.visibility = r.bottom < 0 || r.top > innerHeight ? 'hidden' : '';
     });
     if (picked && !pop.hidden) box(picked, 'rv-picked');
+    const mark = gPick || flashEl;
+    if (pop.hidden && mode !== 'comment' && mark && mark.isConnected) { box(mark, 'rv-picked'); tag.textContent = gPick ? 'Your note will point here' : 'Checklist: ' + (curItem() || {}).t; }
     if (rate !== 1) retime();
     frame(track);
   }
@@ -536,6 +582,7 @@
 
   /* ---------- the list of all comments ---------- */
   function renderPanel() {
+    if (guided && panelView === 'checklist') { panel.innerHTML = checklistHTML(); return; }
     const typed = $('[data-key] input', panel), keep = typed && [typed.value, document.activeElement === typed];
     const all = list(), mine = source === 'local';
     const authors = [...new Set(all.map(byName))];
@@ -544,10 +591,12 @@
     const count = (a) => all.filter((n) => byName(n) === a).length;
     panel.innerHTML = `<header>
         <h2><span class="rv-grow">Comments (${all.length})</span><button class="rv-btn rv-sm" data-p="close" aria-label="Close">✕</button></h2>
+        ${modeSwitch()}
         ${SHEET_URL ? `<div class="rv-filters" style="margin:0 0 10px"><button class="rv-chip" data-src="local" aria-pressed="${mine}">This laptop</button><button class="rv-chip" data-src="sheet" aria-pressed="${!mine}">Everyone (sheet)</button></div>
         <div class="rv-sync">${syncText()}</div>
         ${!mine && sheetState === 'locked' ? `<form class="rv-key" data-key><input type="password" placeholder="Password" aria-label="Password for everyone's comments" autocomplete="current-password"><button class="rv-btn rv-sm rv-main">Unlock</button></form>` : ''}` : ''}
         <div class="rv-tools">
+          ${guided ? '<button class="rv-btn rv-sm" data-p="checklist">← Checklist</button>' : ''}
           <button class="rv-btn rv-sm rv-main" data-p="page">+ Comment on this page</button>
           ${mine || sheetState === 'locked' ? '' : '<button class="rv-btn rv-sm" data-p="refresh">Refresh</button><button class="rv-btn rv-sm" data-p="lock">Lock</button>'}
           <button class="rv-btn rv-sm" data-p="copy"${all.length ? '' : ' disabled'}>Copy all</button>
@@ -572,7 +621,7 @@
     const input = $('[data-key] input', panel);
     if (input && keep) { input.value = keep[0]; if (keep[1]) input.focus(); }
   }
-  function openPanel() { closePop(); setMode('browse'); renderPanel(); panel.hidden = false; }
+  function openPanel(view) { closePop(); setMode('browse'); panelView = view || 'checklist'; renderPanel(); panel.hidden = false; }
   function closePanel() { panel.hidden = true; }
 
   function exportText() {
@@ -584,6 +633,15 @@
       all.filter((n) => n.page === p).forEach((n) => {
         out += `${n.n}. [${byName(n)}] ${n.what}${n.done ? '  [done]' : ''}\n   ${n.body.replace(/\n/g, '\n   ')}\n   (${device(n)}${n.sel ? ` · ${[n.cls, n.sel].filter(Boolean).join(' · ')}` : ''})\n`;
       });
+    });
+    Object.entries(prog).forEach(([name, p]) => {
+      const seen = ITEMS.filter((x) => p.seen[x.id]), th = (v) => ITEMS.filter((x) => p.thumb[x.id] === v).map((x) => x.t);
+      if (!seen.length) return;
+      out += `\nCHECKLIST — ${name}: looked at ${seen.length} of ${ITEMS.length}\n`;
+      if (th('up').length) out += `   Thumbs up: ${th('up').join(', ')}\n`;
+      if (th('down').length) out += `   Thumbs down: ${th('down').join(', ')}\n`;
+      const left = GUIDE.map(([g, items]) => [g, items.filter(([id]) => !p.seen[id]).length]).filter(([, k]) => k);
+      if (left.length) out += `   Not looked at yet: ${left.map(([g, k]) => `${g} (${k})`).join(', ')}\n`;
     });
     return out;
   }
@@ -601,6 +659,9 @@
       }, 120);
       return;
     }
+    const md = e.target.closest('[data-rvmode]'), ck = e.target.closest('[data-item]');
+    if (md) { setGuided(md.dataset.rvmode === 'guided'); return; }
+    if (ck) { closePanel(); openItem(ck.dataset.item); return; }
     const f = e.target.closest('[data-f]'), src = e.target.closest('[data-src]');
     if (f) { const a = f.dataset.f; setHidden(!a ? [] : hidden.includes(a) ? hidden.filter((h) => h !== a) : [...hidden, a]); paint(); return; }
     if (src) { setSource(src.dataset.src); return; }
@@ -617,6 +678,17 @@
     else if (act === 'page') { widen = []; openPop(null); }
     else if (act === 'refresh') load();
     else if (act === 'guide') openWelcome();
+    else if (act === 'comments') { panelView = 'comments'; renderPanel(); }
+    else if (act === 'checklist') { panelView = 'checklist'; renderPanel(); }
+    else if (act === 'restart') {
+      const name = who || 'No name', p = myProg();
+      if (!confirm(`Start ${name}'s checklist over? This clears what's marked as looked at and the thumbs. Comments stay.`)) return;
+      ITEMS.forEach((x) => { if (p.seen[x.id] || p.thumb[x.id]) touch(x.id); });
+      prog[name] = { cur: ITEMS[0].id, seen: {}, thumb: {} };
+      saveGuide();
+      renderPanel();
+      renderDock();
+    }
     else if (act === 'lock') { setKey(''); keyMsg = ''; sheet = []; sheetState = 'locked'; paint(); }
     else if (act === 'copy') {
       try { await navigator.clipboard.writeText(exportText()); b.textContent = 'Copied ✓'; }
@@ -656,8 +728,8 @@
   function showSync() { const el = $('.rv-sync', panel); if (el) el.innerHTML = syncText(); }
   async function sync() {
     if (!SHEET_URL || syncing) return;
-    const rows = unsent().map((n) => ({ n, rev: n.rev })), removing = gone.slice();
-    if (!rows.length && !removing.length) return;
+    const rows = unsent().map((n) => ({ n, rev: n.rev })), removing = gone.slice(), gRows = Object.entries(gDirty);
+    if (!rows.length && !removing.length && !gRows.length) return;
     syncing = true;
     showSync();
     try {
@@ -667,11 +739,19 @@
         body: JSON.stringify({
           save: rows.map(({ n }) => ({ id: n.id, at: n.at, by: byName(n), page: HOME + '#' + n.page, what: n.what, body: n.body, done: !!n.done, device: device(n), sel: n.sel || '' })),
           remove: removing,
+          checklist: gRows.map(([k]) => guideRow(k)),
         }),
       };
       let res = null;
       try { res = await fetch(SHEET_URL, req); } catch (e) { /* the reply may not be readable cross-site; send again without reading it */ }
-      if (res) { const out = await res.json(); if (!out.ok) throw new Error(out.error); }
+      if (res) {
+        const out = await res.json();
+        if (!out.ok) throw new Error(out.error);
+        // a sheet script from before the checklist ignores it and doesn't answer `checklist`, so keep those rows to resend
+        guideSaved = gRows.length ? out.checklist !== undefined : guideSaved;
+        if (guideSaved) gRows.forEach(([k, rev]) => { if (gDirty[k] === rev) delete gDirty[k]; });
+        saveGuide();
+      }
       else await fetch(SHEET_URL, { ...req, mode: 'no-cors' }); // still throws when offline; saves are matched by id, so a repeat can't duplicate
       rows.forEach(({ n, rev }) => { n.sent = rev; });
       gone = gone.filter((id) => !removing.includes(id));
@@ -679,6 +759,7 @@
       S.set(VERSION + '.reviewGone', gone);
       syncFailed = false;
       if (source === 'sheet') load();
+      if (!panel.hidden && guided && panelView === 'checklist') renderPanel();
     } catch (e) {
       syncFailed = true;
       clearTimeout(retry);
@@ -735,6 +816,249 @@
     load();
   });
 
+  /* ---------- guided review: a checklist of everything to look at, one item at a time ---------- */
+  // [group, [[id, title, what to look at, page to open, optional spot to outline], ...]]; ids are stored, so keep them stable
+  const GUIDE = [
+    ['First impression', [
+      ['opening', 'Opening animation', 'Plays only on the very first visit in a browser. Open the store in a private window to see it again. Does it feel right, and is it the right length?', '/'],
+      ['hero', 'Headline', 'The big headline and its rotating italic word. Is it clear within a few seconds what Pepsoma sells?', '/', '.hero-copy'],
+      ['hero-art', 'Vials and glow', 'The tilted vials and the floating chips next to the headline.', '/', '.hero-art'],
+      ['net', 'Molecule network', 'The slow-moving dots behind the top of the page. A nice touch, or distracting?', '/', '.hero'],
+      ['stats', 'Stats under the headline', 'Purity, lots tested and dispatch time count up. Easy to read? Believable?', '/', '.hero-stats'],
+      ['deal', 'Deal bar', 'The strip at the very top with the bulk discount. Is the deal clear?', '/', '.deal-bar'],
+      ['rail', 'Product carousel', 'The row of product cards on the home page. Scroll through it.', '/', '.rail-band'],
+      ['testi', 'Reviews', 'The reviews section. (These are sample reviews for now.)', '/', '.testi'],
+      ['closer', 'Closing section', 'The last big section before the footer.', '/', '.closer'],
+      ['footer', 'Footer', 'Links, the newsletter sign-up and the giant wordmark at the bottom.', '/', '.site-footer'],
+      ['home-flow', 'Order of sections', 'Scroll the whole home page top to bottom. Anything missing, repeated or in the wrong order?', '/'],
+    ]],
+    ['Type and color', [
+      ['type-head', 'Headline font', 'Headlines across the site. Do the weight, size and spacing feel right?', '/', '.hero-copy'],
+      ['type-serif', 'Italic accent words', 'The italic serif words used for emphasis, like the rotating headline word and the stat numbers.', '/', '.hero-stats'],
+      ['type-body', 'Body text', 'Paragraphs and descriptions. Comfortable to read? Too small or too light anywhere?', '/about'],
+      ['type-btn', 'Buttons and small labels', 'Button text, small labels and the uppercase words above titles.', '/', '.hero-copy'],
+      ['type-num', 'Prices and numbers', 'Prices, discounts and totals on the shop page. Easy to scan?', '/shop', '.pcard'],
+      ['color-mix', 'Overall colors', 'Navy, periwinkle, cream and olive-yellow. Does the mix feel like one brand?', '/'],
+      ['color-yellow', 'Yellow highlights', 'Olive-yellow marks deals and the main button. Used enough, or too much?', '/', '.deal-bar'],
+      ['color-light', 'Light mode', 'Switch to light mode with the sun/moon button in the header and look around.', '/', '.site-header'],
+      ['color-dark', 'Dark mode', 'Same in dark mode. Does anything look off or hard to read?', '/', '.site-header'],
+      ['color-read', 'Readability', 'Any text that is hard to read against its background, in either mode?', '/'],
+    ]],
+    ['Layout and spacing', [
+      ['lay-header', 'Header alignment', 'Logo, menu and buttons line up and have room to breathe.', '/', '.site-header'],
+      ['lay-float', 'Floating header', 'Scroll down: the header lifts into a floating pill. Smooth? Does it cover anything?', '/', '.site-header'],
+      ['lay-width', 'Page width and margins', 'How wide the content sits on a big screen. Too narrow or too wide?', '/'],
+      ['lay-gaps', 'Space between sections', 'The gaps between the bands on the home page. Even? Too much empty space anywhere?', '/'],
+      ['lay-cards', 'Card grids', 'Product cards on the shop page: same sizes, edges lining up, nothing stretched.', '/shop', '.pcard'],
+      ['lay-phone', 'Phone layout', 'Narrow the window to phone width (or open it on a phone). Anything cramped, cut off or overlapping?', '/'],
+      ['lay-tablet', 'Tablet layout', 'An in-between width, about a tablet. Anything awkward?', '/'],
+    ]],
+    ['Header and menus', [
+      ['nav-menus', 'Dropdown menus', 'Hover Shop Peptides, Research Stacks and Resources. Clear and easy to use?', '/', '.main-nav'],
+      ['nav-search', 'Search', 'Click the search button in the header and search for a compound.', '/', '.site-header'],
+      ['nav-track', 'Track order', 'Hover the truck button in the header.', '/', '.site-header'],
+      ['nav-account', 'Account Login', 'The Account Login button and where it takes you.', '/', '.site-header'],
+      ['nav-explore', 'Explore Peptides button', 'The main yellow button in the header.', '/', '.site-header'],
+      ['nav-cart', 'Cart button', 'The cart icon and its item count.', '/', '.site-header'],
+      ['nav-theme', 'Light/dark switch', 'The sun/moon button.', '/', '.site-header'],
+      ['nav-phone', 'Phone menu', 'At phone width, open the ☰ menu. Easy to get around?', '/'],
+    ]],
+    ['Motion', [
+      ['mo-enter', 'Page entrance', 'Content rises in when a page opens. Switch between a few pages. Press S to watch it in slow motion.', '/shop'],
+      ['mo-hover', 'Hover effects', 'Hover buttons and product cards. Do they respond nicely?', '/shop', '.pcard'],
+      ['mo-pill', 'Menu highlight', 'Move across the top menu: a pill slides under the links.', '/', '.main-nav'],
+      ['mo-fly', 'Add-to-cart fly-in', 'Add something to the cart and watch the little circle fly to the cart icon.', '/shop', '.pcard'],
+      ['mo-drawer', 'Cart sliding open', 'The cart panel sliding in from the side after adding.', '/shop'],
+      ['mo-modal', 'Pop-ups', 'Open and close a pop-up, like a lab certificate PDF or the sign-in box.', '/lab-tests'],
+      ['mo-theme', 'Theme change', 'Click the sun/moon button: the new theme spreads out in a circle.', '/', '.site-header'],
+      ['mo-toast', 'Little notices', 'The small "added to cart" message at the bottom of the screen.', '/shop'],
+      ['mo-amount', 'Amount of motion', 'All together: too much movement, too little, or about right?', '/'],
+    ]],
+    ['Shop and products', [
+      ['shop-filter', 'Category filters', 'The category chips on the shop page.', '/shop', '.shop-tools'],
+      ['shop-search', 'Shop search', 'Search within the shop.', '/shop', '.shop-tools'],
+      ['shop-sort', 'Sorting', 'Sort by price and by name.', '/shop', '.shop-tools'],
+      ['shop-card', 'Product cards', 'Name, picture, sizes, price and the add button on each card.', '/shop', '.pcard'],
+      ['pdp-layout', 'Product page', 'A product page as a whole. Is the layout clear?', '/product/bpc-157', '.pdp-grid'],
+      ['pdp-size', 'Sizes', 'Pick different sizes. Does the price update clearly?', '/product/bpc-157', '.size-row'],
+      ['pdp-plan', 'One-time vs standing order', 'The standing order option and its discount. Is it clear what you are signing up for?', '/product/bpc-157', '.plans'],
+      ['pdp-qty', 'Quantity', 'The quantity picker.', '/product/bpc-157', '.qty'],
+      ['pdp-specs', 'Specs and details', 'The spec table and product details.', '/product/bpc-157', '.spec-table'],
+      ['pdp-coa', 'Lab results on the product', 'The lab test section on the product page.', '/product/bpc-157'],
+      ['stacks', 'Research stacks', 'A research stack: several compounds sold together.', '/product/stack-recovery'],
+    ]],
+    ['Cart and checkout', [
+      ['cart-add', 'Adding to cart', 'Add a product from the shop page and from a product page.', '/shop'],
+      ['cart-drawer', 'Cart panel', 'What the cart panel shows, and changing quantities in it.', '/shop'],
+      ['cart-free', 'Free-shipping bar', 'With something in the cart, the progress bar toward free shipping at $150.', '/cart'],
+      ['cart-deal', 'Bulk discount', 'Add 3, 5 or 10 vials and check that the discount shows up.', '/cart'],
+      ['cart-promo', 'Promo codes', 'Try WELCOME10, LAB15 and a made-up code.', '/cart'],
+      ['cart-page', 'Cart page', 'The full cart page.', '/cart'],
+      ['co-form', 'Checkout form', 'With something in the cart, fill in the checkout form. Clear, short, nothing confusing?', '/checkout'],
+      ['co-errors', 'Mistakes in the form', 'Leave fields empty or type a bad email. Are the error messages clear?', '/checkout'],
+      ['co-ship', 'Shipping options', 'The three shipping methods and their prices.', '/checkout'],
+      ['co-checks', 'Required checkboxes', 'The research use, 21+, terms and auto-renew boxes. Clear, and not annoying?', '/checkout'],
+      ['co-pay', 'Paying', 'Pay with test card 4242 4242 4242 4242, any future date and any CVC. Nothing is charged.', '/checkout'],
+      ['co-done', 'Order confirmation', 'The page you land on after placing the order.', '/checkout'],
+    ]],
+    ['After ordering', [
+      ['ord-track', 'Order tracking', 'Track the order you just placed with its number and email.', '/track'],
+      ['acc-signup', 'Creating an account', 'Sign up for an account.', '/account'],
+      ['acc-history', 'Order history', 'Sign in and look at past orders.', '/account'],
+      ['acc-standing', 'Standing orders', 'If you placed a standing order, find it and try cancelling it.', '/account'],
+    ]],
+    ['Lab tests', [
+      ['lab-search', 'Lot search', 'Search for a lot number on the Lab Tests page.', '/lab-tests'],
+      ['lab-cards', 'Product list', 'One card per product. Easy to find what you need?', '/lab-tests', '.lot-cards'],
+      ['lab-web', 'Certificate page', 'Open a certificate. Does it read well as a web page?', '/lab-tests'],
+      ['lab-pdf', 'PDF version', 'The option at the bottom of a certificate that opens the lab\'s PDF.', '/lab-tests'],
+      ['lab-chart', 'Purity chart', 'The chart on a certificate.', '/lab-tests'],
+    ]],
+    ['Other pages', [
+      ['pg-about', 'About', 'The About page.', '/about'],
+      ['pg-faq', 'FAQ', 'Open a few questions.', '/faq', '.faq'],
+      ['pg-contact', 'Contact form', 'Send a test message.', '/contact'],
+      ['pg-wholesale', 'Wholesale application', 'The wholesale form.', '/wholesale'],
+      ['pg-policies', 'Policies', 'The list of policies, and one or two of them in full.', '/policies'],
+      ['pg-404', 'Missing page', 'What a broken link shows.', '/this-page-does-not-exist'],
+      ['pg-age', 'Age check', 'The 21+ pop-up on a first visit. Open a private window to see it.', '/'],
+      ['pg-cookies', 'Cookie banner', 'The cookie choice on a first visit. Also shows in a private window.', '/'],
+    ]],
+    ['Words and trust', [
+      ['w-heads', 'Headlines', 'Headlines across the site. Clear and confident, not salesy?', '/'],
+      ['w-products', 'Product descriptions', 'Descriptions on product cards and product pages.', '/shop'],
+      ['w-buttons', 'Button wording', 'Do the buttons say exactly what happens when you click them?', '/'],
+      ['w-empty', 'Error and empty messages', 'An empty cart, a search with no results, form errors.', '/cart'],
+      ['w-ruo', 'Research-use wording', 'The "for laboratory research use only" notices. There where needed, not overdone?', '/'],
+      ['w-trust', 'Trust signals', 'Lab certificates, purity numbers, shipping promises. Do they make you trust the site?', '/'],
+    ]],
+  ];
+  const ITEMS = GUIDE.flatMap(([g, items]) => items.map(([id, t, ask, go, sel]) => ({ id, g, t, ask, go, sel })));
+  const itemOf = (id) => ITEMS.find((x) => x.id === id);
+  // per person: the item they're on, when they first opened each one, and their thumbs
+  const prog = S.get(VERSION + '.reviewGuide', {});
+  const myProg = (name = who || 'No name') => prog[name] || (prog[name] = { cur: ITEMS[0].id, seen: {}, thumb: {} });
+  const curItem = () => itemOf(myProg().cur) || ITEMS[0];
+  // "name|item" → a change counter, so a change made while a send is in flight is sent again
+  let gDirty = S.get(VERSION + '.reviewGuideDirty', {}), guideSaved = null;
+  const saveGuide = () => { S.set(VERSION + '.reviewGuide', prog); S.set(VERSION + '.reviewGuideDirty', gDirty); };
+  function touch(id, name = who || 'No name') { const k = name + '|' + id; gDirty[k] = (gDirty[k] || 0) + 1; saveGuide(); later(sync); }
+  const itemNotes = (id, name = who || 'No name') => notes.filter((n) => n.item === id && byName(n) === name);
+  const guideRow = (k) => {
+    const i = k.lastIndexOf('|'), name = k.slice(0, i), id = k.slice(i + 1), it = itemOf(id), p = prog[name] || { seen: {}, thumb: {} };
+    return { key: VERSION + '|' + k, by: name, version: VERSION, group: it ? it.g : '', item: it ? it.t : id, page: HOME + '#' + (it ? it.go : '/'), opened: p.seen[id] || '', thumb: p.thumb[id] || '', comments: itemNotes(id, name).length };
+  };
+  let guided = S.get(VERSION + '.reviewMode', 'free') === 'guided', panelView = 'checklist', dockMin = false;
+  let gPick = null, gPicking = false, flashEl = null, flashT = 0;
+  const THUMB = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>';
+  const THUMB_DOWN = THUMB.replace('<svg ', '<svg style="transform:rotate(180deg)" ');
+  const BUBBLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+  const cmark = (k) => (k ? `<span class="rv-cmark" title="${k} comment${k === 1 ? '' : 's'}">${BUBBLE}${k}</span>` : '');
+  const tmark = (t) => (t ? `<span class="rv-tmark" style="color:${t === 'up' ? '#16a34a' : '#c4321a'}" title="Thumbs ${t}">${t === 'up' ? THUMB : THUMB_DOWN}</span>` : '');
+  const modeSwitch = () => `<div class="rv-filters" style="margin:0 0 10px"><button class="rv-chip" data-rvmode="free" aria-pressed="${!guided}">Free</button><button class="rv-chip" data-rvmode="guided" aria-pressed="${guided}">Guided checklist</button></div>`;
+
+  function setGuided(on) {
+    if (on && !who) { openPicker('guided'); return; } // a checklist belongs to a person
+    guided = on;
+    S.set(VERSION + '.reviewMode', on ? 'guided' : 'free');
+    gPick = null;
+    if (on) { closePanel(); openItem(myProg().cur); }
+    else { renderDock(); renderPanel(); }
+  }
+  function openItem(id) {
+    const p = myProg(), it = itemOf(id) || ITEMS[0];
+    p.cur = it.id;
+    gPick = null;
+    if (!p.seen[it.id]) { p.seen[it.id] = new Date().toISOString(); touch(it.id); } else saveGuide();
+    renderDock();
+    const move = it.go && route() !== it.go;
+    if (move) location.hash = '#' + it.go;
+    later(() => spot(it), move ? 450 : 60); // after the page renders
+  }
+  function step(d) {
+    const ta = $('textarea', dock);
+    if (ta && ta.value.trim()) saveDockNote();
+    const i = ITEMS.indexOf(curItem()) + d;
+    if (i < 0 || i >= ITEMS.length) { showHud(`<div class="rv-cur">${i < 0 ? 'This is the first item' : 'End of the checklist'}</div>`); return; }
+    openItem(ITEMS[i].id);
+  }
+  // outline the item's spot for a moment so it's clear what to look at
+  function spot(it) {
+    const el = it.sel && document.querySelector(it.sel);
+    if (!el) return;
+    // near the top rather than centred, so the checklist card (bottom-left, or the bottom half on a phone) doesn't cover it
+    window.scrollTo({ top: Math.max(0, scrollY + el.getBoundingClientRect().top - 110), behavior: 'smooth' });
+    flashEl = el;
+    clearTimeout(flashT);
+    flashT = later(() => { flashEl = null; if (pop.hidden && !gPick) hl.hidden = tag.hidden = true; }, 2400);
+  }
+  function saveDockNote() {
+    const ta = $('textarea', dock), body = ta && ta.value.trim();
+    if (!body) { if (ta) ta.focus(); return; }
+    const it = curItem(), auto = it.sel && route() === it.go ? document.querySelector(it.sel) : null;
+    addNote(gPick || auto, body, it);
+    ta.value = '';
+    gPick = null;
+    save();
+    paint();
+    renderDock();
+  }
+  function renderDock() {
+    dock.hidden = !guided;
+    if (!guided) return;
+    const p = myProg(), it = curItem(), group = GUIDE.find(([g]) => g === it.g)[1];
+    const seen = group.filter(([id]) => p.seen[id]).length, th = p.thumb[it.id];
+    const old = $('textarea', dock), typed = old ? old.value : '', focused = old && document.activeElement === old;
+    dock.className = 'rv rv-dock' + (dockMin ? ' rv-min' : '');
+    dock.innerHTML = dockMin
+      ? `<button class="rv-dock-pill" data-g="expand" title="Open the checklist card"><span>${esc(it.g)} ${seen}/${group.length}</span> · ${esc(it.t)}</button>`
+      : `<div class="rv-dock-top"><span class="rv-dock-group">${esc(it.g)} · ${seen}/${group.length}</span><span class="rv-grow"></span><button class="rv-btn rv-sm" data-g="list">Checklist</button><button class="rv-x" data-g="min" aria-label="Shrink" title="Shrink">–</button></div>
+        <h3>${esc(it.t)}${cmark(itemNotes(it.id).length)}</h3>
+        <p class="rv-ask">${esc(it.ask)}</p>
+        <div class="rv-row" style="margin:0"><button class="rv-thumb" data-g="up" aria-pressed="${th === 'up'}">${THUMB}Good</button><button class="rv-thumb" data-g="down" aria-pressed="${th === 'down'}">${THUMB_DOWN}Needs work</button></div>
+        <textarea placeholder="Anything to change? If it's fine, just hit Next."></textarea>
+        <div class="rv-row">${gPick ? `<span class="rv-pointing">Pointing at <b>${esc(describe(gPick))}</b></span><button class="rv-x" data-g="unpoint" aria-label="Stop pointing">×</button>` : '<button class="rv-btn rv-sm" data-g="point" title="Click the exact spot this note is about">Point at a spot</button>'}<span class="rv-grow"></span><button class="rv-btn rv-sm rv-main" data-g="save">Save note</button></div>
+        <div class="rv-dock-nav"><button class="rv-btn rv-sm" data-g="back">‹ Back</button><span class="rv-grow"></span><button class="rv-btn rv-main" data-g="next">Next ›</button></div>`;
+    const ta = $('textarea', dock);
+    if (ta) { ta.value = typed; if (focused) ta.focus(); }
+  }
+  dock.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-g]');
+    if (!b) return;
+    const g = b.dataset.g, it = curItem(), p = myProg();
+    if (g === 'next') step(1);
+    else if (g === 'back') step(-1);
+    else if (g === 'list') openPanel('checklist');
+    else if (g === 'min') { dockMin = true; renderDock(); }
+    else if (g === 'expand') { dockMin = false; renderDock(); }
+    else if (g === 'save') saveDockNote();
+    else if (g === 'point') { if (!who) { openPicker(); return; } gPicking = true; setMode('comment'); }
+    else if (g === 'unpoint') { gPick = null; hl.hidden = tag.hidden = true; renderDock(); }
+    else if (g === 'up' || g === 'down') { p.thumb[it.id] = p.thumb[it.id] === g ? null : g; touch(it.id); renderDock(); }
+  });
+  dock.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveDockNote(); });
+
+  function checklistHTML() {
+    const p = myProg(), seen = ITEMS.filter((x) => p.seen[x.id]).length, waiting = Object.keys(gDirty).length;
+    const saved = !SHEET_URL ? '' : waiting ? (guideSaved === false ? ' · <span class="rv-warn">not saved to the sheet yet: the sheet script needs updating</span>' : ' · saving to the sheet…') : ' · saved to the sheet ✓';
+    return `<header>
+        <h2><span class="rv-grow">Checklist · ${esc(who || 'No name')}</span><button class="rv-btn rv-sm" data-p="close" aria-label="Close">✕</button></h2>
+        ${modeSwitch()}
+        <div class="rv-sync">${seen} of ${ITEMS.length} looked at${saved}</div>
+        <div class="rv-tools">
+          <button class="rv-btn rv-sm rv-main" data-p="comments">Comments (${notes.length})</button>
+          <button class="rv-btn rv-sm" data-p="restart">Start over</button>
+          <button class="rv-btn rv-sm" data-p="guide">How it works</button>
+          <button class="rv-btn rv-sm" data-p="exit">Exit review</button>
+        </div>
+      </header>
+      <div class="rv-list">${GUIDE.map(([g, items]) => {
+        const k = items.filter(([id]) => p.seen[id]).length;
+        return `<div class="rv-grp"><div class="rv-grp-h"><span>${esc(g)}</span><span>${k}/${items.length}</span></div><div class="rv-grp-bar"><i style="width:${Math.round((k / items.length) * 100)}%"></i></div>` +
+          items.map(([id, t]) => `<button class="rv-ck${p.seen[id] ? ' rv-seen' : ''}${p.cur === id ? ' rv-cur' : ''}" data-item="${id}"><span class="rv-grow">${esc(t)}</span>${tmark(p.thumb[id])}${cmark(itemNotes(id).length)}</button>`).join('') + '</div>';
+      }).join('')}</div>`;
+  }
+
   /* ---------- slow motion (S): the store's animations at quarter speed ---------- */
   // CSS and Web Animations get a playbackRate; rAF timestamps, performance.now and timer delays stretch to match, so
   // JS-driven motion (count-up stats, the molecule network) and timed steps (the cart opening after the fly-in) stay in step
@@ -781,7 +1105,7 @@
     <p class="rv-lede">This is the real store with a comment layer on top. Point at anything you'd change, say why, and it lands in a shared sheet. There are no wrong answers.</p>
     <div class="rv-wl-steps">${STEPS.map(([h, p, art], i) => `<div class="rv-wl-step"><div class="rv-art" aria-hidden="true">${art}</div><span class="rv-n">${i + 1}</span><h3>${h}</h3><p>${p}</p></div>`).join('')}</div>
     <div class="rv-wl-keys"><span><kbd>C</kbd>Comment mode</span><span><kbd>F</kbd>Whole page</span><span><kbd>B</kbd>Back to browsing</span><span><kbd>N</kbd>Next person</span><span><kbd>S</kbd>Slow motion</span><span><kbd>?</kbd>This guide</span></div>
-    <div class="rv-wl-foot"><p>Saved automatically. Nothing on the store itself changes.</p><button class="rv-btn rv-main rv-wl-go" data-start>Let's start →</button></div>
+    <div class="rv-wl-foot"><p>Want a step-by-step list? Open Comments and switch to <b>Guided checklist</b>. Saved automatically; nothing on the store changes.</p><button class="rv-btn rv-main rv-wl-go" data-start>Let's start →</button></div>
   </div>`;
   function openWelcome() {
     closePop();
@@ -802,6 +1126,7 @@
 
   showWho();
   setHidden(hidden);
+  renderDock();
   if (source === 'sheet') load(); else paint();
   frame(track);
   sync();

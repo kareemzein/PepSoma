@@ -15,10 +15,13 @@
    After editing this script you must redeploy, or the live URL keeps running the old code:
    Deploy → Manage deployments → edit (pencil) → Version: New version → Deploy. That keeps the same URL.
 
-   Anyone with the URL can add comments (that's how review mode works). Reading them all back needs ADMIN_KEY. */
+   Anyone with the URL can add comments (that's how review mode works). Reading them all back needs ADMIN_KEY.
+   Guided-review progress (one row per person per checklist item) goes to a second tab, Checklist. */
 
 const SHEET_NAME = 'Comments';
 const HEADERS = ['ID', 'Time', 'Name', 'Page', 'Element', 'Comment', 'Status', 'Device', 'Selector', 'Last updated'];
+const CHECK_SHEET = 'Checklist';
+const CHECK_HEADERS = ['Key', 'Name', 'Version', 'Group', 'Item', 'Page', 'Looked at', 'Thumb', 'Comments', 'Last updated'];
 
 function doPost(e) {
   let data;
@@ -42,12 +45,35 @@ function doPost(e) {
     const remove = new Set((data.remove || []).map(String));
     for (let i = ids.length - 1; i >= 0; i--) if (remove.has(ids[i])) sh.deleteRow(i + 2);
 
-    return json_({ ok: true });
+    // `checklist` in the answer tells review mode this script saves checklist rows
+    return json_({ ok: true, checklist: checklist_(data.checklist || []) });
   } catch (err) {
     return json_({ ok: false, error: String(err) });
   } finally {
     lock.releaseLock();
   }
+}
+
+// one row per person per checklist item, matched by Key
+function checklist_(list) {
+  if (!list.length) return 0;
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(CHECK_SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(CHECK_SHEET);
+    sh.appendRow(CHECK_HEADERS);
+    sh.getRange(1, 1, 1, CHECK_HEADERS.length).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  const last = sh.getLastRow();
+  const keys = last > 1 ? sh.getRange(2, 1, last - 1, 1).getValues().map((r) => String(r[0])) : [];
+  list.forEach((c) => {
+    const row = [c.key, c.by, c.version, c.group, c.item, c.page, c.opened ? new Date(c.opened) : '', c.thumb === 'up' ? 'Good' : c.thumb === 'down' ? 'Needs work' : '', c.comments || 0, new Date()].map(safe_);
+    const i = keys.indexOf(String(c.key));
+    if (i >= 0) sh.getRange(i + 2, 1, 1, row.length).setValues([row]);
+    else { sh.appendRow(row); keys.push(String(c.key)); }
+  });
+  return list.length;
 }
 
 // Opening the /exec URL in a browser is a quick check that the deployment works.
