@@ -88,6 +88,7 @@ html[data-var-field-err="b"] .field > .input:not(textarea) { height: 54px; min-h
 html[data-var-field-err="b"] .is-invalid > .input:not(textarea) { height: 46px; margin-bottom: 8px; }
 .form-msg { color: var(--danger); font-size: .88rem; margin: 0 0 10px; }
 .form-msg:empty { display: none; }
+.form-msg.ok { color: inherit; }
 .field-check { margin-bottom: 10px; }
 .field-check:has(> .field-error) { margin-bottom: 6px; }
 .check { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; font-size: .9rem; line-height: 1.45; }

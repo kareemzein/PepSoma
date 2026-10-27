@@ -257,7 +257,7 @@
               ${H.check({ name: 'age', required: true, label: 'I am 21+ and will use products for laboratory research only.' })}
               <p class="form-msg" aria-live="polite"></p><button class="btn btn-primary btn-block" type="submit">Create account</button></form>
             <p class="auth-switch">Already have an account? <a href="#/account${q}">Sign in</a></p>`}
-        </div><p class="small muted center mt">Demo accounts are stored only in this browser.</p></section></div>`,
+        </div>${PS.backend && PS.backend.online ? '' : '<p class="small muted center mt">Demo accounts are stored only in this browser.</p>'}</section></div>`,
     };
   }
 
@@ -687,10 +687,10 @@
     }
   }
 
-  PS.trackLookup = (num, email) => {
+  PS.trackLookup = async (num, email) => {
     const box = $('[data-track-result]');
     if (!box) return;
-    const o = PS.orders.find(num, email);
+    const o = await PS.orders.lookup(num, email);
     box.innerHTML = o
       ? `<div class="track-result"><div class="track-head"><div><span class="label">Order</span><strong>${o.number}</strong></div><div><span class="label">Placed</span><strong>${PS.date(o.createdAt)}</strong></div><div><span class="label">Total</span><strong>${PS.money(o.total)}</strong></div></div>${H.orderStatus(o)}<a class="btn btn-ghost btn-sm" href="#/order/${o.number}">View order details</a></div>`
       : `<div class="notice notice-error">No order matches that number and email on this device. Double-check both — order numbers look like <code>PS123456</code>.</div>`;
@@ -964,7 +964,9 @@
         signingIn = true;
         const r = kind === 'signin' ? await PS.auth.signIn(data) : await PS.auth.signUp(data);
         signingIn = false;
-        if (!r.ok) { btn.disabled = false; $('.form-msg', form).textContent = r.msg; return; }
+        const msg = $('.form-msg', form);
+        msg.classList.toggle('ok', !!r.pending);
+        if (!r.ok || r.pending) { btn.disabled = false; msg.textContent = r.msg; return; }
         arrive(form);
       }
     });
@@ -1132,6 +1134,7 @@
       refreshCart();
       if (!signingIn) goAfterAuth(); // a sign-in from its form waits for the welcome (see arrive)
     });
+    PS.on('orders', () => { if (['account', 'track', 'order'].includes(current)) render(); });
     PS.on('route', render);
     window.addEventListener('hashchange', render);
     render();

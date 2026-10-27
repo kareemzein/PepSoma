@@ -172,6 +172,15 @@
       research: ['Anxiolytic-behavior models (rodent)', 'Cytokine expression assays'],
       accent: '#3dbfa0',
     },
+    // Placeholder price until Noza's list is in. cardsAllowed: false = checkout must offer a non-card payment for it
+    {
+      id: 'retatrutide', code: 'RET', name: 'Retatrutide', full: 'GIP / GLP-1 / glucagon receptor triple agonist (LY3437943)', cat: 'longevity', flag: 'retatrutide', cardsAllowed: false,
+      sizes: [sz('10mg', 129.99)], purity: 99.1,
+      seq: '39-residue acylated peptide', formula: 'C221H342N46O68', mw: 4731.3, cas: '2381089-83-2',
+      summary: 'A synthetic single-molecule agonist of the GIP, GLP-1 and glucagon receptors.',
+      research: ['Incretin and glucagon receptor binding assays', 'Metabolic signaling in cell models'],
+      accent: '#d9773d',
+    },
     {
       id: 'kpv', code: 'KPV', name: 'KPV', full: 'α-MSH C-terminal tripeptide', cat: 'recovery',
       sizes: [sz('10mg', 49.99)], purity: 99.5,

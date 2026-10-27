@@ -1,6 +1,6 @@
 /* Pepsoma — core engine: storage, events, pricing, cart, orders, accounts, router.
    Everything persists in the browser (localStorage) so the demo is fully clickable
-   without a backend. Swap these modules for API calls when wiring up real commerce. */
+   without a backend. js/backend.js swaps PS.auth and PS.orders for Supabase when it's configured and reachable. */
 (function () {
   const PS = (window.PS = window.PS || {});
 
@@ -78,10 +78,11 @@
     },
     // Built but waiting on a decision: products with a matching `flag` (js/data.js) stay hidden, and the header's
     // Supplies link stays off, until switched on here. Preview without switching: add ?preview=sprays,supplies to the address (before the #).
-    features: { sprays: false, supplies: false },
+    features: { sprays: false, supplies: false, retatrutide: false },
   };
   new URLSearchParams(location.search).getAll('preview').join(',').split(',').forEach((f) => { if (f in PS.config.features) PS.config.features[f] = true; });
-  PS.products = PS.products.filter((p) => !p.flag || PS.config.features[p.flag]);
+  PS.featured = (p) => !p.flag || PS.config.features[p.flag];
+  PS.products = PS.products.filter(PS.featured);
   // 'once', '4w', 'custom' (the product page's Custom option), or 'cN' (custom, every N weeks, 1–12) that a cart line or order was saved with.
   // 'Nw' ids from before Custom existed (the old 8-week plan) read as custom too.
   PS.getPlan = (id) => {
@@ -203,6 +204,8 @@
       const o = this.get(num);
       return o && o.email.toLowerCase() === String(email).trim().toLowerCase() ? o : null;
     },
+    // async so js/backend.js can look the order up on the server when it isn't on this device
+    lookup: async (num, email) => PS.orders.find(num, email),
     forEmail: (email) => PS.orders.all().filter((o) => o.email.toLowerCase() === String(email).toLowerCase()),
     create(data, totals) {
       const r = PS.rng(Date.now());

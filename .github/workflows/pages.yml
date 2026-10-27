@@ -23,6 +23,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # Supabase URL + anon key from the repo's Actions secrets; with none set the store runs as the browser-only demo
+      - name: Write store/js/env.js
+        run: node tools/env.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       # One site, two links: the store at the main address, the feedback page at /pepsoma-feedback/.
       # Only these two folders are published (session notes and the README stay in the repo).
       - name: Assemble site
