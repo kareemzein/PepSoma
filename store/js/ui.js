@@ -198,6 +198,23 @@
       <td><button class="btn btn-sm btn-secondary" type="button" data-coa="${esc(l.code)}">${PS.icon('doc')} View COA</button></td></tr>`;
   }).join('');
   H.lotTable = (lots) => `<div class="table-wrap"><table class="lot-table"><thead><tr><th>Lot</th><th>Product</th><th>Tested</th><th>Purity</th><th>Status</th><th><span class="sr-only">COA</span></th></tr></thead><tbody>${H.lotRows(lots)}</tbody></table><p class="empty-row" hidden>No lots match that search.</p></div>`;
+  // Lab Tests page: one card per product with its current lot; earlier lots are links underneath
+  H.lotCards = (lots) => {
+    const by = {};
+    lots.forEach((l) => (by[l.product] = by[l.product] || []).push(l));
+    return `<div class="lot-cards">${Object.keys(by).map((id) => {
+      const p = PS.getProduct(id), [cur, ...older] = by[id];
+      const key = by[id].map((l) => l.code).concat(p.name, p.cat).join(' ').toLowerCase();
+      return `<article class="card lot-card" data-lot-row="${esc(key)}">
+        <a class="lot-card-img" href="#/product/${p.id}" aria-label="${esc(p.name)}">${PS.productImage(p, { theme: T().vialTheme })}</a>
+        <div class="lot-card-body">
+          <h3 class="h4"><a href="#/product/${p.id}">${esc(p.name)}</a></h3>
+          <dl class="lot-card-facts"><div><dt>Purity</dt><dd>${cur.purity}%</dd></div><div><dt>Lot</dt><dd><code>${esc(cur.code)}</code></dd></div><div><dt>Tested</dt><dd>${PS.date(cur.tested)}</dd></div></dl>
+          <a class="btn btn-primary btn-sm" href="#/coa/${esc(cur.code)}">${PS.icon('doc')} View COA</a>
+          ${older.length ? `<p class="lot-older">Earlier lots: ${older.map((l) => `<a href="#/coa/${esc(l.code)}">${esc(l.code)}</a>`).join(' · ')}</p>` : ''}
+        </div></article>`;
+    }).join('')}</div><p class="empty-row" hidden>No lots match that search.</p>`;
+  };
 
   H.faq = (groups) => groups.map((g) => `<div class="faq-group">${g.group ? `<h3 class="faq-group-title">${esc(g.group)}</h3>` : ''}${g.items.map(([q, a]) => `<details class="faq-item"><summary><span>${esc(q)}</span>${PS.icon('chev', 'faq-chev')}</summary><div class="faq-a"><p>${esc(a)}</p></div></details>`).join('')}</div>`).join('');
 
@@ -241,10 +258,33 @@
         <section class="container section-sm">
           <div class="lab-stats">${[['100%', 'lots third-party tested'], ['≥98%', 'release purity spec'], [String(lots.length), 'lots on record'], ['ISO 17025', 'accredited labs']].map(([a, b]) => `<div><strong>${a}</strong><span>${b}</span></div>`).join('')}</div>
           <div class="lot-search"><span class="lot-search-icon">${PS.icon('search')}</span><label class="sr-only" for="lot-q">Search lots</label><input id="lot-q" class="input" data-lot-search placeholder="Search lot number or product — e.g. PS-BPC-2609A" value="${esc(query.q || '')}"></div>
-          ${H.lotTable(lots)}
+          ${H.lotCards(lots)}
           <p class="small muted mt">Demo COAs use illustrative values. Read our <a href="#/policies/testing">Testing &amp; COA Policy</a>.</p>
         </section>`,
         after() { const i = $('[data-lot-search]'); if (i && i.value) filterLots(i.value); },
+      };
+    },
+    // a lot's COA as a page on the site; the lab's own certificate (the printable document) is a button at the bottom
+    coa({ params }) {
+      const lot = PS.findLot(params.code);
+      if (!lot) return PS.defaultViews.notFound({ msg: 'We couldn’t find that lot number. Check the label on your vial.' });
+      const p = PS.getProduct(lot.product);
+      return {
+        title: `COA ${lot.code}`,
+        html: `${T().pageHead({ eyebrow: 'Certificate of Analysis', title: esc(p.name), intro: `Lot <code>${esc(lot.code)}</code> · tested ${PS.date(lot.tested)} by an independent ISO/IEC 17025-accredited lab` })}
+        <section class="container section-sm coa-web">
+          <div class="card pad coa-web-top">
+            <div><span class="label muted">HPLC purity</span><div class="big-purity">${lot.purity}<small>%</small></div><span class="coa-pass">Pass</span> <small class="muted">spec ≥ 98.0%</small></div>
+            <div><span class="label muted">RP-HPLC chromatogram · C18 · 220 nm · retention time (min)</span>${PS.chromatogram(lot)}</div>
+          </div>
+          <div class="card pad"><h2 class="h3">Test results</h2>
+            <ul class="coa-results">${PS.coaTests(lot).map(([test, method, spec, result]) => `<li><div><strong>${test}</strong><small>${method} · spec ${spec}</small></div><b>${result}</b><span class="coa-pass">Pass</span></li>`).join('')}</ul></div>
+          <div class="card pad"><h2 class="h3">Compound</h2>${H.specTable(p)}</div>
+          <div class="coa-web-foot">
+            <p class="small muted">Results apply only to lot ${esc(lot.code)}. For research use only. Sample data: illustrative values until real lab results are added.</p>
+            <div class="btn-row"><button class="btn btn-secondary" type="button" data-coa-pdf="${esc(lot.code)}">${PS.icon('download')} Open the lab’s PDF</button><a class="btn btn-ghost" href="#/lab-tests">All lab tests</a></div>
+          </div>
+        </section>`,
       };
     },
     faq() {
@@ -482,8 +522,9 @@
       }
       else if (d.lineRemove) { PS.cart.remove(d.lineRemove); }
       else if ('removePromo' in d) { PS.cart.removePromo(); }
-      else if (d.coa) {
-        const lot = PS.findLot(d.coa);
+      else if (d.coa) { PS.go('#/coa/' + d.coa); }
+      else if (d.coaPdf) {
+        const lot = PS.findLot(d.coaPdf);
         if (lot) PS.openModal(`${PS.coaDoc(lot)}<div class="coa-actions"><button class="btn btn-primary" type="button" data-print>${PS.icon('download')} Print / save PDF</button></div>`, { cls: 'modal-coa' });
       }
       else if ('print' in d) { window.print(); }
@@ -546,6 +587,7 @@
         return;
       }
       if (kind === 'search') { PS.go('#/shop?q=' + encodeURIComponent(data.q || '')); document.body.classList.remove('nav-open'); return; }
+      if (kind === 'track-go') { PS.go(`#/track?order=${encodeURIComponent(data.order)}&email=${encodeURIComponent(data.email)}`); form.reset(); document.activeElement.blur(); return; }
       if (kind === 'promo') { const r = PS.cart.applyPromo(data.code); PS.toast(esc(r.msg), r.ok ? '' : 'error'); return; }
       if (!validateForm(form)) return;
       const btn = $('button[type="submit"]', form);

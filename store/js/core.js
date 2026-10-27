@@ -74,7 +74,12 @@
       LAB15: { pct: 15, min: 250, label: '15% off orders $250+' },
       SHIPFREE: { freeShip: true, label: 'Free standard shipping' },
     },
+    // Built but waiting on a decision: products with a matching `flag` (js/data.js) stay hidden, and the header's
+    // Supplies link stays off, until switched on here. Preview without switching: add ?preview=sprays,supplies to the address (before the #).
+    features: { sprays: false, supplies: false },
   };
+  new URLSearchParams(location.search).getAll('preview').join(',').split(',').forEach((f) => { if (f in PS.config.features) PS.config.features[f] = true; });
+  PS.products = PS.products.filter((p) => !p.flag || PS.config.features[p.flag]);
   PS.getPlan = (id) => PS.config.plans.find((p) => p.id === id) || PS.config.plans[0];
   PS.getSize = (p, id) => p.sizes.find((s) => s.id === id) || p.sizes[0];
   PS.minPrice = (p) => Math.min(...p.sizes.map((s) => s.price));
@@ -296,7 +301,7 @@
   /* ---------- hash router ---------- */
   PS.routes = [
     ['/', 'home'], ['/shop', 'shop'], ['/shop/:cat', 'shop'], ['/product/:id', 'product'], ['/cart', 'cart'],
-    ['/checkout', 'checkout'], ['/order/:num', 'order'], ['/track', 'track'], ['/lab-tests', 'labs'], ['/faq', 'faq'],
+    ['/checkout', 'checkout'], ['/order/:num', 'order'], ['/track', 'track'], ['/lab-tests', 'labs'], ['/coa/:code', 'coa'], ['/faq', 'faq'],
     ['/about', 'about'], ['/contact', 'contact'], ['/wholesale', 'wholesale'], ['/account', 'account'],
     ['/policies', 'policies'], ['/policies/:slug', 'policy'],
   ];

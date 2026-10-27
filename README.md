@@ -17,12 +17,13 @@ Both are published from this repo as one site with two links:
 ## What the store does
 
 - **Catalog**: 16 compounds and 4 research stacks, with category filters, search and sort
+- **Waiting on a decision** (built, switched off in `PS.config.features` in `store/js/core.js`): Semax and Selank sprays, and a Supplies link in the header. Add `?preview=sprays,supplies` to the address to see them
 - **Product pages**: size options, one-time vs standing order (15%/10% off), quantity, specs, per-lot lab tests
 - **Cart**: slide-out drawer and full cart page, free-shipping progress bar ($150), an automatic one-time-vial deal (volume tiers 3+/5+/10+ vials, or Buy 1 Get 1: set `DEAL` in `store/app.js`, or add `?deal=bogo` to the address to preview), promo codes
 - **Checkout**: field validation, card checks (Luhn, expiry, CVC), three shipping methods, and required checkboxes for research use, 21+, terms and auto-renew
 - **Orders**: confirmation page, order tracking by number + email (a sped-up demo status timeline), order history
 - **Accounts**: sign up, sign in, sign out, order history, cancelling standing orders
-- **Lab Tests / COAs**: lot search, a certificate viewer with a generated HPLC chart, print/save as PDF
+- **Lab Tests / COAs**: a card per product with its current lot, lot search, a COA page per lot with a generated HPLC chart, and the lab's printable certificate (print/save as PDF) at the bottom
 - **Pages**: FAQ, About, Contact form, Wholesale application, 404
 - **Compliance**: 21+ age gate, cookie consent banner, research-use disclaimers site-wide
 - **Policies**: Terms of Service, Research Use Only, Shipping, Refund & Return, Testing & COA, Standing Order (auto-renewal) Terms, Privacy, Cookies, Accessibility

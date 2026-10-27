@@ -143,6 +143,17 @@
   };
 
   /* ---------- COA document ---------- */
+  // [test, method, specification, result], shared by the printable certificate and the COA page
+  PS.coaTests = (lot) => [
+    ['Purity', 'RP-HPLC', '≥ 98.0%', lot.purity + '%'],
+    lot.identity ? ['Identity', 'ESI-MS', `${lot.identity.expected} ± 1.0 Da`, lot.identity.observed + ' Da'] : ['Identity', 'HPLC co-elution', 'Matches reference', 'Conforms'],
+    ['Net content', 'Gravimetric / HPLC', '≥ 100% of label', PS.esc(lot.content)],
+    ['Endotoxin', 'LAL (USP ⟨85⟩)', '< 1.0 EU/mg', lot.endotoxin + ' EU/mg'],
+    ['Heavy metals', 'ICP-MS', 'Pb, As, Cd, Hg < 0.5 ppm', 'All < 0.5 ppm'],
+    ['Sterility', 'USP ⟨71⟩', 'No growth', 'No growth'],
+    ['Water content', 'Karl Fischer', '≤ 8.0%', lot.water + '%'],
+    ['Appearance', 'Visual', 'Conforms to description', PS.esc(lot.appearance)],
+  ];
   PS.coaDoc = function (lot) {
     const p = PS.getProduct(lot.product);
     const esc = PS.esc;
@@ -162,16 +173,7 @@
       <div class="coa-chart"><div class="coa-label">RP-HPLC chromatogram · C18 · 220 nm · retention time (min)</div>${PS.chromatogram(lot)}</div>
       <div class="coa-table-wrap"><table class="coa-table">
         <thead><tr><th>Test</th><th>Method</th><th>Specification</th><th>Result</th><th></th></tr></thead>
-        <tbody>
-          ${row('Purity', 'RP-HPLC', '≥ 98.0%', lot.purity + '%')}
-          ${lot.identity ? row('Identity', 'ESI-MS', `${lot.identity.expected} ± 1.0 Da`, lot.identity.observed + ' Da') : row('Identity', 'HPLC co-elution', 'Matches reference', 'Conforms')}
-          ${row('Net content', 'Gravimetric / HPLC', '≥ 100% of label', esc(lot.content))}
-          ${row('Endotoxin', 'LAL (USP ⟨85⟩)', '< 1.0 EU/mg', lot.endotoxin + ' EU/mg')}
-          ${row('Heavy metals', 'ICP-MS', 'Pb, As, Cd, Hg < 0.5 ppm', 'All < 0.5 ppm')}
-          ${row('Sterility', 'USP ⟨71⟩', 'No growth', 'No growth')}
-          ${row('Water content', 'Karl Fischer', '≤ 8.0%', lot.water + '%')}
-          ${row('Appearance', 'Visual', 'Conforms to description', esc(lot.appearance))}
-        </tbody>
+        <tbody>${PS.coaTests(lot).map((r) => row(...r)).join('')}</tbody>
       </table></div>
       <footer class="coa-foot">
         <p>Tested by an independent ISO/IEC 17025-accredited laboratory. Results apply only to the lot identified above.</p>

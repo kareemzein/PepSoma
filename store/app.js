@@ -29,13 +29,14 @@
   };
 
   /* ---------- product card ---------- */
-  function card(p, i) {
+  function card(p, i, still) {
     const s = p.sizes[0];
     const multi = p.sizes.length > 1;
     // one navy "Sale" tag wherever the card shows a crossed-out price (stacks keep their "Save x%" pill)
     const sale = p.badge === 'Sale' || (s.compare && !/save/i.test(p.badge || ''));
     const badge = p.badge && p.badge !== 'Sale' ? p.badge : '';
-    return `<article class="pcard reveal" style="--d:${(i || 0) % 4}">
+    // still: no scroll reveal (cards off to the side of a carousel would never scroll into view vertically)
+    return `<article class="pcard${still ? '' : ' reveal'}" style="--d:${(i || 0) % 4}">
       <a class="pcard-img" href="#/product/${p.id}" aria-label="${esc(p.name)}">${badge ? `<span class="pill-y">${esc(badge)}</span>` : ''}${sale ? '<span class="sale-tag">Sale</span>' : ''}${img(p)}</a>
       <div class="pcard-body">
         <span class="pcard-cat">${esc(catName(p.cat))}</span>
@@ -76,12 +77,17 @@
           <div class="dd"><a href="#/lab-tests">Lab Tests &amp; COAs</a><a href="#/faq">FAQ</a><a href="#/track">Track Order</a><a href="#/wholesale">Wholesale</a><a href="#/policies">Policies</a></div></div>
         <a href="#/about" data-nav="about" class="nav-link">About</a>
         <a href="#/contact" data-nav="contact" class="nav-link">Contact</a>
+        ${PS.config.features.supplies ? '<a href="#/shop/supplies" class="nav-link">Supplies</a>' : ''}
         <a href="#/account" class="nav-link show-sm">${u ? 'My account' : 'Sign in'}</a>
       </nav>
+      <form class="hdr-search" data-form="search" role="search"><span class="hdr-search-icon">${icon('search')}</span><input class="input" name="q" placeholder="Search peptides, e.g. BPC-157" aria-label="Search peptides"><button class="hdr-search-x" type="button" data-search-close aria-label="Close search">${icon('x')}</button></form>
       <div class="hdr-actions">
+        <button class="round-btn hide-sm" type="button" data-search-open aria-label="Search">${icon('search')}</button>
         ${themeButton()}
+        <div class="track-wrap"><a class="round-btn" href="#/track" aria-label="Track an order">${icon('truck')}</a>
+          <div class="track-pane"><strong>Track an order</strong><form class="stack-form" data-form="track-go"><input class="input" name="order" placeholder="Order number, e.g. PS123456" aria-label="Order number" required><input class="input" name="email" type="email" placeholder="Email used at checkout" aria-label="Email" required><button class="btn btn-primary btn-sm" type="submit">Track ${icon('arrow')}</button></form></div></div>
+        <a class="btn btn-yellow btn-pill hide-md" href="#/shop">Explore Peptides</a>
         <a class="btn btn-primary btn-pill hide-sm" href="#/account">${u ? 'Hi, ' + esc(u.name.split(' ')[0]) : 'Account Login'}</a>
-        <a class="btn btn-yellow hide-md" href="#/shop"><em class="serif">Explore Peptides</em></a>
         <button class="round-btn cart-btn" data-open-cart aria-label="Open cart">${icon('cart')}<span class="cart-count" data-cart-count>0</span></button>
         <button class="round-btn nav-toggle" data-nav-toggle aria-label="Menu" aria-expanded="false">${icon('menu')}</button>
       </div>
@@ -163,9 +169,6 @@
     const sampleLot = PS.lots(hero)[0];
     const singles = PS.products.filter((p) => !p.includes && !p.noCoa);
     const avgPurity = singles.reduce((s, p) => s + p.purity, 0) / singles.length;
-    const chip = (p) => `<a class="mchip" href="#/product/${p.id}"><i style="background:${p.accent}"></i><b>${esc(p.name)}</b><span>${esc(catName(p.cat))}</span></a>`;
-    const half = Math.ceil(PS.products.length / 2);
-    const rowA = PS.products.slice(0, half).map(chip).join(''), rowB = PS.products.slice(half).map(chip).join('');
     const r = (i) => `class="rise" style="--i:${i}"`;
     return {
       html: `
@@ -189,10 +192,11 @@
         </div>
       </div></section>
 
-      <section class="chips-band" aria-label="Browse compounds">
-        <div class="marquee"><div class="marquee-track">${rowA}</div><div class="marquee-track" aria-hidden="true">${rowA}</div></div>
-        <div class="marquee rev"><div class="marquee-track">${rowB}</div><div class="marquee-track" aria-hidden="true">${rowB}</div></div>
-      </section>
+      <section class="rail-band" aria-label="Browse compounds"><div class="container">
+        <div class="sec-head split-head"><h2>Browse ${it('compounds')}</h2>
+          <div class="rail-nav"><button class="round-btn rail-prev" data-rail="-1" aria-label="Previous compounds" disabled>${icon('arrow')}</button><button class="round-btn" data-rail="1" aria-label="More compounds">${icon('arrow')}</button></div></div>
+        <div class="rail" data-rail-track>${singlesAll.map((p) => card(p, 0, true)).join('')}</div>
+      </div></section>
 
       <section class="section"><div class="container">
         <div class="sec-head center reveal"><h2>Choose your ${it('research stack')}</h2><p class="lead muted">Complementary compounds, pre-kitted. Each vial ships with its own lot-matched COA.</p></div>
@@ -377,7 +381,7 @@
     if (!t.count) return views.cart();
     return {
       title: 'Checkout',
-      html: `${pageHead({ eyebrow: 'Secure checkout', title: `Almost ${it('there')}` })}
+      html: `${pageHead({ eyebrow: 'Secure checkout', title: '<span class="thin">Almost there</span>' })}
       <section class="container section-sm"><div class="checkout-grid">
         <div class="card pad">${H.checkoutForm(PS.auth.current(), t)}</div>
         <aside class="sticky" data-summary>${summary(t, { shipping: true })}</aside>
@@ -432,7 +436,24 @@
     if (cyc) { const order = ['auto', 'light', 'dark']; applyMode(order[(order.indexOf(getMode()) + 1) % 3], cyc); return; }
     const set = e.target.closest('[data-mode-set]');
     if (set) applyMode(set.dataset.modeSet, set);
+    // header search: the search bar takes the nav's place until you search, press Esc or click away
+    const hdr = document.querySelector('.hdr');
+    if (e.target.closest('[data-search-open]')) { const on = !hdr.classList.contains('searching'); hdr.classList.toggle('searching', on); if (on) hdr.querySelector('.hdr-search input').focus(); return; }
+    if (e.target.closest('[data-search-close]') || (hdr && hdr.classList.contains('searching') && !e.target.closest('.hdr-search'))) hdr.classList.remove('searching');
+    const rail = e.target.closest('[data-rail]');
+    if (rail) { const t = document.querySelector('[data-rail-track]'); t.scrollBy({ left: rail.dataset.rail * t.clientWidth * 0.9, behavior: 'smooth' }); }
   });
+  const closeSearch = () => { const h = document.querySelector('.hdr.searching'); if (h) h.classList.remove('searching'); };
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSearch(); });
+  addEventListener('hashchange', closeSearch);
+  // carousel arrows dim at either end
+  document.addEventListener('scroll', (e) => {
+    const t = e.target;
+    if (!t.matches || !t.matches('[data-rail-track]')) return;
+    const [prev, next] = t.parentElement.querySelectorAll('[data-rail]');
+    prev.disabled = t.scrollLeft < 4;
+    next.disabled = t.scrollLeft + t.clientWidth > t.scrollWidth - 4;
+  }, true);
 
   /* ---------- motion ---------- */
   // sliding pill behind the nav link you're pointing at

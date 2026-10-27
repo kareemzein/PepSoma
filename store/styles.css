@@ -192,6 +192,25 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 @keyframes bump { 30% { transform: scale(1.18); } 60% { transform: scale(.94); } }
 .nav-toggle { display: none; }
 .show-sm { display: none !important; }
+.hdr-actions .btn-yellow { font-size: .95rem; font-weight: 700; } /* same type as the Account Login pill */
+/* header search: the search button swaps the nav for a full-width search bar (the header has no room for both) */
+.hdr-search { display: none; position: relative; flex: 1; align-items: center; }
+.hdr.searching .main-nav { display: none; }
+.hdr.searching .hdr-search { display: flex; animation: pageIn .3s var(--ease-out); }
+.hdr-search .input { width: 100%; min-height: 46px; padding: 0 46px 0 44px; border-radius: 999px; }
+.hdr-search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--muted); display: flex; pointer-events: none; }
+.hdr-search-icon .icon { width: 18px; height: 18px; }
+.hdr-search-x { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border: 0; border-radius: 50%; background: none; color: var(--muted); display: grid; place-items: center; cursor: pointer; }
+.hdr-search-x:hover { background: var(--bg-soft); color: var(--text); }
+.hdr-search-x .icon { width: 16px; height: 16px; }
+/* track-order pane: opens under the truck button on hover or keyboard focus (on touch, the button goes to the Track Order page) */
+.track-wrap { position: relative; }
+.track-pane { position: absolute; top: calc(100% + 10px); right: -60px; width: 300px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-lg); padding: 16px; display: grid; gap: 10px; opacity: 0; visibility: hidden; transform: translateY(8px); transition: opacity .2s, transform .25s var(--ease-out), visibility .2s; z-index: 5; }
+.track-pane::before { content: ''; position: absolute; left: 0; right: 0; top: -12px; height: 12px; }
+.track-pane .stack-form { display: grid; gap: 8px; }
+.track-pane .btn { margin-top: 2px; }
+.track-wrap:hover .track-pane, .track-wrap:focus-within .track-pane { opacity: 1; visibility: visible; transform: none; }
+@media (hover: none) { .track-pane { display: none; } }
 
 /* theme toggle: sun / moon / auto glyphs cross-fade */
 .theme-btn .t-ico { position: absolute; inset: 0; display: grid; place-items: center; transition: opacity .3s, transform .45s var(--ease-spring); }
@@ -204,6 +223,7 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .page-head { background: radial-gradient(900px 300px at 50% 0%, var(--bg-tint), transparent 70%), var(--bg); padding: 64px 0 40px; text-align: center; }
 .page-head h1 { font-size: clamp(2.1rem, 4.4vw, 3.3rem); max-width: 860px; margin: 0 auto .35em; }
 .page-head .lead { max-width: 680px; margin: 0 auto; }
+.thin { font-weight: 300; letter-spacing: -.01em; }
 
 /* ---------- hero ---------- */
 .hero { position: relative; background: radial-gradient(1100px 520px at 85% 15%, var(--bg-tint), transparent 60%), var(--cream); padding: 56px 0 72px; overflow: hidden; }
@@ -241,19 +261,17 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .fc1 { top: 56px; left: 0; animation: float 7s ease-in-out infinite; }
 .fc2 { bottom: 40px; right: 0; animation: float 8s ease-in-out -2s infinite; }
 
-/* ---------- marquee chips ---------- */
-.chips-band { background: var(--cream); padding: 0 0 56px; overflow: hidden; }
-.marquee { display: flex; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
-.marquee + .marquee { margin-top: 12px; }
-.marquee-track { display: flex; gap: 12px; padding-right: 12px; flex: none; animation: mq 48s linear infinite; }
-.marquee.rev .marquee-track { animation-direction: reverse; animation-duration: 56s; }
-.marquee:hover .marquee-track { animation-play-state: paused; }
-@keyframes mq { to { transform: translateX(-100%); } }
-.mchip { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; padding: 10px 16px; border-radius: 99px; background: var(--surface); border: 1px solid var(--line); text-decoration: none; font-size: .9rem; transition: border-color .2s, transform .2s; }
-.mchip b { font-weight: 700; }
-.mchip span { color: var(--muted); }
-.mchip i { width: 8px; height: 8px; border-radius: 50%; }
-.mchip:hover { border-color: var(--text); transform: translateY(-2px); }
+/* ---------- compound carousel (home): swipe or use the arrows, snaps card by card ---------- */
+.rail-band { background: var(--cream); padding: 8px 0 64px; }
+.rail-band .sec-head { margin-bottom: 24px; }
+.rail-nav { display: flex; gap: 8px; }
+.rail-nav .round-btn:disabled { opacity: .35; pointer-events: none; }
+.rail-prev .icon { transform: rotate(180deg); }
+.rail { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - 3 * 20px) / 4); gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding: 4px 2px 12px; margin: -4px -2px 0; }
+.rail::-webkit-scrollbar { display: none; }
+.rail .pcard { scroll-snap-align: start; }
+@media (max-width: 1024px) { .rail { grid-auto-columns: calc((100% - 2 * 16px) / 3); gap: 16px; } }
+@media (max-width: 640px) { .rail { grid-auto-columns: 72%; gap: 12px; } }
 
 /* ---------- sections ---------- */
 .section-lav { background: var(--bg-soft); }
@@ -443,6 +461,41 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .stage-coa h3 { font-weight: 700; margin: 0; }
 .big-purity { font-family: var(--font-serif); font-style: italic; font-size: 5rem; line-height: 1; }
 .big-purity small { font-size: 2rem; }
+
+/* ---------- lab tests: one card per product ---------- */
+.lot-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 18px; }
+.lot-card { display: grid; grid-template-columns: 110px 1fr; gap: 18px; padding: 18px; align-items: center; }
+.lot-card[hidden] { display: none; }
+.lot-card-img { display: grid; place-items: center; height: 150px; border-radius: 14px; background: var(--bg-soft); }
+.lot-card-img .vial-single, .lot-card-img .vial-group { height: 130px; }
+.lot-card h3 { margin: 0 0 10px; }
+.lot-card h3 a { text-decoration: none; }
+.lot-card-facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0 0 14px; font-size: .88rem; }
+.lot-card-facts div { display: contents; }
+.lot-card-facts dt { color: var(--muted); }
+.lot-card-facts dd { margin: 0; font-weight: 600; }
+.lot-older { margin: 12px 0 0; font-size: .78rem; color: var(--muted); }
+.lot-older a { color: inherit; }
+
+/* ---------- COA page ---------- */
+.coa-web { display: grid; gap: 18px; }
+.coa-web-top { display: grid; grid-template-columns: 240px 1fr; gap: 28px; align-items: center; }
+.coa-web-top .big-purity { margin: 6px 0 10px; }
+.coa-web-top .chromatogram { width: 100%; height: 170px; margin-top: 10px; color: var(--muted); }
+.coa-results { list-style: none; margin: 0; padding: 0; }
+.coa-results li { display: grid; grid-template-columns: 1fr auto auto; gap: 16px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.coa-results li:last-child { border-bottom: 0; }
+.coa-results small { display: block; color: var(--muted); font-size: .8rem; }
+.coa-results b { font-variant-numeric: tabular-nums; text-align: right; }
+.coa-web-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding-top: 6px; }
+.coa-web-foot p { margin: 0; max-width: 560px; }
+@media (max-width: 640px) {
+  .coa-web-top { grid-template-columns: 1fr; }
+  .coa-results li { grid-template-columns: 1fr auto; }
+  .coa-results .coa-pass { display: none; }
+  .lot-card { grid-template-columns: 84px 1fr; }
+  .lot-card-img { height: 120px; }
+}
 .stage-coa .chromatogram { height: 120px; margin: 8px 0 16px; color: var(--muted); }
 .stage-spec { align-content: center; gap: 24px; }
 .beads { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 420px; }
@@ -549,8 +602,12 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .fly .icon { width: 20px; height: 20px; color: #1b2d74; }
 
 /* ---------- responsive ---------- */
-@media (max-width: 1320px) { .hide-md { display: none !important; } }
+@media (min-width: 1410px) { .hdr { max-width: 1410px; } } /* room for Explore Peptides beside the search and track buttons */
+@media (max-width: 1409px) { .hide-md { display: none !important; } }
 @media (max-width: 1180px) { .nav-link { padding: 10px 10px; } }
+/* between the full header and the slide-out menu, tighten up; the theme switch is also in the footer */
+@media (min-width: 1025px) and (max-width: 1180px) { .hdr { gap: 14px; } .hdr-actions { gap: 6px; } .hdr-actions .theme-btn { display: none; } }
+@media (min-width: 1025px) and (max-width: 1100px) { .nav-link { padding: 10px 8px; } .logo { font-size: 1.75rem; } .round-btn { width: 42px; height: 42px; } }
 @media (max-width: 1024px) {
   /* a blurred header becomes the containing block for the fixed slide-out menu, so skip the blur here */
   .site-header, .site-header.scrolled .hdr { backdrop-filter: none; -webkit-backdrop-filter: none; }
@@ -630,6 +687,5 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
   .rise, .line-mask > span, .reveal { opacity: 1 !important; transform: none !important; filter: none !important; }
   .window .chromatogram path { stroke-dashoffset: 0; }
   .window .win-rows li b { background: rgba(47,191,113,.16); color: var(--success); }
-  .marquee-track { animation: none; }
   .hero-glow, .hv { animation: none; }
 }

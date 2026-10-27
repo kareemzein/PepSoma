@@ -145,6 +145,23 @@
       research: ['BDNF expression in neural tissue', 'Ischemia models (preclinical)', 'Attention and memory paradigms (rodent)'],
       accent: '#3da5bf',
     },
+    // Sprays: hidden until PS.config.features.sprays is on (js/core.js). Sizes and prices are placeholders until Noza confirms them.
+    {
+      id: 'semax-spray', code: 'SMS', name: 'Semax Spray', vial: ['Semax', 'Spray'], full: 'ACTH (4-10) analog · 3 mL metered spray', cat: 'cognitive', flag: 'sprays', liquid: true,
+      sizes: [{ id: '30mg', label: '30 mg', price: 54.99 }], purity: 99.1, appearance: 'Clear, colorless solution',
+      seq: 'Met-Glu-His-Phe-Pro-Gly-Pro', formula: 'C37H51N9O10S', mw: 813.9, cas: '80714-61-0',
+      summary: 'Semax in sterile solution, supplied in a metered spray bottle for research handling.',
+      research: ['BDNF expression in neural tissue', 'Attention and memory paradigms (rodent)'],
+      accent: '#3da5bf',
+    },
+    {
+      id: 'selank-spray', code: 'SLS', name: 'Selank Spray', vial: ['Selank', 'Spray'], full: 'Tuftsin analog · 3 mL metered spray', cat: 'cognitive', flag: 'sprays', liquid: true,
+      sizes: [{ id: '30mg', label: '30 mg', price: 54.99 }], purity: 99.0, appearance: 'Clear, colorless solution',
+      seq: 'Thr-Lys-Pro-Arg-Pro-Gly-Pro', formula: 'C33H57N11O9', mw: 751.9, cas: '129954-34-3',
+      summary: 'Selank in sterile solution, supplied in a metered spray bottle for research handling.',
+      research: ['Anxiolytic-behavior models (rodent)', 'Cytokine expression assays'],
+      accent: '#3dbfa0',
+    },
     {
       id: 'kpv', code: 'KPV', name: 'KPV', full: 'α-MSH C-terminal tripeptide', cat: 'recovery',
       sizes: [sz('10mg', 49.99)], purity: 99.5,
