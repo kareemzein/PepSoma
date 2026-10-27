@@ -36,6 +36,8 @@ jobs:
           cp -R pepsoma-feedback _site/pepsoma-feedback
           # frozen earlier versions of the store, with a switcher page at /versions/
           cp -R versions _site/versions
+          # same stamp on each frozen version's page, so its review tools update too
+          for f in _site/versions/*/index.html; do sed -i -E "s#(href|src)=\"((css|js)/[^\"?]+|styles\.css|app\.js)\"#\1=\"\2?v=$v\"#g" "$f"; done
           touch _site/.nojekyll
           # links from before the reorganization forward to where those pages live now
           forward() {
