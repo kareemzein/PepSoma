@@ -1,6 +1,7 @@
 /* Pepsoma — review mode: point at any part of the site and leave a comment on it.
    Turn on with ?review in the address (or the /review/ link); it stays on in that tab until "Exit review" or the tab closes.
-   Comments live in localStorage (pepsoma.v2.reviewNotes; V1's stay in pepsoma.reviewNotes) and export as plain text.
+   The same file runs in the live store and in every frozen copy under versions/<id>/ (copy it there when it changes); it works out which version it's in.
+   Comments live in localStorage (pepsoma.<version>.reviewNotes; V1's in pepsoma.reviewNotes) and export as plain text.
    Each comment is signed with the current commenter; names are kept per device (pepsoma.reviewPeople) and N cycles them.
    With SHEET_URL set, every comment is also sent to a Google Sheet (setup: tools/review-sheet.gs), and the panel can show everyone's comments from it (password checked by the script).
    Guided mode walks a checklist of everything to review (GUIDE below), one item at a time, with progress kept per person and sent to the sheet's Checklist tab. */
@@ -19,15 +20,23 @@
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // Google Apps Script web app URL from tools/review-sheet.gs; empty keeps comments on this device only
   const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyIdUV2k7x63p800wluyHXTep0wn75DTpMdP9AAMuqC_VhSArNgiq0Kh2GTXICJj96e/exec';
-  // this version's comments are filed in the sheet under HOME and kept apart from V1's (versions/v1/, filed under the bare store address)
-  // when the live store becomes the next version, bump VERSION here and keep the frozen copy's HOME as it was
-  const VERSION = 'v2', HOME = location.origin + location.pathname + '?version=' + VERSION;
+  // every version, oldest first; the last is the live store. When the live store is frozen into versions/<id>/, add the next one here
+  // (and to versions/index.html), then copy this file into the frozen copy's js/.
+  const VERSIONS = [['v1', 'V1', 'Oct 1'], ['v2', 'V2', 'live']], LATEST = VERSIONS[VERSIONS.length - 1][0];
+  const frozen = location.pathname.match(/\/versions\/(v\d+)\//), VERSION = frozen ? frozen[1] : LATEST;
+  // the live store's address. Each version's comments are filed in the sheet under HOME, so versions stay apart;
+  // V1's were made before versions existed and keep the bare address
+  const ROOT = frozen ? new URL('../../', location.href).href : location.origin + location.pathname;
+  const HOME = ROOT + (VERSION === 'v1' ? '' : '?version=' + VERSION), KEYS = VERSION === 'v1' ? '' : VERSION + '.';
+  // deployed, the live store is the site root with versions/ inside it; served locally from the repo, the store is /store/ beside /versions/
+  const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname), SITE = !frozen && local ? new URL('../', ROOT).href : ROOT;
+  const verUrl = (id) => (id === LATEST ? (local ? SITE + 'store/' : SITE) : SITE + 'versions/' + id + '/');
   const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  let notes = S.get(VERSION + '.reviewNotes', []);
+  let notes = S.get(KEYS + 'reviewNotes', []);
   notes.forEach((n) => { n.id = n.id || newId(); n.rev = n.rev || 1; });
   // n.sent is the revision the sheet has; `gone` holds ids deleted here that the sheet still shows
-  let gone = S.get(VERSION + '.reviewGone', []);
-  const save = () => { S.set(VERSION + '.reviewNotes', notes); S.set(VERSION + '.reviewGone', gone); sync(); };
+  let gone = S.get(KEYS + 'reviewGone', []);
+  const save = () => { S.set(KEYS + 'reviewNotes', notes); S.set(KEYS + 'reviewGone', gone); sync(); };
   const drop = (test) => {
     notes.forEach((n) => { if (test(n) && n.sent) gone.push(n.id); if (test(n) && n.item) touch(n.item, byName(n)); });
     notes = notes.filter((n) => !test(n));
@@ -95,6 +104,8 @@
   .rv-panel { z-index: 2147483630; top: 0; right: 0; bottom: 0; width: min(400px, 100vw); background: #fff; color: #1b1a17; box-shadow: -20px 0 60px rgba(0,0,0,.2); display: flex; flex-direction: column; }
   .rv-panel header { padding: 18px 18px 12px; border-bottom: 1px solid #eee8de; }
   .rv-panel h2 { font-size: 18px; font-weight: 700; margin: 0 0 10px; display: flex; align-items: center; color: #1b1a17; }
+  .rv-vers { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: #6b665d; }
+  .rv-vers .rv-chip { text-decoration: none; }
   .rv-sync { font-size: 12px; color: #6b665d; margin: -4px 0 10px; }
   .rv-sync.rv-warn { color: #c4321a; }
   .rv-sync .rv-btn { margin-left: 6px; }
@@ -614,6 +625,7 @@
           <button class="rv-btn rv-sm" data-p="guide">How it works</button>
           <button class="rv-btn rv-sm" data-p="exit">Exit review</button>
         </div>
+        ${versionSwitch()}
         ${authors.length > 1 ? `<div class="rv-filters">` +
           authors.map((a) => `<button class="rv-chip${hidden.includes(a) ? ' rv-off' : ''}" data-f="${esc(a)}" aria-pressed="${!hidden.includes(a)}" title="${hidden.includes(a) ? 'Show' : 'Hide'} ${esc(a)}'s comments"><span class="rv-dot" style="background:${color(a === 'No name' ? null : a)}"></span>${esc(a)} (${count(a)})</button>`).join('') +
           (hidden.length ? '<button class="rv-chip" data-f="">Show everyone</button>' : '') + '</div>' : ''}
@@ -764,8 +776,8 @@
       else await fetch(SHEET_URL, { ...req, mode: 'no-cors' }); // still throws when offline; saves are matched by id, so a repeat can't duplicate
       rows.forEach(({ n, rev }) => { n.sent = rev; });
       gone = gone.filter((id) => !removing.includes(id));
-      S.set(VERSION + '.reviewNotes', notes);
-      S.set(VERSION + '.reviewGone', gone);
+      S.set(KEYS + 'reviewNotes', notes);
+      S.set(KEYS + 'reviewGone', gone);
       syncFailed = false;
       if (source === 'sheet') load();
       if (!panel.hidden && guided && panelView === 'checklist') renderPanel();
@@ -964,6 +976,8 @@
   const BUBBLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
   const cmark = (k) => (k ? `<span class="rv-cmark" title="${k} comment${k === 1 ? '' : 's'}">${BUBBLE}${k}</span>` : '');
   const tmark = (t) => (t ? `<span class="rv-tmark" style="color:${t === 'up' ? '#16a34a' : '#c4321a'}" title="Thumbs ${t}">${t === 'up' ? THUMB : THUMB_DOWN}</span>` : '');
+  // the same page in another version, still in review mode
+  const versionSwitch = () => `<div class="rv-vers"><span>Version</span>${VERSIONS.map(([id, name, note]) => `<a class="rv-chip" href="${esc(verUrl(id) + '?review' + location.hash)}"${id === VERSION ? ' aria-current="page" aria-pressed="true"' : ''} title="${id === VERSION ? 'You are on ' + name : 'Open this page in ' + name}">${name} · ${note}</a>`).join('')}<a class="rv-chip" href="${esc(SITE + 'versions/')}" target="_blank" rel="noopener" title="Compare all versions side by side">All ↗</a></div>`;
   const modeSwitch = () => `<div class="rv-filters" style="margin:0 0 10px"><button class="rv-chip" data-rvmode="free" aria-pressed="${!guided}">Free</button><button class="rv-chip" data-rvmode="guided" aria-pressed="${guided}">Guided checklist</button></div>`;
 
   // which checklist item a clicked element belongs to: the tightest spot containing it, on this page or in the header/footer;
@@ -1085,6 +1099,7 @@
           <button class="rv-btn rv-sm" data-p="guide">How it works</button>
           <button class="rv-btn rv-sm" data-p="exit">Exit review</button>
         </div>
+        ${versionSwitch()}
       </header>
       <div class="rv-list">${GUIDE.map(([g, items]) => {
         const k = items.filter(([id]) => p.seen[id]).length;
