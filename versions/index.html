@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pepsoma versions</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="v1/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:ital,opsz,wght@1,9..144,500&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg: #f7f0d4; --card: #ffffff; --ink: #1b2d74; --muted: #5a6491; --line: #d9dcef; --on: #1b2d74; --on-ink: #ffffff; --yellow: #d8d85a; color-scheme: light; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #0b1026; --card: #0f1630; --ink: #e9edfb; --muted: #9aa3cc; --line: #24305a; --on: #e9edfb; --on-ink: #0b1026; color-scheme: dark; } }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body { background: var(--bg); color: var(--ink); font: 15px/1.45 'DM Sans', system-ui, sans-serif; display: flex; flex-direction: column; }
+    header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+    h1 { margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: -.01em; }
+    h1 i { font-family: 'Fraunces', serif; font-weight: 500; }
+    .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tab { appearance: none; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 99px; padding: 7px 14px; font: inherit; font-weight: 500; cursor: pointer; }
+    .tab small { color: var(--muted); font-weight: 400; margin-left: 4px; }
+    .tab[aria-selected="true"] { background: var(--on); color: var(--on-ink); border-color: var(--on); }
+    .tab[aria-selected="true"] small { color: inherit; opacity: .75; }
+    .info { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 16px; font-size: .9rem; color: var(--muted); }
+    .info p { margin: 0; flex: 1 1 320px; }
+    .info a { color: var(--ink); font-weight: 500; white-space: nowrap; }
+    .frame { flex: 1; min-height: 70vh; padding: 0 16px 16px; }
+    iframe { width: 100%; height: 100%; min-height: 70vh; border: 1px solid var(--line); border-radius: 12px; background: #fff; display: block; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>pep<i>soma</i> · versions</h1>
+    <div class="tabs" role="tablist" aria-label="Versions"></div>
+  </header>
+  <div class="info"><p data-note></p><a data-open target="_blank" rel="noopener">Open full page ↗</a><a data-review target="_blank" rel="noopener">Open in review mode ↗</a></div>
+  <div class="frame"><iframe title="Selected version"></iframe></div>
+  <script>
+    // Add a new entry here (newest last) each time a version is frozen into versions/<id>/.
+    // Locally the live store is served from /store/; online it's the site root.
+    var live = location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? '../store/' : '../';
+    var versions = [
+      { id: 'original', name: 'Original', date: 'Sep 23', url: '../pepsoma-feedback/designs/a/', note: 'Design A as the reviewer first saw it, before any feedback. Frozen.' },
+      { id: 'v1', name: 'V1', date: 'Oct 1', url: 'v1/', note: 'The store as reviewed in the Oct 1 meeting, with the reworked colors, fonts and opening. The review comments were made on this version. Frozen.' },
+      { id: 'v2', name: 'V2', date: 'in progress', url: live, note: 'The live site: V1 plus the Oct 1 review changes. This is the one being worked on.' },
+    ];
+    var tabs = document.querySelector('.tabs'), frame = document.querySelector('iframe');
+    versions.forEach(function (v) {
+      var b = document.createElement('button');
+      b.className = 'tab'; b.setAttribute('role', 'tab'); b.dataset.id = v.id;
+      b.innerHTML = v.name + '<small>' + v.date + '</small>';
+      b.onclick = function () { location.hash = v.id; };
+      tabs.appendChild(b);
+    });
+    function show() {
+      var id = location.hash.slice(1), v = versions.filter(function (x) { return x.id === id; })[0] || versions[versions.length - 1];
+      tabs.querySelectorAll('.tab').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.id === v.id); });
+      document.querySelector('[data-note]').textContent = v.note;
+      document.querySelector('[data-open]').href = v.url;
+      var review = document.querySelector('[data-review]');
+      review.hidden = v.id === 'original'; // design A has no review mode
+      review.href = v.url + '?review';
+      if (frame.getAttribute('src') !== v.url) frame.src = v.url;
+      document.title = 'Pepsoma ' + v.name;
+    }
+    addEventListener('hashchange', show);
+    show();
+  </script>
+</body>
+</html>

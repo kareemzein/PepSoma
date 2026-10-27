@@ -12,6 +12,7 @@ Both are published from this repo as one site with two links:
 | Pepsoma (the store) | https://kareemzein.github.io/PepSoma/ | `store/` |
 | Pepsoma feedback | https://kareemzein.github.io/PepSoma/pepsoma-feedback/ | `pepsoma-feedback/` |
 | Store in review mode | https://kareemzein.github.io/PepSoma/review/ | `store/js/review.js` |
+| Versions (Original, V1, V2) | https://kareemzein.github.io/PepSoma/versions/ | `versions/` |
 
 ## What the store does
 
@@ -63,6 +64,10 @@ store/                   the storefront (published at the main address)
   js/ui.js               forms, default pages, cart drawer/modals, app boot
   js/review.js           review mode: Browse/Comment toggle, click any element to comment, commenter names (N switches), person filter, everyone's comments from the sheet, export (only runs with ?review)
   css/base.css           base layout that styles.css builds on
+
+versions/                frozen copies of earlier versions of the store (don't edit), published at /versions/
+  index.html             the switcher page: Original, V1, V2 (live). Add a line here when a version is frozen
+  v1/                    the store as reviewed on Oct 1
 
 tools/review-sheet.gs    Google Apps Script that collects review-mode comments in a Google Sheet (not published; setup steps inside)
 
