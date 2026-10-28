@@ -1047,12 +1047,14 @@
     flashT = later(() => { flashEl = null; if (pop.hidden && !gPick) hl.hidden = tag.hidden = true; }, 2400);
   }
   // the box holds this person's note on the item (their newest, if there are several), so it can be reread and changed in place
-  let boxFor = '', boxEdit = null, boxText = '', boxDirty = false;
+  // "Saved ✓" only shows on a note you come back to, not while you type, so it doesn't flicker
+  let boxFor = '', boxEdit = null, boxText = '', boxDirty = false, boxBack = false;
   function loadBox(id) {
     const n = id && notes.find((x) => x.id === id);
     boxEdit = n ? n.id : null;
     boxText = n ? n.body : '';
     boxDirty = false;
+    boxBack = !!n;
   }
   function syncBox() {
     const it = curItem(), k = (who || '') + '|' + it.id, n = boxEdit && notes.find((x) => x.id === boxEdit);
@@ -1098,7 +1100,7 @@
         <div class="rv-row" style="margin:0"><button class="rv-thumb" data-g="up" aria-pressed="${th === 'up'}">${THUMB}Good</button><button class="rv-thumb" data-g="down" aria-pressed="${th === 'down'}">${THUMB_DOWN}Needs work</button></div>
         ${here.length > 1 || (here.length && !editing) ? `<div class="rv-notes"><span>Your notes</span>${here.map((n, i) => `<button class="rv-chip" data-g="edit" data-id="${n.id}" aria-pressed="${n.id === boxEdit}" title="${esc(n.body)}">Note ${i + 1}</button>`).join('')}</div>` : ''}
         <textarea placeholder="${editing ? '' : "Anything to change? It saves as you go; if it's fine, just hit Next."}"></textarea>
-        <div class="rv-row">${gPick ? `<span class="rv-pointing">Pointing at <b>${esc(describe(gPick))}</b></span><button class="rv-x" data-g="unpoint" aria-label="Stop pointing">×</button>` : '<button class="rv-btn rv-sm" data-g="point" title="Click the exact spot this note is about">Point at a spot</button>'}<span class="rv-grow"></span>${editing ? `${boxDirty ? '' : '<span class="rv-saved">Saved ✓</span>'}<button class="rv-btn rv-sm rv-red" data-g="del">Delete</button><button class="rv-btn rv-sm" data-g="new" title="Keep this note and start another on the same item">+ New note</button>` : ''}</div>
+        <div class="rv-row">${gPick ? `<span class="rv-pointing">Pointing at <b>${esc(describe(gPick))}</b></span><button class="rv-x" data-g="unpoint" aria-label="Stop pointing">×</button>` : '<button class="rv-btn rv-sm" data-g="point" title="Click the exact spot this note is about">Point at a spot</button>'}<span class="rv-grow"></span>${editing ? `${boxBack ? '<span class="rv-saved">Saved ✓</span>' : ''}<button class="rv-btn rv-sm rv-red" data-g="del">Delete</button><button class="rv-btn rv-sm" data-g="new" title="Keep this note and start another on the same item">+ New note</button>` : ''}</div>
         <div class="rv-dock-nav"><button class="rv-btn rv-sm" data-g="back" title="Or press ← while typing in the box">‹ Back</button><span class="rv-grow"></span><button class="rv-btn rv-main" data-g="next" title="Or press → while typing in the box">Next ›</button></div>`;
     const ta = $('textarea', dock);
     if (ta) { ta.value = boxText; if (focused) { ta.focus(); ta.setSelectionRange(Math.min(caret[0], ta.value.length), Math.min(caret[1], ta.value.length)); } }
@@ -1107,7 +1109,7 @@
   dock.addEventListener('input', (e) => {
     if (!e.target.matches('textarea')) return;
     boxText = e.target.value;
-    if (!boxDirty) { boxDirty = true; const s1 = $('.rv-saved', dock); if (s1) s1.remove(); }
+    if (!boxDirty) { boxDirty = true; boxBack = false; const s1 = $('.rv-saved', dock); if (s1) s1.remove(); }
     clearTimeout(boxT);
     boxT = later(() => { if (boxDirty && boxText.trim()) saveDockNote(); }, 900);
   });
@@ -1129,7 +1131,7 @@
     else if (g === 'up' || g === 'down') { p.thumb[it.id] = p.thumb[it.id] === g ? null : g; touch(it.id); renderDock(); }
   });
   dock.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveDockNote();
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); step(1); } // saves on the way
     // in the box, ← / → are Back / Next; with Shift, Option or ⌘ they still move through the text
     if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && e.target.matches('textarea') && !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey && !e.isComposing) { e.preventDefault(); step(e.key === 'ArrowRight' ? 1 : -1); }
   });
