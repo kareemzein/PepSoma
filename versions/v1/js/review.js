@@ -1032,6 +1032,9 @@
     const i = ITEMS.indexOf(curItem()) + d;
     if (i < 0 || i >= ITEMS.length) { showHud(`<div class="rv-cur">${i < 0 ? 'This is the first item' : 'End of the checklist'}</div>`); return; }
     openItem(ITEMS[i].id);
+    // straight into the box, caret at the end; not on touch screens, where it would pop the keyboard up
+    const ta = $('textarea', dock);
+    if (ta && !matchMedia('(pointer: coarse)').matches) { ta.focus({ preventScroll: true }); ta.setSelectionRange(ta.value.length, ta.value.length); }
   }
   // outline the item's spot for a moment so it's clear what to look at
   function spot(it) {
@@ -1096,7 +1099,7 @@
         ${here.length > 1 || (here.length && !editing) ? `<div class="rv-notes"><span>Your notes</span>${here.map((n, i) => `<button class="rv-chip" data-g="edit" data-id="${n.id}" aria-pressed="${n.id === boxEdit}" title="${esc(n.body)}">Note ${i + 1}</button>`).join('')}</div>` : ''}
         <textarea placeholder="${editing ? '' : "Anything to change? It saves as you go; if it's fine, just hit Next."}"></textarea>
         <div class="rv-row">${gPick ? `<span class="rv-pointing">Pointing at <b>${esc(describe(gPick))}</b></span><button class="rv-x" data-g="unpoint" aria-label="Stop pointing">×</button>` : '<button class="rv-btn rv-sm" data-g="point" title="Click the exact spot this note is about">Point at a spot</button>'}<span class="rv-grow"></span>${editing ? `${boxDirty ? '' : '<span class="rv-saved">Saved ✓</span>'}<button class="rv-btn rv-sm rv-red" data-g="del">Delete</button><button class="rv-btn rv-sm" data-g="new" title="Keep this note and start another on the same item">+ New note</button>` : ''}</div>
-        <div class="rv-dock-nav"><button class="rv-btn rv-sm" data-g="back">‹ Back</button><span class="rv-grow"></span><button class="rv-btn rv-main" data-g="next">Next ›</button></div>`;
+        <div class="rv-dock-nav"><button class="rv-btn rv-sm" data-g="back" title="Or press ← while typing in the box">‹ Back</button><span class="rv-grow"></span><button class="rv-btn rv-main" data-g="next" title="Or press → while typing in the box">Next ›</button></div>`;
     const ta = $('textarea', dock);
     if (ta) { ta.value = boxText; if (focused) { ta.focus(); ta.setSelectionRange(Math.min(caret[0], ta.value.length), Math.min(caret[1], ta.value.length)); } }
   }
@@ -1125,7 +1128,11 @@
     else if (g === 'unpoint') { gPick = null; hl.hidden = tag.hidden = true; renderDock(); }
     else if (g === 'up' || g === 'down') { p.thumb[it.id] = p.thumb[it.id] === g ? null : g; touch(it.id); renderDock(); }
   });
-  dock.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveDockNote(); });
+  dock.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveDockNote();
+    // in the box, ← / → are Back / Next; with Shift, Option or ⌘ they still move through the text
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && e.target.matches('textarea') && !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey && !e.isComposing) { e.preventDefault(); step(e.key === 'ArrowRight' ? 1 : -1); }
+  });
 
   function checklistHTML() {
     const p = myProg(), seen = ITEMS.filter((x) => p.seen[x.id]).length, waiting = Object.keys(gDirty).length;
