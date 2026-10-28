@@ -170,7 +170,7 @@
   .rv-thumb svg { width: 15px; height: 15px; }
   .rv-thumb[aria-pressed="true"][data-g="up"] { background: #16a34a; border-color: #16a34a; color: #fff; }
   .rv-thumb[aria-pressed="true"][data-g="down"] { background: #c4321a; border-color: #c4321a; color: #fff; }
-  .rv-dock textarea { width: 100%; min-height: 72px; margin-top: 8px; resize: vertical; padding: 10px 12px; border-radius: 10px; border: 1px solid #d9d3c8; background: #faf8f4; color: #1b1a17; outline: none; }
+  .rv-dock textarea { width: 100%; min-height: 72px; max-height: 40vh; margin-top: 8px; resize: vertical; padding: 10px 12px; border-radius: 10px; border: 1px solid #d9d3c8; background: #faf8f4; color: #1b1a17; outline: none; }
   .rv-dock textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.18); }
   .rv-pointing { font-size: 12px; color: #6b665d; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rv-pointing b { color: #ff5a1f; }
@@ -1103,11 +1103,14 @@
         <div class="rv-row">${gPick ? `<span class="rv-pointing">Pointing at <b>${esc(describe(gPick))}</b></span><button class="rv-x" data-g="unpoint" aria-label="Stop pointing">×</button>` : '<button class="rv-btn rv-sm" data-g="point" title="Click the exact spot this note is about">Point at a spot</button>'}<span class="rv-grow"></span>${editing ? `${boxBack ? '<span class="rv-saved">Saved ✓</span>' : ''}<button class="rv-btn rv-sm rv-red" data-g="del">Delete</button><button class="rv-btn rv-sm" data-g="new" title="Keep this note and start another on the same item">+ New note</button>` : ''}</div>
         <div class="rv-dock-nav"><button class="rv-btn rv-sm" data-g="back">‹ Back</button><span class="rv-grow"></span><button class="rv-btn rv-main" data-g="next" title="Or ⌘↵ in the box">Next ›</button></div>`;
     const ta = $('textarea', dock);
-    if (ta) { ta.value = boxText; if (focused) { ta.focus(); ta.setSelectionRange(Math.min(caret[0], ta.value.length), Math.min(caret[1], ta.value.length)); } }
+    if (ta) { ta.value = boxText; grow(ta); if (focused) { ta.focus(); ta.setSelectionRange(Math.min(caret[0], ta.value.length), Math.min(caret[1], ta.value.length)); } }
   }
+  // the box grows with the note (up to 40vh, then it scrolls)
+  function grow(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 2 + 'px'; }
   let boxT = 0;
   dock.addEventListener('input', (e) => {
     if (!e.target.matches('textarea')) return;
+    grow(e.target);
     boxText = e.target.value;
     if (!boxDirty) { boxDirty = true; boxBack = false; const s1 = $('.rv-saved', dock); if (s1) s1.remove(); }
     clearTimeout(boxT);
