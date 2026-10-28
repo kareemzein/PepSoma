@@ -162,6 +162,8 @@
   .rv-dock-top { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
   .rv-dock-group { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #ff5a1f; }
   .rv-dock h3 { font-size: 17px; font-weight: 700; line-height: 1.25; margin: 0 0 4px; color: #1b1a17; display: flex; align-items: center; gap: 8px; }
+  .rv-notes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: #6b665d; }
+  .rv-saved { font-size: 12px; color: #16a34a; font-weight: 600; }
   .rv-pos { font-size: 12px; font-weight: 600; color: #8a857c; }
   .rv-ask { font-size: 13px; color: #6b665d; margin: 0 0 10px; }
   .rv-thumb { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #d9d3c8; background: #fff; color: #6b665d; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 600; }
@@ -340,6 +342,7 @@
     $('.rv-nm', bar).textContent = who || 'Add name';
   }
   function setWho(name, flash) {
+    if (guided && boxDirty && boxText.trim()) saveDockNote();
     who = name;
     savePeople();
     showWho();
@@ -1015,6 +1018,7 @@
     else { renderDock(); renderPanel(); }
   }
   function openItem(id) {
+    if (boxDirty && boxText.trim()) saveDockNote();
     const p = myProg(), it = itemOf(id) || ITEMS[0];
     p.cur = it.id;
     gPick = null;
@@ -1025,8 +1029,6 @@
     later(() => spot(it), move ? 450 : 60); // after the page renders
   }
   function step(d) {
-    const ta = $('textarea', dock);
-    if (ta && ta.value.trim()) saveDockNote();
     const i = ITEMS.indexOf(curItem()) + d;
     if (i < 0 || i >= ITEMS.length) { showHud(`<div class="rv-cur">${i < 0 ? 'This is the first item' : 'End of the checklist'}</div>`); return; }
     openItem(ITEMS[i].id);
@@ -1041,13 +1043,36 @@
     clearTimeout(flashT);
     flashT = later(() => { flashEl = null; if (pop.hidden && !gPick) hl.hidden = tag.hidden = true; }, 2400);
   }
+  // the box holds this person's note on the item (their newest, if there are several), so it can be reread and changed in place
+  let boxFor = '', boxEdit = null, boxText = '', boxDirty = false;
+  function loadBox(id) {
+    const n = id && notes.find((x) => x.id === id);
+    boxEdit = n ? n.id : null;
+    boxText = n ? n.body : '';
+    boxDirty = false;
+  }
+  function syncBox() {
+    const it = curItem(), k = (who || '') + '|' + it.id, n = boxEdit && notes.find((x) => x.id === boxEdit);
+    if (boxFor !== k) { boxFor = k; const here = itemNotes(it.id); loadBox(here.length ? here[here.length - 1].id : null); }
+    else if (boxEdit && !n) loadBox(null); // deleted elsewhere
+    else if (n && !boxDirty) boxText = n.body; // edited elsewhere
+  }
   function saveDockNote() {
-    const ta = $('textarea', dock), body = ta && ta.value.trim();
-    if (!body) { if (ta) ta.focus(); return; }
-    const it = curItem(), auto = it.sel && route() === it.go ? document.querySelector(it.sel) : null;
-    addNote(gPick || auto, body, it);
-    ta.value = '';
+    const body = boxText.trim(), it = curItem(), n = boxEdit && notes.find((x) => x.id === boxEdit);
+    if (!body) { const ta = $('textarea', dock); if (ta) ta.focus(); return; }
+    if (n) {
+      if (n.body === body && !gPick) return;
+      n.body = body;
+      n.rev++;
+      if (gPick) { Object.assign(n, { page: route(), sel: selectorOf(gPick), text: snippet(gPick), what: `${it.g} › ${it.t} · ${describe(gPick)}`, cls: gPick.tagName.toLowerCase() + classes(gPick) }); n._el = undefined; }
+    } else {
+      const auto = it.sel && route() === it.go ? document.querySelector(it.sel) : null;
+      addNote(gPick || auto, body, it);
+      boxEdit = notes[notes.length - 1].id;
+    }
     gPick = null;
+    boxText = body;
+    boxDirty = false;
     save();
     paint();
     renderDock();
@@ -1058,7 +1083,9 @@
     const p = myProg(), it = curItem(), gi = GUIDE.findIndex(([g]) => g === it.g), group = GUIDE[gi][1], th = p.thumb[it.id];
     // where you are, not how much is done: section n of all sections, and the item's place in its section
     const sec = `${gi + 1}/${GUIDE.length}`, pos = `${group.findIndex(([id]) => id === it.id) + 1}/${group.length}`;
-    const old = $('textarea', dock), typed = old ? old.value : '', focused = old && document.activeElement === old;
+    const old = $('textarea', dock), focused = old && document.activeElement === old, caret = focused && [old.selectionStart, old.selectionEnd];
+    syncBox();
+    const here = itemNotes(it.id), editing = here.find((x) => x.id === boxEdit);
     dock.className = 'rv rv-dock' + (dockMin ? ' rv-min' : '');
     dock.innerHTML = dockMin
       ? `<button class="rv-dock-pill" data-g="expand" title="Open the checklist card"><span>${esc(it.g)} ${sec}</span> · ${esc(it.t)} ${pos}</button>`
@@ -1066,12 +1093,22 @@
         <h3>${esc(it.t)}<span class="rv-pos" title="Item ${pos.replace('/', ' of ')} in ${esc(it.g)}">${pos}</span>${cmark(itemNotes(it.id).length)}</h3>
         <p class="rv-ask">${esc(it.ask)}</p>
         <div class="rv-row" style="margin:0"><button class="rv-thumb" data-g="up" aria-pressed="${th === 'up'}">${THUMB}Good</button><button class="rv-thumb" data-g="down" aria-pressed="${th === 'down'}">${THUMB_DOWN}Needs work</button></div>
-        <textarea placeholder="Anything to change? If it's fine, just hit Next."></textarea>
-        <div class="rv-row">${gPick ? `<span class="rv-pointing">Pointing at <b>${esc(describe(gPick))}</b></span><button class="rv-x" data-g="unpoint" aria-label="Stop pointing">×</button>` : '<button class="rv-btn rv-sm" data-g="point" title="Click the exact spot this note is about">Point at a spot</button>'}<span class="rv-grow"></span><button class="rv-btn rv-sm rv-main" data-g="save">Save note</button></div>
+        ${here.length > 1 || (here.length && !editing) ? `<div class="rv-notes"><span>Your notes</span>${here.map((n, i) => `<button class="rv-chip" data-g="edit" data-id="${n.id}" aria-pressed="${n.id === boxEdit}" title="${esc(n.body)}">Note ${i + 1}</button>`).join('')}</div>` : ''}
+        <textarea placeholder="${editing ? '' : "Anything to change? It saves as you go; if it's fine, just hit Next."}"></textarea>
+        <div class="rv-row">${gPick ? `<span class="rv-pointing">Pointing at <b>${esc(describe(gPick))}</b></span><button class="rv-x" data-g="unpoint" aria-label="Stop pointing">×</button>` : '<button class="rv-btn rv-sm" data-g="point" title="Click the exact spot this note is about">Point at a spot</button>'}<span class="rv-grow"></span>${editing ? `${boxDirty ? '' : '<span class="rv-saved">Saved ✓</span>'}<button class="rv-btn rv-sm rv-red" data-g="del">Delete</button><button class="rv-btn rv-sm" data-g="new" title="Keep this note and start another on the same item">+ New note</button>` : ''}</div>
         <div class="rv-dock-nav"><button class="rv-btn rv-sm" data-g="back">‹ Back</button><span class="rv-grow"></span><button class="rv-btn rv-main" data-g="next">Next ›</button></div>`;
     const ta = $('textarea', dock);
-    if (ta) { ta.value = typed; if (focused) ta.focus(); }
+    if (ta) { ta.value = boxText; if (focused) { ta.focus(); ta.setSelectionRange(Math.min(caret[0], ta.value.length), Math.min(caret[1], ta.value.length)); } }
   }
+  let boxT = 0;
+  dock.addEventListener('input', (e) => {
+    if (!e.target.matches('textarea')) return;
+    boxText = e.target.value;
+    if (!boxDirty) { boxDirty = true; const s1 = $('.rv-saved', dock); if (s1) s1.remove(); }
+    clearTimeout(boxT);
+    boxT = later(() => { if (boxDirty && boxText.trim()) saveDockNote(); }, 900);
+  });
+  window.addEventListener('pagehide', () => { if (boxDirty && boxText.trim()) saveDockNote(); });
   dock.addEventListener('click', (e) => {
     const b = e.target.closest('[data-g]');
     if (!b) return;
@@ -1081,7 +1118,9 @@
     else if (g === 'list') openPanel('checklist');
     else if (g === 'min') { dockMin = true; renderDock(); }
     else if (g === 'expand') { dockMin = false; renderDock(); }
-    else if (g === 'save') saveDockNote();
+    else if (g === 'edit') { loadBox(b.dataset.id); renderDock(); $('textarea', dock).focus(); }
+    else if (g === 'new') { if (boxDirty && boxText.trim()) saveDockNote(); loadBox(null); renderDock(); $('textarea', dock).focus(); }
+    else if (g === 'del') { if (confirm('Delete this note?')) { const id = boxEdit; drop((n) => n.id === id); loadBox(null); boxFor = ''; paint(); renderDock(); } }
     else if (g === 'point') { if (!who) { openPicker(); return; } gPicking = true; setMode('comment'); }
     else if (g === 'unpoint') { gPick = null; hl.hidden = tag.hidden = true; renderDock(); }
     else if (g === 'up' || g === 'down') { p.thumb[it.id] = p.thumb[it.id] === g ? null : g; touch(it.id); renderDock(); }
