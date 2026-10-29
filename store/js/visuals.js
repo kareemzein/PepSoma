@@ -98,15 +98,20 @@
       const code = `PS-${p.code}-${String(y).slice(2)}${String(m + 1).padStart(2, '0')}${'ABC'[i]}`;
       const purity = (i === 0 ? p.purity : Math.min(99.9, p.purity - 0.35 + r() * 0.6)).toFixed(1);
       const observed = p.mw ? (p.mw + (r() - 0.5) * 0.6).toFixed(1) : null;
-      return {
+      const lot = {
         code, product: p.id, current: i === 0, tested: dt.getTime(), purity,
         identity: p.mw ? { expected: p.mw.toFixed(1), observed } : null,
         content: `${(mg * (1.005 + r() * 0.04)).toFixed(mg >= 100 ? 1 : 2)} mg / vial (label ${p.sizes[0].label})`,
         endotoxin: (0.08 + r() * 0.3).toFixed(2),
         water: (2 + r() * 3.5).toFixed(1),
         appearance: p.appearance || 'White lyophilized powder',
+        lab: PS.lab.name, reportId: PS.lab.reportId,
+        sample: !PS.lotOverrides[code], // illustrative values, until real lab results are set in PS.lotOverrides
         seed: PS.hash(code),
       };
+      Object.assign(lot, PS.lotOverrides[code]); // real lab results (js/data.js)
+      if (typeof lot.tested === 'string') lot.tested = new Date(lot.tested + 'T00:00:00').getTime();
+      return lot;
     });
     return cache[p.id];
   };
@@ -133,13 +138,19 @@
       d += (d ? 'L' : 'M') + x.toFixed(1) + ' ' + yy.toFixed(1);
     }
     const main = peaks[1];
-    const ticks = [0, 5, 10, 15, 20].map((t) => `<text x="${(t / tmax) * W}" y="${H + 6}" font-size="9" text-anchor="middle" fill="currentColor" opacity=".6">${t}</text>`).join('');
-    return `<svg class="chromatogram" viewBox="-6 -4 ${W + 12} ${H + 14}" preserveAspectRatio="none" role="img" aria-label="HPLC chromatogram, main peak ${lot.purity}%">
-      <line x1="0" y1="${H - 10}" x2="${W}" y2="${H - 10}" stroke="currentColor" opacity=".25"/>
-      <path d="${d}" fill="none" stroke="var(--chrom, currentColor)" stroke-width="1.3"/>
-      <text x="${(main.t / tmax) * W + 8}" y="16" font-size="9" fill="currentColor">${main.t.toFixed(2)} min · ${lot.purity}%</text>
-      ${ticks}
-    </svg>`;
+    // the drawing is stretched to fill its box, so the text is a second SVG laid over it (positions in %): letters keep their natural shape
+    const lx = (x) => (((x + 6) / (W + 12)) * 100).toFixed(2) + '%';
+    const ticks = [0, 5, 10, 15, 20].map((t) => `<text x="${lx((t / tmax) * W)}" y="100%" dy="-3" font-size="10" text-anchor="${t ? (t === tmax ? 'end' : 'middle') : 'start'}" fill="currentColor" opacity=".6">${t}</text>`).join('');
+    return `<div class="chromatogram" role="img" aria-label="HPLC chromatogram, main peak ${lot.purity}%">
+      <svg viewBox="-6 -4 ${W + 12} ${H + 14}" preserveAspectRatio="none" aria-hidden="true">
+        <line x1="0" y1="${H - 10}" x2="${W}" y2="${H - 10}" stroke="currentColor" opacity=".25"/>
+        <path d="${d}" fill="none" stroke="var(--chrom, currentColor)" stroke-width="1.3"/>
+      </svg>
+      <svg class="chrom-text" aria-hidden="true">
+        <text x="${lx((main.t / tmax) * W + 8)}" y="13%" font-size="12" fill="currentColor">${main.t.toFixed(2)} min · ${lot.purity}%</text>
+        ${ticks}
+      </svg>
+    </div>`;
   };
 
   /* ---------- COA document ---------- */
@@ -154,16 +165,19 @@
     ['Water content', 'Karl Fischer', '≤ 8.0%', lot.water + '%'],
     ['Appearance', 'Visual', 'Conforms to description', PS.esc(lot.appearance)],
   ];
+  // the line under the certificate's heading, on the COA page and in the printable document
+  PS.labLine = (lot) => `Analysis performed by ${PS.esc(lot.lab)}. Results are shown as reported by the laboratory.`;
   PS.coaDoc = function (lot) {
     const p = PS.getProduct(lot.product);
     const esc = PS.esc;
     const row = (test, method, spec, result) => `<tr><td>${test}</td><td>${method}</td><td>${spec}</td><td><strong>${result}</strong></td><td><span class="coa-pass">Pass</span></td></tr>`;
     return `<article class="coa-doc">
-      <div class="coa-watermark" aria-hidden="true">SAMPLE DATA</div>
+      ${lot.sample ? '<div class="coa-watermark" aria-hidden="true">SAMPLE DATA</div>' : ''}
       <header class="coa-head">
-        <div><div class="coa-brand">${esc(PS.company.name)}</div><div class="coa-kicker">Certificate of Analysis</div></div>
-        <div class="coa-meta"><div><span>Lot</span><strong>${esc(lot.code)}</strong></div><div><span>Tested</span><strong>${PS.date(lot.tested)}</strong></div></div>
+        <div><div class="coa-brand">${esc(lot.lab)}</div><div class="coa-kicker">Certificate of Analysis</div></div>
+        <div class="coa-meta"><div><span>Report ID</span><strong>${esc(lot.reportId)}</strong></div><div><span>Lot</span><strong>${esc(lot.code)}</strong></div><div><span>Tested</span><strong>${PS.date(lot.tested)}</strong></div></div>
       </header>
+      <p class="coa-lab-line">${PS.labLine(lot)}</p>
       <div class="coa-product">
         <div><span>Product</span><strong>${esc(p.name)}</strong><em>${esc(p.full || '')}</em></div>
         <div><span>CAS</span><strong>${esc(p.cas)}</strong></div>
@@ -177,7 +191,7 @@
       </table></div>
       <footer class="coa-foot">
         <p>Tested by an independent ISO/IEC 17025-accredited laboratory. Results apply only to the lot identified above.</p>
-        <p><strong>For research use only.</strong> Not for human or veterinary use. Demo certificate — illustrative values only.</p>
+        <p><strong>For research use only.</strong> Not for human or veterinary use.${lot.sample ? ' Demo certificate — illustrative values only.' : ''}</p>
       </footer>
     </article>`;
   };

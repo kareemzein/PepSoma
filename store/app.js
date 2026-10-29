@@ -84,7 +84,7 @@
         <div class="nav-item dd-wrap"><a href="#/shop/stacks" class="nav-link">Research Stacks ${icon('chev')}</a>
           <div class="dd">${stacks.map((p) => `<a href="#/product/${p.id}">${esc(p.name)} <small>${money(p.sizes[0].price)}</small></a>`).join('')}</div></div>
         <div class="nav-item dd-wrap"><a href="#/lab-tests" data-nav="lab-tests" class="nav-link">Resources ${icon('chev')}</a>
-          <div class="dd"><a href="#/lab-tests">Lab Tests &amp; COAs</a><a href="#/faq">FAQ</a><a href="#/track">Track Order</a><a href="#/wholesale">Wholesale</a><a href="#/policies">Policies</a></div></div>
+          <div class="dd"><a href="#/lab-tests">Lab Tests &amp; COAs</a><a href="#/faq">FAQ</a><a href="#/track">Track Order</a><a href="${u ? '#/orders' : '#/account?next=/orders'}">Order history</a><a href="#/wholesale">Wholesale</a><a href="#/policies">Policies</a></div></div>
         <a href="#/about" data-nav="about" class="nav-link">About</a>
         <a href="#/contact" data-nav="contact" class="nav-link">Contact</a>
         ${PS.config.features.supplies ? '<a href="#/shop/supplies" class="nav-link">Supplies</a>' : ''}
@@ -95,7 +95,9 @@
         <div class="track-wrap"><a class="round-btn" href="#/track" aria-label="Track an order">${icon('truck')}</a>
           <div class="track-pane"><strong>Track an order</strong><form class="stack-form" data-form="track-go"><input class="input" name="order" placeholder="Order number, e.g. PS123456" aria-label="Order number" required><input class="input" name="email" type="email" placeholder="Email used at checkout" aria-label="Email" required><button class="btn btn-primary btn-sm" type="submit">Track ${icon('arrow')}</button></form></div></div>
         <a class="btn btn-yellow btn-pill hide-md" href="#/shop">Explore Peptides</a>
-        <a class="btn btn-primary btn-pill hide-sm" href="#/account">${u ? 'Hi, ' + esc(u.name.split(' ')[0]) : 'Account Login'}</a>
+        ${u ? `<div class="acct-wrap dd-wrap hide-sm"><a class="btn btn-primary btn-pill acct-btn" href="#/account"><span>Hi ${esc(u.name.split(' ')[0])}</span><small>Account &amp; Orders</small></a>
+          <div class="dd"><a href="#/account">Account</a><a href="#/orders">Order history</a><a href="#/account?focus=standing">Standing orders</a><button type="button" data-signout>Sign out</button></div></div>`
+          : '<a class="btn btn-primary btn-pill hide-sm" href="#/account">Account Login</a>'}
         <button class="round-btn cart-btn" data-open-cart aria-label="Open cart">${icon('cart')}<span class="cart-count" data-cart-count>0</span></button>
         <button class="round-btn nav-toggle" data-nav-toggle aria-label="Menu" aria-expanded="false">${icon('menu')}</button>
       </div>
@@ -407,7 +409,7 @@
     html: `<section class="page-head"><div class="container"><span class="eyebrow rise" style="--i:0">About Pepsoma</span><h1 class="rise" style="--i:1">Science first. ${it('Documented')} always.</h1><p class="lead rise" style="--i:2">We started Pepsoma because researchers deserve suppliers who show their work — every lot, every test, every time.</p></div></section>
     <section class="section-sm container"><div class="split">
       <div class="split-art art-box"><div class="box-card">${PS.productImage(PS.getProduct('stack-longevity'), { theme: VT })}</div></div>
-      <div class="split-copy"><h2 class="serif-h">Our ${it('standard')}</h2><p>Pepsoma supplies research peptides to universities, biotech R&amp;D teams, CROs and independent researchers across the United States. We don’t manufacture claims — we publish data.</p>
+      <div class="split-copy"><h2 class="serif-h">Our ${it('standard')}</h2><p>Pepsoma supplies research peptides to universities, biotech R&amp;D teams, CROs and independent researchers across the United States.</p>
         <ul class="checks lg">${checkItem('<strong>Independent testing.</strong> Every lot, every time, by ISO/IEC 17025-accredited labs.')}${checkItem('<strong>Radical transparency.</strong> Full COAs published online and printed in every box.')}${checkItem('<strong>Research-only integrity.</strong> We sell to researchers, screen orders, and never make health claims.')}</ul>
         <div class="btn-row"><a class="btn btn-primary" href="#/lab-tests">See our lab tests</a><a class="btn btn-ghost" href="#/contact">Talk to our team</a></div></div>
     </div></section>
@@ -461,7 +463,7 @@
     const set = e.target.closest('[data-mode-set]');
     if (set) applyMode(set.dataset.modeSet, set);
     // dropdowns open on hover or focus, so a click on an item shuts its menu
-    if (e.target.closest('.dd a')) shutMenus();
+    if (e.target.closest('.dd a, .dd button')) shutMenus();
     const rail = e.target.closest('[data-rail]');
     if (rail) { const t = document.querySelector('[data-rail-track]'); t.scrollBy({ left: rail.dataset.rail * t.clientWidth * 0.9, behavior: 'smooth' }); }
   });

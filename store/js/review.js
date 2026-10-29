@@ -1201,6 +1201,23 @@
       ['secure-note', 'Secure checkout line', 'Under the Place order button it now reads "Secure checkout. By placing your order you agree to our policies." The cart needs an item to reach checkout.', '/checkout', '.secure-note'],
       ['order-terms', 'Order status wording', 'On the order confirmation page the second status step reads "Research-use terms accepted". Place an order first; the page you land on is the one to look at.', '/checkout'],
     ]],
+    ['Oct 28 round · Account', [
+      ['auth-pages', 'Sign in and Create account pages', 'Sign in is its own page and links to "New here? Create an account", which is a separate page that links back. The big faded Pepsoma mark bleeds in from the side behind each. Sign out first if you are signed in.', '/account', '.auth-card'],
+      ['hdr-account', 'Header account button', 'Signed in, the button reads "Hi <first name>" with a smaller "Account & Orders" under it. Hover or tab to it: Account, Order history, Standing orders, Sign out. Signed out it is still "Account Login". Sign in first to see it.', '/', '.hdr-actions .acct-wrap'],
+      ['orders-page', 'Order history page', 'Every order on the account in its own page (number, date, items, total, status), each opening its order. Open it from the account menu, the Account page or Resources. Signed out it asks you to sign in, then returns here. Sign in first.', '/orders', '.order-list'],
+      ['sub-manage', 'Standing orders: Manage', 'Each standing order has Manage: change the period (every 4 weeks or custom), the start date and an optional end date; the next shipment date updates as you edit. Cancelling is inside Manage and asks you to confirm. Needs a signed-in account with a standing order (place one at checkout).', '/account', '#standing-orders'],
+      ['order-thumbs', 'Order page pictures', 'Each item on an order shows its product picture, and the picture and the name both open the product. Sign in and open any order from the list.', '/orders', '.order-list'],
+    ]],
+    ['Oct 28 round · Lab tests', [
+      ['lab-filter', 'Lab Tests product filter', 'A product menu above the lot search shows only that product\'s COA card. It works together with the search; when nothing matches you get the empty message.', '/lab-tests', '.lot-tools'],
+      ['coa-lab', 'Certificate names the lab', 'The top of the certificate page, and of the printable PDF (button at the bottom), names the testing laboratory and its report ID instead of Pepsoma, with the line "Analysis performed by … Results are shown as reported by the laboratory." The lab and report ID are placeholders ([Testing lab], [Report ID]) until the real lab is known.', '/coa/PS-BPC-2609A', '.page-head'],
+      ['chart-label', 'Chart label fixed', 'The "10.73 min · 99.4%" label on the purity chart is no longer squished: it keeps its natural shape on the certificate page, in the PDF and in the Home window.', '/coa/PS-BPC-2609A', '.coa-web-top .chromatogram'],
+    ]],
+    ['Oct 28 round · Other pages', [
+      ['about-line', 'About page', 'The line "We don’t manufacture claims — we publish data." is gone.', '/about', '.split-copy'],
+      ['contact-info', 'Contact page', 'The phone number, hours and mailing address are gone; the email is the only contact detail listed.', '/contact', '.contact-list'],
+      ['notfound', '404 page', 'The text on the page-not-found screen sits in the middle of the window.', '/nope', '.notfound'],
+    ]],
   ];
   const CH = CHANGES.flatMap(([g, items]) => items.map(([id, t, ask, go, sel, vars]) => ({ id, g, t, ask, go, sel, vars: vars || [] })));
   let chgId = CH[0].id, oldOn = false;

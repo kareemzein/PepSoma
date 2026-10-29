@@ -100,7 +100,7 @@
       <fieldset class="fs"><legend class="legend"><span class="legend-n">1</span> Contact</legend>
         ${f({ name: 'email', label: 'Email', type: 'email', auto: 'email', validate: 'email', value: user ? user.email : '' })}
         ${f({ name: 'phone', label: 'Phone', type: 'tel', auto: 'tel', required: false, validate: 'phone', hint: 'For delivery issues only.' })}
-        ${user ? `<p class="small muted">Signed in as ${esc(user.email)}</p>` : `<p class="small muted">Have an account? <a href="#/account">Sign in</a> to see order history.</p>`}
+        ${user ? `<p class="small muted">Signed in as ${esc(user.email)}</p>` : `<p class="small muted">Have an account? <a href="#/account?next=/checkout">Sign in</a> to see order history.</p>`}
       </fieldset>
       <fieldset class="fs"><legend class="legend"><span class="legend-n">2</span> Shipping address</legend>
         <div class="field-row">${f({ name: 'first', label: 'First name', auto: 'given-name', value: user ? user.name.split(' ')[0] : '' })}${f({ name: 'last', label: 'Last name', auto: 'family-name', value: user ? user.name.split(' ').slice(1).join(' ') : '' })}</div>
@@ -176,7 +176,11 @@
     <p class="small muted">Demo timeline runs in minutes instead of days so you can watch it progress.</p>`;
   };
 
-  H.orderItems = (o) => `<ul class="order-items">${o.items.map((i) => `<li><span>${i.qty} × ${esc(i.name)} <small>${esc(i.size)}${i.planId !== 'once' ? ' · ' + esc(i.plan) : ''}</small></span><span>${PS.money(i.total)}</span></li>`).join('')}</ul>
+  // each line shows the product picture; the picture and the name both open the product page
+  H.orderItems = (o) => `<ul class="order-items">${o.items.map((i) => {
+    const p = PS.getProduct(i.id), href = `#/product/${esc(i.id)}`;
+    return `<li>${p ? `<a class="oi-img" href="${href}" aria-label="${esc(i.name)}">${PS.productImage(p, { theme: T().vialTheme, size: i.size })}</a>` : ''}<span class="oi-name">${i.qty} × ${p ? `<a href="${href}">${esc(i.name)}</a>` : esc(i.name)} <small>${esc(i.size)}${i.planId !== 'once' ? ' · ' + esc(i.plan) : ''}</small></span><span>${PS.money(i.total)}</span></li>`;
+  }).join('')}</ul>
     <div class="totals">
       <div class="tot-row"><span>Subtotal</span><span>${PS.money(o.subtotal)}</span></div>
       ${o.tierDiscount ? `<div class="tot-row discount"><span>Volume savings (${o.tierPct}%)</span><span>−${PS.money(o.tierDiscount)}</span></div>` : ''}
@@ -211,7 +215,7 @@
     return `<div class="lot-cards">${Object.keys(by).map((id) => {
       const p = PS.getProduct(id), [cur, ...older] = by[id];
       const key = by[id].map((l) => l.code).concat(p.name, p.cat).join(' ').toLowerCase();
-      return `<article class="card lot-card" data-lot-row="${esc(key)}">
+      return `<article class="card lot-card" data-lot-row="${esc(key)}" data-lot-product="${esc(p.id)}">
         <a class="lot-card-img" href="#/product/${p.id}" aria-label="${esc(p.name)}">${PS.productImage(p, { theme: T().vialTheme })}</a>
         <div class="lot-card-body">
           <h3 class="h4"><a href="#/product/${p.id}">${esc(p.name)}</a></h3>
@@ -219,7 +223,7 @@
           <a class="btn btn-primary btn-sm" href="#/coa/${esc(cur.code)}">${PS.icon('doc')} View COA</a>
           ${older.length ? `<p class="lot-older">Earlier lots: ${older.map((l) => `<a href="#/coa/${esc(l.code)}">${esc(l.code)}</a>`).join(' · ')}</p>` : ''}
         </div></article>`;
-    }).join('')}</div><p class="empty-row" hidden>No lots match that search.</p>`;
+    }).join('')}</div><p class="empty-row" hidden>No lots match that search or filter.</p>`;
   };
 
   H.faq = (groups) => groups.map((g) => `<div class="faq-group">${g.group ? `<h3 class="faq-group-title">${esc(g.group)}</h3>` : ''}${g.items.map(([q, a]) => `<details class="faq-item"><summary><span>${esc(q)}</span>${PS.icon('chev', 'faq-chev')}</summary><div class="faq-a"><p>${esc(a)}</p></div></details>`).join('')}</div>`).join('');
@@ -228,6 +232,84 @@
 
   /* ---------- default pages (themes can override any of these) ---------- */
   const T = () => PS.theme;
+
+  // Sign in and Create account are separate pages. `next` is where to go once signed in (set by links that ask for a sign-in first).
+  const safeNext = (n) => (/^\/[\w\-./]*$/.test(n || '') && !/^\/\//.test(n) ? n : '');
+  function authPage(mode, next) {
+    const f = (o) => H.field(o), q = next ? '?next=' + next : '', signin = mode === 'signin';
+    return {
+      title: signin ? 'Sign in' : 'Create account',
+      html: `<div class="auth-page ${signin ? 'from-left' : 'from-right'}"><span class="auth-wordmark" aria-hidden="true">pepsoma</span>
+        ${T().pageHead({ eyebrow: 'Account', title: signin ? 'Sign in' : 'Create an account', intro: signin ? 'Track orders, reorder in one click and manage standing orders.' : 'Track orders, see your order history and manage standing orders.' })}
+        <section class="container section-sm"><div class="card pad auth-card">${signin
+          ? `<form class="stack-form" data-form="signin" novalidate>
+              ${f({ form: 'si', name: 'email', label: 'Email', type: 'email', auto: 'email', validate: 'email' })}${f({ form: 'si', name: 'password', label: 'Password', type: 'password', auto: 'current-password' })}
+              <p class="form-msg" aria-live="polite"></p><button class="btn btn-primary btn-block" type="submit">Sign in</button></form>
+            <p class="auth-switch">New here? <a href="#/signup${q}">Create an account</a></p>`
+          : `<form class="stack-form" data-form="signup" novalidate>
+              ${f({ form: 'su', name: 'name', label: 'Full name', auto: 'name' })}${f({ form: 'su', name: 'email', label: 'Email', type: 'email', auto: 'email', validate: 'email' })}${f({ form: 'su', name: 'password', label: 'Password', type: 'password', auto: 'new-password', validate: 'password', hint: 'At least 8 characters.' })}
+              ${H.check({ name: 'age', required: true, label: 'I am 21+ and will use products for laboratory research only.' })}
+              <p class="form-msg" aria-live="polite"></p><button class="btn btn-primary btn-block" type="submit">Create account</button></form>
+            <p class="auth-switch">Already have an account? <a href="#/account${q}">Sign in</a></p>`}
+        </div><p class="small muted center mt">Demo accounts are stored only in this browser.</p></section></div>`,
+    };
+  }
+
+  /* ---------- standing orders: every order item bought on a plan. Manage changes its period, start and end dates (kept in 'subSettings') ---------- */
+  const DAY = 864e5;
+  const dayOf = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d; };
+  const isoDay = (t) => { const d = dayOf(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const fromIso = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v || '') ? new Date(v + 'T00:00:00') : null);
+  // The next ship date after today, on a schedule that starts on `start` and repeats every `weeks` weeks (the start itself if it is still ahead).
+  // null when the end date comes first.
+  function nextShip(weeks, start, end) {
+    const s = dayOf(start), step = weeks * 7, gone = Math.round((dayOf(Date.now()) - s) / DAY);
+    const n = new Date(s);
+    n.setDate(n.getDate() + (gone < 0 ? 0 : Math.floor(gone / step) + 1) * step);
+    const e = fromIso(end);
+    return e && n > e ? null : n;
+  }
+  const subsOf = (orders) => {
+    const set = PS.storage.get('subSettings', {}), off = PS.storage.get('cancelledSubs', []);
+    return orders.flatMap((o) => o.items.filter((i) => i.planId !== 'once').map((i) => {
+      const key = o.number + '|' + i.id + '|' + i.size, cfg = set[key] || {};
+      const cur = PS.getPlan(cfg.planId || i.planId), start = cfg.start || isoDay(o.createdAt), end = cfg.end || '';
+      return Object.assign({ key, order: o, off: off.includes(key), cur, start, end, next: nextShip(cur.weeks || 4, fromIso(start), end) }, i);
+    }));
+  };
+  const planPct = (id) => PS.config.plans.find((p) => p.id === id).pct;
+  const manageHtml = (s) => {
+    const is4 = s.cur.id === '4w', f = (o) => H.field(Object.assign({ form: 'ms' }, o));
+    return `<h2 class="h3">Manage standing order</h2><p class="muted">${esc(s.name)} · ${esc(s.size)} × ${s.qty}</p>
+      <form class="stack-form" data-form="manage-sub" novalidate>
+        <input type="hidden" name="key" value="${esc(s.key)}">
+        <div class="options">
+          <label class="option"><input type="radio" name="plan" value="4w" ${is4 ? 'checked' : ''}><span class="option-dot"></span><span class="option-body"><span class="option-title">Every 4 weeks</span><span class="option-sub">Saves ${planPct('4w')}%</span></span></label>
+          <label class="option"><input type="radio" name="plan" value="custom" ${is4 ? '' : 'checked'}><span class="option-dot"></span><span class="option-body"><span class="option-title">Custom: every <input class="plan-weeks" name="weeks" type="number" min="1" max="12" value="${is4 ? weeksIn(PS.storage.get('customWeeks', 6)) : s.cur.weeks}" inputmode="numeric" aria-label="Weeks between shipments"> weeks</span><span class="option-sub">Saves ${planPct('custom')}%</span></span></label>
+        </div>
+        <div class="field-row">${f({ name: 'start', label: 'Start date', type: 'date', value: s.start })}${f({ name: 'end', label: 'End date', type: 'date', required: false, value: s.end, hint: 'Leave empty to keep going until you cancel.' })}</div>
+        <p class="manage-next">Next shipment: <strong data-next-ship></strong></p>
+        <p class="form-msg" aria-live="polite"></p>
+        <div class="btn-row"><button class="btn btn-primary" type="submit">Save changes</button><button class="btn btn-ghost" type="button" data-cancel-ask="${esc(s.key)}">Cancel standing order</button></div>
+      </form>`;
+  };
+  const cancelAskHtml = (s) => `<h2 class="h3">Cancel standing order?</h2><p class="muted">${esc(s.name)} · ${esc(s.size)} × ${s.qty} will stop shipping and you won’t be charged again.</p>
+    <div class="btn-row"><button class="btn btn-primary" type="button" data-manage-sub="${esc(s.key)}">Keep</button><button class="btn btn-ghost" type="button" data-cancel-sub="${esc(s.key)}">Cancel it</button></div>`;
+  // the Manage panel's "Next shipment" follows the plan, start and end dates as they are edited
+  function syncManage(form) {
+    const weeks = form.elements.plan.value === '4w' ? 4 : weeksIn(form.elements.weeks.value), start = fromIso(form.elements.start.value);
+    const n = start && nextShip(weeks, start, form.elements.end.value);
+    $('[data-next-ship]', form).textContent = !start ? '—' : n ? PS.date(n) : 'none, the end date comes first';
+  }
+  const swapModal = (html) => { $('#ps-modal .modal-panel').innerHTML = `<button class="modal-close" data-close-modal aria-label="Close">${PS.icon('close')}</button>` + html; };
+  function openManage(key, swap) {
+    const u = PS.auth.current(), s = u && subsOf(PS.orders.forEmail(u.email)).find((x) => x.key === key);
+    if (!s || s.off) return;
+    if (swap) swapModal(manageHtml(s)); else PS.openModal(manageHtml(s));
+    syncManage($('#ps-modal form[data-form="manage-sub"]'));
+  }
+  H.orderList = (orders) => `<ul class="order-list">${orders.map((o) => { const n = o.items.reduce((s, i) => s + i.qty, 0); return `<li><a href="#/order/${o.number}"><strong>${o.number}</strong><span>${PS.date(o.createdAt)} · ${n} item${n > 1 ? 's' : ''} · ${PS.money(o.total)}</span><span class="badge">${PS.orders.status(o).current.label}</span></a></li>`; }).join('')}</ul>`;
+
   PS.defaultViews = {
     order({ params }) {
       const o = PS.orders.get(params.num);
@@ -263,11 +345,14 @@
         html: `${T().pageHead({ eyebrow: 'Transparency', title: 'Lab tests & Certificates of Analysis', intro: 'Every lot is independently tested for purity, identity, content, endotoxins, heavy metals and sterility. Search by the lot number printed on your vial.' })}
         <section class="container section-sm">
           <div class="lab-stats">${[['100%', 'lots third-party tested'], ['≥98%', 'release purity spec'], [String(lots.length), 'lots on record'], ['ISO 17025', 'accredited labs']].map(([a, b]) => `<div><strong>${a}</strong><span>${b}</span></div>`).join('')}</div>
-          <div class="lot-search"><span class="lot-search-icon">${PS.icon('search')}</span><label class="sr-only" for="lot-q">Search lots</label><input id="lot-q" class="input" data-lot-search placeholder="Search lot number or product — e.g. PS-BPC-2609A" value="${esc(query.q || '')}"></div>
+          <div class="lot-tools">
+            <div class="lot-search"><span class="lot-search-icon">${PS.icon('search')}</span><label class="sr-only" for="lot-q">Search lots</label><input id="lot-q" class="input" data-lot-search placeholder="Search lot number or product — e.g. PS-BPC-2609A" value="${esc(query.q || '')}"></div>
+            <label class="sr-only" for="lot-product">Filter by product</label><select id="lot-product" class="input" data-lot-product-filter><option value="">All products</option>${PS.products.filter((p) => PS.lots(p).length).map((p) => `<option value="${esc(p.id)}" ${p.id === query.product ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>
+          </div>
           ${H.lotCards(lots)}
           <p class="small muted mt">Demo COAs use illustrative values. Read our <a href="#/policies/testing">Testing &amp; COA Policy</a>.</p>
         </section>`,
-        after() { const i = $('[data-lot-search]'); if (i && i.value) filterLots(i.value); },
+        after() { filterLots(); },
       };
     },
     // a lot's COA as a page on the site; the lab's own certificate (the printable document) is a button at the bottom
@@ -277,7 +362,7 @@
       const p = PS.getProduct(lot.product);
       return {
         title: `COA ${lot.code}`,
-        html: `${T().pageHead({ eyebrow: 'Certificate of Analysis', title: esc(p.name), intro: `Lot <code>${esc(lot.code)}</code> · tested ${PS.date(lot.tested)} by an independent ISO/IEC 17025-accredited lab` })}
+        html: `${T().pageHead({ eyebrow: 'Certificate of Analysis', title: esc(p.name), intro: `<strong>${esc(lot.lab)}</strong> · Report ID <code>${esc(lot.reportId)}</code><br>Lot <code>${esc(lot.code)}</code> · tested ${PS.date(lot.tested)}<br>${PS.labLine(lot)}` })}
         <section class="container section-sm coa-web">
           <div class="card pad coa-web-top">
             <div><span class="label muted">HPLC purity</span><div class="big-purity">${lot.purity}<small>%</small></div><span class="coa-pass">Pass</span> <small class="muted">spec ≥ 98.0%</small></div>
@@ -287,8 +372,8 @@
             <ul class="coa-results">${PS.coaTests(lot).map(([test, method, spec, result]) => `<li><div><strong>${test}</strong><small>${method} · spec ${spec}</small></div><b>${result}</b><span class="coa-pass">Pass</span></li>`).join('')}</ul></div>
           <div class="card pad"><h2 class="h3">Compound</h2>${H.specTable(p)}</div>
           <div class="coa-web-foot">
-            <p class="small muted">Results apply only to lot ${esc(lot.code)}. For research use only. Sample data: illustrative values until real lab results are added.</p>
-            <div class="btn-row"><button class="btn btn-secondary" type="button" data-coa-pdf="${esc(lot.code)}">${PS.icon('download')} Open the lab’s PDF</button><a class="btn btn-ghost" href="#/lab-tests">All lab tests</a></div>
+            <p class="small muted">Results apply only to lot ${esc(lot.code)}. For research use only.${lot.sample ? ' Sample data: illustrative values until real lab results are added.' : ''}</p>
+            <div class="btn-row">${lot.pdf ? `<a class="btn btn-secondary" href="${esc(lot.pdf)}" target="_blank" rel="noopener">${PS.icon('download')} Open the lab’s PDF</a>` : `<button class="btn btn-secondary" type="button" data-coa-pdf="${esc(lot.code)}">${PS.icon('download')} Open the lab’s PDF</button>`}<a class="btn btn-ghost" href="#/lab-tests">All lab tests</a></div>
           </div>
         </section>`,
       };
@@ -311,9 +396,6 @@
           <aside class="contact-side">
             <div class="card pad"><ul class="contact-list">
               <li>${PS.icon('mail')}<div><span class="label">Email</span><a href="mailto:${C.email}">${C.email}</a></div></li>
-              <li>${PS.icon('phone')}<div><span class="label">Phone</span><span>${C.phone}</span></div></li>
-              <li>${PS.icon('clock')}<div><span class="label">Hours</span><span>Mon–Fri · 9 AM – 6 PM ET</span></div></li>
-              <li>${PS.icon('pin')}<div><span class="label">Mailing address</span><span>${C.address}</span></div></li>
             </ul></div>
             <div class="card pad"><h2 class="h4">Quick links</h2><ul class="link-list"><li><a href="#/track">Track an order</a></li><li><a href="#/lab-tests">Find a COA</a></li><li><a href="#/policies/refunds">Returns &amp; refunds</a></li><li><a href="#/wholesale">Wholesale pricing</a></li></ul></div>
           </aside></div></section>`,
@@ -330,36 +412,36 @@
           </ul></div></aside></div></section>`,
       };
     },
-    account() {
+    account({ query }) {
       const u = PS.auth.current();
-      if (!u) {
-        const f = (o) => H.field(o);
-        return {
-          title: 'Account',
-          html: `${T().pageHead({ eyebrow: 'Account', title: 'Sign in or create an account', intro: 'Track orders, reorder in one click and manage standing orders.' })}
-          <section class="container section-sm"><div class="auth-grid">
-            <div class="card pad"><h2 class="h3">Sign in</h2><form class="stack-form" data-form="signin" novalidate>
-              ${f({ form: 'si', name: 'email', label: 'Email', type: 'email', auto: 'email', validate: 'email' })}${f({ form: 'si', name: 'password', label: 'Password', type: 'password', auto: 'current-password' })}
-              <p class="form-msg" aria-live="polite"></p><button class="btn btn-primary btn-block" type="submit">Sign in</button></form></div>
-            <div class="card pad"><h2 class="h3">Create account</h2><form class="stack-form" data-form="signup" novalidate>
-              ${f({ form: 'su', name: 'name', label: 'Full name', auto: 'name' })}${f({ form: 'su', name: 'email', label: 'Email', type: 'email', auto: 'email', validate: 'email' })}${f({ form: 'su', name: 'password', label: 'Password', type: 'password', auto: 'new-password', validate: 'password', hint: 'At least 8 characters.' })}
-              ${H.check({ name: 'age', required: true, label: 'I am 21+ and will use products for laboratory research only.' })}
-              <p class="form-msg" aria-live="polite"></p><button class="btn btn-secondary btn-block" type="submit">Create account</button></form></div>
-          </div><p class="small muted center mt">Demo accounts are stored only in this browser.</p></section>`,
-        };
-      }
+      if (!u) return authPage('signin', safeNext(query.next));
       const orders = PS.orders.forEmail(u.email);
-      const cancelled = PS.storage.get('cancelledSubs', []);
-      const subs = orders.flatMap((o) => o.items.filter((i) => i.planId !== 'once').map((i) => Object.assign({ key: o.number + '|' + i.id + '|' + i.size, order: o }, i)));
+      const subs = subsOf(orders);
       return {
         title: 'My account',
         html: `${T().pageHead({ eyebrow: 'Account', title: `Welcome back, ${esc(u.name.split(' ')[0])}.`, intro: `Signed in as ${esc(u.email)} · member since ${PS.date(u.created, { month: 'long', year: 'numeric' })}` })}
         <section class="container section-sm"><div class="account-grid">
-          <div class="card pad"><h2 class="h3">Order history</h2>${orders.length ? `<ul class="order-list">${orders.map((o) => `<li><a href="#/order/${o.number}"><strong>${o.number}</strong><span>${PS.date(o.createdAt)} · ${o.items.reduce((s, i) => s + i.qty, 0)} items · ${PS.money(o.total)}</span><span class="badge">${PS.orders.status(o).current.label}</span></a></li>`).join('')}</ul>` : `<p class="muted">No orders yet.</p><a class="btn btn-primary" href="#/shop">Start shopping</a>`}</div>
+          <div class="card pad"><h2 class="h3">Recent orders</h2>${orders.length ? `${H.orderList(orders.slice(0, 3))}<a class="link-arrow mt" href="#/orders">Order history ${PS.icon('arrow')}</a>` : `<p class="muted">No orders yet.</p><a class="btn btn-primary" href="#/shop">Start shopping</a>`}</div>
           <div class="stack">
-            <div class="card pad"><h2 class="h3">Standing orders</h2>${subs.length ? `<ul class="sub-list">${subs.map((s) => { const off = cancelled.includes(s.key); return `<li><div><strong>${esc(s.name)}</strong> <small>${esc(s.size)} × ${s.qty}</small><span class="small muted">${esc(s.plan)} · ${off ? 'Cancelled' : 'Next ship ' + PS.date(s.order.createdAt + PS.getPlan(s.planId).weeks * 7 * 864e5)}</span></div>${off ? '<span class="badge badge-muted">Cancelled</span>' : `<button class="btn btn-sm btn-ghost" data-cancel-sub="${esc(s.key)}">Cancel</button>`}</li>`; }).join('')}</ul>` : '<p class="muted small">No standing orders. Choose “Standing order” on any product page to save up to 15%.</p>'}</div>
+            <div class="card pad" id="standing-orders"><h2 class="h3">Standing orders</h2>${subs.length ? `<ul class="sub-list">${subs.map((s) => `<li><div><strong>${esc(s.name)}</strong> <small>${esc(s.size)} × ${s.qty}</small><span class="small muted">${esc(s.cur.short)} · ${s.off ? 'Cancelled' : s.next ? 'Next ship ' + PS.date(s.next) : 'No further shipments'}</span></div>${s.off ? '<span class="badge badge-muted">Cancelled</span>' : `<button class="btn btn-sm btn-ghost" data-manage-sub="${esc(s.key)}">Manage</button>`}</li>`).join('')}</ul>` : '<p class="muted small">No standing orders. Choose “Standing order” on any product page to save up to 15%.</p>'}</div>
             <div class="card pad"><h2 class="h3">Profile</h2><p>${esc(u.name)}<br><span class="muted">${esc(u.email)}</span></p><button class="btn btn-secondary" data-signout>Sign out</button></div>
           </div></div></section>`,
+        after() { if (query.focus === 'standing') { const el = $('#standing-orders'); if (el) el.scrollIntoView({ block: 'center' }); } },
+      };
+    },
+    signup({ query }) {
+      return PS.auth.current() ? PS.defaultViews.account({ query: {} }) : authPage('signup', safeNext(query.next));
+    },
+    // every order on this account; signed out, it is the sign-in page and brings you back here afterwards
+    orders() {
+      const u = PS.auth.current();
+      if (!u) return authPage('signin', '/orders');
+      const orders = PS.orders.forEmail(u.email);
+      return {
+        title: 'Order history',
+        html: `${T().pageHead({ eyebrow: 'Account', title: 'Order history', intro: orders.length ? `${orders.length} order${orders.length > 1 ? 's' : ''} on ${esc(u.email)}.` : `Orders placed with ${esc(u.email)} show up here.` })}
+        <section class="container section-sm narrow"><div class="card pad">${orders.length ? H.orderList(orders) : `<p class="muted">No orders yet.</p><a class="btn btn-primary" href="#/shop">Start shopping</a>`}</div>
+          <p class="small center mt"><a class="link-arrow" href="#/account">${PS.icon('arrow')} Back to my account</a></p></section>`,
       };
     },
     policies() {
@@ -384,7 +466,9 @@
     notFound(o) {
       return {
         title: 'Not found',
-        html: `${T().pageHead({ eyebrow: '404', title: 'Page not found', intro: (o && o.msg) || 'That page doesn’t exist or has moved.' })}<section class="container section-sm center"><a class="btn btn-primary" href="#/">Back home</a> <a class="btn btn-ghost" href="#/shop">Shop peptides</a></section>`,
+        html: `<section class="notfound"><div class="container">
+          <span class="eyebrow">404</span><h1>Page not found</h1><p class="lead">${esc((o && o.msg) || 'That page doesn’t exist or has moved.')}</p>
+          <div class="btn-row"><a class="btn btn-primary" href="#/">Back home</a><a class="btn btn-ghost" href="#/shop">Shop peptides</a></div></div></section>`,
       };
     },
   };
@@ -461,10 +545,12 @@
     return o;
   };
 
-  function filterLots(q) {
-    q = String(q).trim().toLowerCase();
+  // Lab Tests: a card shows when it matches both the search box and the product filter
+  function filterLots() {
+    const i = $('[data-lot-search]'), f = $('[data-lot-product-filter]');
+    const q = (i ? i.value : '').trim().toLowerCase(), pid = f ? f.value : '';
     let shown = 0;
-    $$('[data-lot-row]').forEach((r) => { const m = !q || r.dataset.lotRow.includes(q); r.hidden = !m; if (m) shown++; });
+    $$('[data-lot-row]').forEach((r) => { const m = (!q || r.dataset.lotRow.includes(q)) && (!pid || r.dataset.lotProduct === pid); r.hidden = !m; if (m) shown++; });
     const e = $('.empty-row');
     if (e) e.hidden = shown > 0;
   }
@@ -550,10 +636,16 @@
       }
       else if ('print' in d) { window.print(); }
       else if ('signout' in d) { PS.auth.signOut(); PS.toast('Signed out'); }
+      else if (d.manageSub) { openManage(d.manageSub, !!t.closest('#ps-modal')); }
+      else if (d.cancelAsk) {
+        const u = PS.auth.current(), s = u && subsOf(PS.orders.forEmail(u.email)).find((x) => x.key === d.cancelAsk);
+        if (s) swapModal(cancelAskHtml(s));
+      }
       else if (d.cancelSub) {
         const list = PS.storage.get('cancelledSubs', []);
         list.push(d.cancelSub);
         PS.storage.set('cancelledSubs', list);
+        PS.closeModal();
         PS.toast('Standing order cancelled — no further charges.');
         render();
       }
@@ -577,7 +669,12 @@
       const t = e.target;
       if (t.dataset.format === 'card') t.value = t.value.replace(/\D/g, '').slice(0, 16).replace(/(\d{4})(?=\d)/g, '$1 ');
       if (t.dataset.format === 'exp') { const d = t.value.replace(/\D/g, '').slice(0, 4); t.value = d.length > 2 ? d.slice(0, 2) + ' / ' + d.slice(2) : d; }
-      if ('lotSearch' in t.dataset) filterLots(t.value);
+      if ('lotSearch' in t.dataset) filterLots();
+      const mf = t.closest('form[data-form="manage-sub"]');
+      if (mf) {
+        if (t.name === 'weeks') mf.elements.plan.value = 'custom'; // typing a number means Custom
+        syncManage(mf);
+      }
       const pf = t.closest('form[data-form="product"]');
       if (pf && t.name === 'qty') rollQty(t);
       if (pf && t.name === 'weeks') pickCustomPlan(pf);
@@ -597,6 +694,9 @@
       const pf = t.closest('form[data-form="product"]');
       if (pf && t.name === 'weeks') t.value = weeksIn(t.value);
       if (pf) PS.syncProductForm(pf);
+      if ('lotProductFilter' in t.dataset) filterLots();
+      const mf = t.closest('form[data-form="manage-sub"]');
+      if (mf) { if (t.name === 'weeks') t.value = weeksIn(t.value); syncManage(mf); }
       if (t.name === 'billingSame') {
         // the billing address shows only when it differs from shipping; its fields are required while shown and off (skipped by the form) while hidden
         const box = $('[data-billing]', t.closest('form'));
@@ -631,6 +731,16 @@
       if (kind === 'promo') { const r = PS.cart.applyPromo(data.code); PS.toast(esc(r.msg), r.ok ? '' : 'error'); return; }
       if (!validateForm(form)) return;
       const btn = $('button[type="submit"]', form);
+      if (kind === 'manage-sub') {
+        if (data.end && data.end < data.start) { $('.form-msg', form).textContent = 'The end date has to come after the start date.'; return; }
+        const weeks = data.plan === '4w' ? 4 : weeksIn(data.weeks), set = PS.storage.get('subSettings', {});
+        set[data.key] = { planId: data.plan === '4w' ? '4w' : 'c' + weeks, start: data.start, end: data.end || '' };
+        PS.storage.set('subSettings', set);
+        PS.closeModal();
+        PS.toast('Standing order updated.');
+        render();
+        return;
+      }
       if (kind === 'checkout') {
         const t = PS.cart.totals(data.ship);
         if (!t.lines.length) { PS.toast('Your cart is empty.', 'error'); return; }
@@ -802,7 +912,14 @@
       <div id="ps-toasts" class="toasts" aria-live="polite"></div>`);
     bind();
     PS.on('cart', refreshCart);
-    PS.on('auth', () => { $('#app-header').innerHTML = theme.header(); refreshCart(); if (['account', 'checkout', 'track'].includes(current)) render(); });
+    PS.on('auth', () => {
+      $('#app-header').innerHTML = theme.header();
+      refreshCart();
+      // signing in from the sign-in or create-account page goes on to where the visitor was headed (or the account page)
+      const q = PS.parseHash().query;
+      if (PS.auth.current() && ['account', 'signup'].includes(current) && (q.next || current === 'signup')) PS.go('#' + (safeNext(q.next) || '/account'));
+      else if (['account', 'signup', 'orders', 'checkout', 'track'].includes(current)) render();
+    });
     PS.on('route', render);
     window.addEventListener('hashchange', render);
     render();

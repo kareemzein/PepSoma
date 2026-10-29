@@ -334,7 +334,7 @@
   PS.routes = [
     ['/', 'home'], ['/shop', 'shop'], ['/shop/:cat', 'shop'], ['/product/:id', 'product'], ['/cart', 'cart'],
     ['/checkout', 'checkout'], ['/order/:num', 'order'], ['/track', 'track'], ['/lab-tests', 'labs'], ['/coa/:code', 'coa'], ['/faq', 'faq'],
-    ['/about', 'about'], ['/contact', 'contact'], ['/wholesale', 'wholesale'], ['/account', 'account'],
+    ['/about', 'about'], ['/contact', 'contact'], ['/wholesale', 'wholesale'], ['/account', 'account'], ['/signup', 'signup'], ['/orders', 'orders'],
     ['/policies', 'policies'], ['/policies/:slug', 'policy'],
   ];
   PS.parseHash = () => {

@@ -20,6 +20,16 @@
     founded: 2026,
   };
 
+  // The laboratory named at the top of every COA. Bracketed values are placeholders until the real lab is known: fill them in here to
+  // change every lot at once, or give one lot its own `lab` and `reportId` (see PS.lots in js/visuals.js).
+  PS.lab = { name: '[Testing lab]', reportId: '[Report ID]' };
+
+  // Real lab results, by lot code. Each entry is laid over that lot's sample values (the lots are drawn in js/visuals.js) and can set
+  // any of: lab, reportId, tested ('YYYY-MM-DD'), purity, pdf (the lab's own file, put in store/coa/), identity, content, endotoxin, water, appearance.
+  // Steps: docs/COA-UPLOAD.md. Example:
+  //   'PS-BPC-2609A': { lab: 'Example Analytical Labs', reportId: 'EAL-2609-0142', tested: '2026-09-02', purity: 99.4, pdf: 'coa/PS-BPC-2609A.pdf' },
+  PS.lotOverrides = {};
+
   PS.categories = [
     { id: 'recovery', name: 'Recovery & Repair', blurb: 'Peptides studied in tissue, tendon and mucosal repair models.' },
     { id: 'gh', name: 'GH Secretagogues', blurb: 'GHRH analogs and ghrelin mimetics for endocrine research.' },
