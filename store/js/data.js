@@ -219,7 +219,7 @@
     { group: 'Ordering & payment', items: [
       ['Who can purchase from Pepsoma?', 'Customers must be 21 or older and must confirm at checkout that products are purchased solely for lawful laboratory research. We reserve the right to cancel any order we believe is intended for human or veterinary use.'],
       ['Do you offer volume pricing?', 'Yes. Volume savings apply automatically to one-time items: 5% off 3+ vials, 10% off 5+ vials and 15% off 10+ vials. Institutions ordering at larger scale can apply for wholesale pricing.'],
-      ['How do standing orders work?', 'Choose “Standing order” on a product page to have it re-ship every 4 or 8 weeks at a discount. You can skip, change or cancel any time from your account before the next ship date — no fees.'],
+      ['How do standing orders work?', 'Choose “Standing order” on a product page to have it re-ship every 4 weeks, or on a custom period of 1 to 12 weeks, at a discount. You can skip, change or cancel any time from your account before the next ship date — no fees.'],
       ['Which payment methods do you accept?', 'Major credit and debit cards at checkout. Wholesale and institutional accounts can also pay by ACH, wire or purchase order.'],
     ] },
     { group: 'Shipping', items: [

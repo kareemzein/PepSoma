@@ -183,8 +183,8 @@
 <h2>How it works</h2>
 <ul>
   <li>When you choose a standing order, you’re charged for your first shipment at checkout.</li>
-  <li>Your order then <strong>renews automatically</strong> every 4 or 8 weeks (as selected) and your payment method is charged the then-current discounted price, plus any shipping and tax, on each renewal date until you cancel.</li>
-  <li>Standing-order discounts are ${PS.config.plans.filter((p) => p.pct).map((p) => `${p.pct}% (${p.short.toLowerCase()})`).join(' and ')} off the one-time price.</li>
+  <li>Your order then <strong>renews automatically</strong> every 4 weeks or the custom period of 1 to 12 weeks you choose (as selected) and your payment method is charged the then-current discounted price, plus any shipping and tax, on each renewal date until you cancel.</li>
+  <li>Standing-order discounts are ${PS.config.plans.filter((p) => p.pct).map((p) => `${p.pct}% (${p.custom ? 'custom period' : p.short.toLowerCase()})`).join(' and ')} off the one-time price.</li>
 </ul>
 
 <h2>Reminders</h2>

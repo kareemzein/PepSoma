@@ -297,7 +297,7 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 
 /* ---------- product grid ---------- */
 .pgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-.pcard { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; display: flex; flex-direction: column; }
+.pcard { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; display: flex; flex-direction: column; cursor: pointer; }
 /* cards are static: no hover lift, tilt or cursor glow, and a flat panel behind the vial */
 .pcard-img { position: relative; display: grid; place-items: center; height: 230px; background: var(--bg-soft); }
 .pcard-img .vial-single, .pcard-img .vial-group { height: 180px; }
@@ -308,10 +308,15 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .pcard-cat { font-size: .72rem; text-transform: uppercase; letter-spacing: .12em; color: var(--accent); font-weight: 700; }
 .pcard-name { font-size: 1.15rem; font-weight: 700; margin: 4px 0 2px; letter-spacing: -.01em; }
 .pcard-name a { text-decoration: none; }
-.pcard-full { font-size: .85rem; color: var(--muted); margin: 0 0 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.pcard-sizes { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-.pcard-sizes span { font-size: .72rem; border: 1px solid var(--line); border-radius: 99px; padding: 3px 9px; color: var(--muted); }
-.pcard-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: auto; }
+.pcard-full { font-size: .85rem; color: var(--muted); margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* size buttons sit centered, with the leftover card height split evenly above and below them */
+.pcard-sizes { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin: auto 0; padding: 12px 0; }
+.size-chip { font: inherit; font-size: .72rem; background: none; border: 1px solid var(--line); border-radius: 99px; padding: 3px 11px; color: var(--muted); }
+button.size-chip { cursor: pointer; transition: border-color .15s, color .15s, background .15s; }
+button.size-chip:hover { border-color: var(--line-2); color: var(--text); }
+button.size-chip.on { border-color: var(--text); color: var(--text); background: var(--bg-soft); box-shadow: inset 0 0 0 1px var(--text); }
+button.size-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pcard-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 
 /* ---------- why Pepsoma ---------- */
 .testi { position: relative; overflow: hidden; background: radial-gradient(900px 400px at 20% 0%, #4a63c9, transparent 70%), linear-gradient(135deg, #14215a, #1b2d74 60%, #2c43a0); color: #fff; padding: 88px 0; text-align: center; }
@@ -500,7 +505,6 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .mini-spec dt { color: var(--muted); }
 .mini-spec dd { margin: 0; font-weight: 700; }
 .stage-box .box-card { transform: scale(.95); }
-.gallery-disclaimer { grid-column: 1 / -1; font-size: .74rem; color: var(--muted); text-align: center; margin: 8px 20px 0; line-height: 1.5; }
 .buybox .pill-y { margin-bottom: 10px; }
 .pdp-title { font-size: clamp(2.6rem, 5vw, 3.8rem); margin: 0 0 6px; }
 .pdp-title .serif { font-weight: 500; }
@@ -526,7 +530,7 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .plans { display: grid; gap: 12px; margin-bottom: 20px; }
 .plan-opt { position: relative; display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; padding: 18px 20px; border: 1.5px solid var(--line); border-radius: 18px; cursor: pointer; transition: border-color .25s, background .25s, transform .25s var(--ease-out); background: var(--surface); }
 .plan-opt:hover { transform: translateX(3px); }
-.plan-opt input { position: absolute; opacity: 0; }
+.plan-opt input[type="radio"] { position: absolute; opacity: 0; }
 .plan-opt.selected { border-color: var(--yellow-line); background: var(--yellow-tint); }
 .plan-opt:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 .plan-check { width: 24px; height: 24px; border-radius: 6px; border: 1.5px solid var(--line-2); display: grid; place-items: center; background: var(--surface); transition: all .25s var(--ease-spring); }
@@ -540,11 +544,20 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .plan-price { display: grid; justify-items: end; gap: 3px; font-size: 1.2rem; font-variant-numeric: tabular-nums; }
 .plan-price s { font-size: .85rem; color: var(--muted); }
 .plan-price s:empty { display: none; }
+.plan-weeks { width: 52px; height: 28px; padding: 0 4px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; font-weight: 700; text-align: center; -moz-appearance: textfield; }
+.plan-weeks::-webkit-outer-spin-button, .plan-weeks::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.plan-weeks:focus { outline: none; border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 22%, transparent); }
+.plan-body .plan-last { font-size: .78rem; color: var(--text); opacity: .75; }
 .deal-line { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 14px; font-size: .88rem; color: var(--muted); }
 .deal-line .yc { width: 20px; height: 20px; }
 .deal-line strong { color: var(--text); }
 .buy-row { display: flex; gap: 12px; align-items: stretch; }
 .buy-row .qty { flex: none; }
+/* the product page's quantity rolls up when it goes up and down when it goes down */
+.qty-input.roll-up { animation: qtyUp .18s var(--ease-out); }
+.qty-input.roll-down { animation: qtyDown .18s var(--ease-out); }
+@keyframes qtyUp { from { transform: translateY(60%); opacity: 0; } }
+@keyframes qtyDown { from { transform: translateY(-60%); opacity: 0; } }
 .buy-btn { flex: 1; position: relative; overflow: hidden; }
 .buy-btn::after { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.28) 50%, transparent 70%); transform: translateX(-100%); }
 .buy-btn:hover::after { animation: shine .9s ease; }
@@ -591,6 +604,19 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .modal-panel { background: var(--bg); }
 .modal-close, .icon-btn { background: var(--surface); color: var(--text); }
 .drawer-panel .line { animation: lineIn .4s var(--ease-out) both; }
+.drawer-body { padding-top: 4px; }
+.drawer-panel .line:first-child { padding-top: 16px; }
+.drawer-body > .tier-note { margin-top: 14px; }
+/* a removed line shrinks out before it is taken away */
+.line.leaving { animation: none; overflow: hidden; pointer-events: none; transition: height .26s var(--ease-out), padding .26s var(--ease-out), opacity .18s linear, border-color .26s; }
+.line.leaving.out { padding-top: 0; padding-bottom: 0; opacity: 0; border-bottom-color: transparent; }
+/* free-shipping progress: a small inset bar just above the subtotal */
+.drawer-foot .freeship { margin: 0; padding: 8px 12px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 6px 16px -12px rgba(0,0,0,.45); font-size: .76rem; }
+.drawer-foot .freeship-text { gap: 6px; margin-bottom: 6px; }
+.drawer-foot .freeship-text .icon { width: 15px; height: 15px; flex: none; }
+.drawer-foot .freeship-bar { height: 4px; }
+.billing-fields { margin-top: 6px; }
+.billing-fields > .label { display: block; margin-bottom: 10px; }
 @keyframes lineIn { from { opacity: 0; transform: translateX(16px); } }
 
 /* Home's offer card: fades in slowly mid-screen; no backdrop, the page keeps scrolling */
@@ -693,6 +719,7 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
   .bracket.tl { top: 24px; } .bracket.br { bottom: 24px; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .qty-input.roll-up, .qty-input.roll-down { animation: none; }
   .rise, .line-mask > span, .reveal { opacity: 1 !important; transform: none !important; filter: none !important; }
   .window .chromatogram path { stroke-dashoffset: 0; }
   .window .win-rows li b { background: rgba(47,191,113,.16); color: var(--success); }

@@ -26,7 +26,7 @@
     doc: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',
     star: '<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" fill="currentColor" stroke="none"/>',
     menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
-    trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+    trash: '<path d="M4 7h16"/><path d="M9.5 7V4.5h5V7"/><path d="M6 7l.9 12.2A1.8 1.8 0 0 0 8.7 21h6.6a1.8 1.8 0 0 0 1.8-1.8L18 7"/><path d="M10 11v6M14 11v6"/>',
     chev: '<path d="M6 9l6 6 6-6"/>',
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
@@ -115,9 +115,15 @@
       <fieldset class="fs"><legend class="legend"><span class="legend-n">4</span> Payment</legend>
         <div class="demo-note">${PS.icon('lock')} <span><strong>Demo checkout — no card is charged.</strong> Try <code>4242 4242 4242 4242</code>, any future expiry, any CVC.</span></div>
         ${f({ name: 'cardname', label: 'Name on card', auto: 'cc-name' })}
-        ${f({ name: 'card', label: 'Card number', auto: 'cc-number', validate: 'card', attrs: 'inputmode="numeric" data-format="card" maxlength="23" placeholder="1234 5678 9012 3456"' })}
+        ${f({ name: 'card', label: 'Card number', auto: 'cc-number', validate: 'card', attrs: 'inputmode="numeric" data-format="card" maxlength="19" placeholder="1234 5678 9012 3456"' })}
         <div class="field-row">${f({ name: 'exp', label: 'Expiry', auto: 'cc-exp', validate: 'exp', attrs: 'inputmode="numeric" data-format="exp" maxlength="7" placeholder="MM / YY"' })}${f({ name: 'cvc', label: 'CVC', auto: 'cc-csc', validate: 'cvc', attrs: 'inputmode="numeric" maxlength="4" placeholder="123"' })}</div>
         ${H.check({ name: 'billingSame', label: 'Billing address same as shipping', checked: true })}
+        <div class="billing-fields" data-billing hidden>
+          <span class="label">Billing address</span>
+          ${f({ name: 'baddress1', label: 'Street address', auto: 'billing address-line1', attrs: 'disabled' })}
+          ${f({ name: 'baddress2', label: 'Apt, suite, building', auto: 'billing address-line2', required: false, attrs: 'disabled' })}
+          <div class="field-row three">${f({ name: 'bcity', label: 'City', auto: 'billing address-level2', attrs: 'disabled' })}${f({ name: 'bstate', label: 'State', options: PS.states, auto: 'billing address-level1', attrs: 'disabled' })}${f({ name: 'bzip', label: 'ZIP', auto: 'billing postal-code', validate: 'zip', attrs: 'inputmode="numeric" maxlength="10" disabled' })}</div>
+        </div>
       </fieldset>
       <fieldset class="fs attest"><legend class="legend"><span class="legend-n">5</span> Research use attestation</legend>
         ${H.check({ name: 'ruo', required: true, label: 'I confirm these materials are purchased solely for in-vitro laboratory research and <strong>not for human or animal consumption</strong>.' })}
@@ -127,7 +133,7 @@
         ${H.check({ name: 'marketing', label: 'Email me new lots, restocks and research-stack offers.' })}
       </fieldset>
       <button class="btn btn-primary btn-lg btn-block" type="submit" data-submit>${PS.icon('lock')} Place order · <span data-total>${PS.money(t.total)}</span></button>
-      <p class="secure-note">Secured with 256-bit TLS encryption. By placing your order you agree to our policies.</p>
+      <p class="secure-note">Secure checkout. By placing your order you agree to our policies.</p>
     </form>`;
   };
 
@@ -351,7 +357,7 @@
         <section class="container section-sm"><div class="account-grid">
           <div class="card pad"><h2 class="h3">Order history</h2>${orders.length ? `<ul class="order-list">${orders.map((o) => `<li><a href="#/order/${o.number}"><strong>${o.number}</strong><span>${PS.date(o.createdAt)} · ${o.items.reduce((s, i) => s + i.qty, 0)} items · ${PS.money(o.total)}</span><span class="badge">${PS.orders.status(o).current.label}</span></a></li>`).join('')}</ul>` : `<p class="muted">No orders yet.</p><a class="btn btn-primary" href="#/shop">Start shopping</a>`}</div>
           <div class="stack">
-            <div class="card pad"><h2 class="h3">Standing orders</h2>${subs.length ? `<ul class="sub-list">${subs.map((s) => { const off = cancelled.includes(s.key); return `<li><div><strong>${esc(s.name)}</strong> <small>${esc(s.size)} × ${s.qty}</small><span class="small muted">${esc(s.plan)} · ${off ? 'Cancelled' : 'Next ship ' + PS.date(s.order.createdAt + (s.planId === '4w' ? 28 : 56) * 864e5)}</span></div>${off ? '<span class="badge badge-muted">Cancelled</span>' : `<button class="btn btn-sm btn-ghost" data-cancel-sub="${esc(s.key)}">Cancel</button>`}</li>`; }).join('')}</ul>` : '<p class="muted small">No standing orders. Choose “Standing order” on any product page to save up to 15%.</p>'}</div>
+            <div class="card pad"><h2 class="h3">Standing orders</h2>${subs.length ? `<ul class="sub-list">${subs.map((s) => { const off = cancelled.includes(s.key); return `<li><div><strong>${esc(s.name)}</strong> <small>${esc(s.size)} × ${s.qty}</small><span class="small muted">${esc(s.plan)} · ${off ? 'Cancelled' : 'Next ship ' + PS.date(s.order.createdAt + PS.getPlan(s.planId).weeks * 7 * 864e5)}</span></div>${off ? '<span class="badge badge-muted">Cancelled</span>' : `<button class="btn btn-sm btn-ghost" data-cancel-sub="${esc(s.key)}">Cancel</button>`}</li>`; }).join('')}</ul>` : '<p class="muted small">No standing orders. Choose “Standing order” on any product page to save up to 15%.</p>'}</div>
             <div class="card pad"><h2 class="h3">Profile</h2><p>${esc(u.name)}<br><span class="muted">${esc(u.email)}</span></p><button class="btn btn-secondary" data-signout>Sign out</button></div>
           </div></div></section>`,
       };
@@ -433,7 +439,7 @@
     let first = null;
     $$('.field', form).forEach((f) => {
       const input = $('input, select, textarea', f);
-      if (!input) return;
+      if (!input || input.disabled) return;
       let msg = '';
       const v = input.type === 'checkbox' ? input.checked : String(input.value || '');
       if (input.required && (input.type === 'checkbox' ? !v : !v.trim())) msg = input.type === 'checkbox' ? 'Required to continue.' : 'This field is required.';
@@ -493,6 +499,24 @@
     if (img && !p.includes && img.dataset.size !== s.label) { img.dataset.size = s.label; img.innerHTML = PS.productImage(p, { theme: T().vialTheme, size: s.label }); }
   };
 
+  // standing order, Custom: every N weeks (1–12)
+  const weeksIn = (v) => Math.max(1, Math.min(12, parseInt(v, 10) || 4));
+  function pickCustomPlan(form) {
+    const r = $('input[name="plan"][value="custom"]', form);
+    if (r && !r.checked) { r.checked = true; PS.syncProductForm(form); }
+  }
+  // the product page's quantity rolls up when it goes up and down when it goes down
+  function rollQty(q) {
+    const to = parseInt(q.value, 10);
+    if (!to) return;
+    const from = q.dataset.prev != null ? +q.dataset.prev : +q.defaultValue || 1;
+    q.dataset.prev = to;
+    if (to === from || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    q.classList.remove('roll-up', 'roll-down');
+    void q.offsetWidth;
+    q.classList.add(to > from ? 'roll-up' : 'roll-down');
+  }
+
   /* ---------- delegated behaviors ---------- */
   function bind() {
     document.addEventListener('click', (e) => {
@@ -551,20 +575,35 @@
 
     document.addEventListener('input', (e) => {
       const t = e.target;
-      if (t.dataset.format === 'card') t.value = t.value.replace(/\D/g, '').slice(0, 19).replace(/(\d{4})(?=\d)/g, '$1 ');
+      if (t.dataset.format === 'card') t.value = t.value.replace(/\D/g, '').slice(0, 16).replace(/(\d{4})(?=\d)/g, '$1 ');
       if (t.dataset.format === 'exp') { const d = t.value.replace(/\D/g, '').slice(0, 4); t.value = d.length > 2 ? d.slice(0, 2) + ' / ' + d.slice(2) : d; }
       if ('lotSearch' in t.dataset) filterLots(t.value);
       const pf = t.closest('form[data-form="product"]');
+      if (pf && t.name === 'qty') rollQty(t);
+      if (pf && t.name === 'weeks') pickCustomPlan(pf);
       if (pf) PS.syncProductForm(pf);
       const field = t.closest('.field.is-invalid');
       if (field) { field.classList.remove('is-invalid'); const er = $('.field-error', field); if (er) er.textContent = ''; }
+    });
+
+    document.addEventListener('focusin', (e) => {
+      const pf = e.target.name === 'weeks' && e.target.closest('form[data-form="product"]');
+      if (pf) pickCustomPlan(pf);
     });
 
     document.addEventListener('change', (e) => {
       const t = e.target;
       if (t.dataset.lineQty) PS.cart.setQty(t.dataset.lineQty, t.value);
       const pf = t.closest('form[data-form="product"]');
+      if (pf && t.name === 'weeks') t.value = weeksIn(t.value);
       if (pf) PS.syncProductForm(pf);
+      if (t.name === 'billingSame') {
+        // the billing address shows only when it differs from shipping; its fields are required while shown and off (skipped by the form) while hidden
+        const box = $('[data-billing]', t.closest('form'));
+        box.hidden = t.checked;
+        $$('input, select', box).forEach((i) => { i.disabled = t.checked; });
+        if (t.checked) $$('.field.is-invalid', box).forEach((f) => { f.classList.remove('is-invalid'); $('.field-error', f).textContent = ''; });
+      }
       if (t.name === 'ship' && t.closest('[data-form="checkout"]')) refreshCheckout();
       if (t.dataset.sort != null) { const r = PS.parseHash(); r.query.sort = t.value; PS.go('#' + r.path + '?' + new URLSearchParams(r.query)); }
     });
@@ -577,7 +616,13 @@
       const data = formData(form);
       if (kind === 'product') {
         const p = PS.getProduct(form.dataset.id);
-        PS.cart.add(p.id, data.size, data.qty, data.plan || 'once');
+        let plan = data.plan || 'once';
+        if (plan === 'custom') {
+          const w = weeksIn(data.weeks);
+          plan = 'c' + w;
+          PS.storage.set('customWeeks', w); // suggested next time on other product pages
+        }
+        PS.cart.add(p.id, data.size, data.qty, plan);
         PS.emit('added', { el: form.querySelector('[type=submit]'), id: p.id });
         return;
       }
@@ -638,9 +683,59 @@
     $$('[data-cart-count]').forEach((el) => { el.textContent = t.count; el.classList.toggle('has', t.count > 0); });
     $$('[data-cart-total]').forEach((el) => { el.textContent = PS.money(t.merch); });
     const panel = $('#cart-drawer .drawer-panel');
-    if (panel) panel.innerHTML = T().drawer(t);
-    if (current === 'cart' || (current === 'checkout' && !t.count)) render();
+    const drawFull = () => { panel.innerHTML = T().drawer(PS.cart.totals()); };
+    if (panel && !patchCart(panel, T().drawer(t), drawFull)) drawFull();
+    if (current === 'cart') {
+      const views = Object.assign({}, PS.defaultViews, T().views);
+      if (!patchCart($('#view'), views.cart().html, () => { if (current === 'cart') render(); })) render();
+    }
+    else if (current === 'checkout' && !t.count) render();
     else if (current === 'checkout') refreshCheckout();
+  }
+  // Updates a cart (the drawer or the cart page) in place: only the quantities, line prices, notes and totals change, and a removed line
+  // collapses out before it goes. `html` is the cart as freshly drawn, `redraw` draws it from scratch (used once the cart has emptied).
+  // Returns false when the lines changed too much to patch (a line was added or moved), and the caller redraws.
+  function patchCart(root, html, redraw) {
+    const next = document.createElement('div');
+    next.innerHTML = html;
+    const old = $$('.line:not(.leaving)', root), fresh = $$('.line', next);
+    const byKey = {};
+    old.forEach((l) => { byKey[l.dataset.key] = l; });
+    const keys = fresh.map((l) => l.dataset.key);
+    if (!old.length || keys.some((k) => !byKey[k])) return false;
+    if (old.map((l) => l.dataset.key).filter((k) => keys.includes(k)).join('\n') !== keys.join('\n')) return false;
+    const head = $('.drawer-head h2', root);
+    if (head) head.innerHTML = $('.drawer-head h2', next).innerHTML;
+    if (!fresh.length) {
+      old.forEach(collapseLine);
+      setTimeout(() => { if (!PS.cart.items().length) redraw(); }, 300);
+      return true;
+    }
+    const pairs = [['.totals', 'innerHTML'], ['.freeship-text', 'innerHTML'], ['.drawer-foot .btn-primary', 'textContent']];
+    if (pairs.some(([q]) => !$(q, root) !== !$(q, next)) || !$('.totals', root) || !!$('.promo-applied', root) !== !!$('.promo-applied', next)) return false;
+    fresh.forEach((f) => {
+      const o = byKey[f.dataset.key];
+      $('.qty-input', o).value = $('.qty-input', f).value;
+      ['.line-price', '.line-meta'].forEach((q) => { $(q, o).innerHTML = $(q, f).innerHTML; });
+    });
+    old.filter((l) => !keys.includes(l.dataset.key)).forEach(collapseLine);
+    pairs.forEach(([q, prop]) => { const o = $(q, root); if (o) o[prop] = $(q, next)[prop]; });
+    const bar = $('.freeship-bar span', root);
+    if (bar) bar.style.width = $('.freeship-bar span', next).style.width;
+    const note = $('.tier-note', root), noteNew = $('.tier-note', next);
+    if (note && noteNew) note.innerHTML = noteNew.innerHTML;
+    else if (note) note.remove();
+    else if (noteNew) old[0].parentNode.insertBefore(noteNew, old[0]);
+    return true;
+  }
+  function collapseLine(el) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { el.remove(); return; }
+    el.classList.add('leaving');
+    el.style.height = el.offsetHeight + 'px';
+    void el.offsetHeight;
+    el.classList.add('out');
+    el.style.height = '0px';
+    setTimeout(() => el.remove(), 280);
   }
   function reveal(soft) {
     const els = $$('.reveal:not(.in)');

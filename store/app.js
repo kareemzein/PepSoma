@@ -36,19 +36,30 @@
     const sale = p.badge === 'Sale' || (s.compare && !/save/i.test(p.badge || ''));
     const badge = p.badge && p.badge !== 'Sale' ? p.badge : '';
     // still: no scroll reveal (cards off to the side of a carousel would never scroll into view vertically)
-    return `<article class="pcard${still ? '' : ' reveal'}" style="--d:${(i || 0) % 4}">
-      <a class="pcard-img" href="#/product/${p.id}" aria-label="${esc(p.name)}">${badge ? `<span class="pill-y">${esc(badge)}</span>` : ''}${sale ? '<span class="sale-tag">Sale</span>' : ''}${img(p)}</a>
+    return `<article class="pcard${still ? '' : ' reveal'}" data-id="${p.id}" style="--d:${(i || 0) % 4}">
+      <a class="pcard-img" href="#/product/${p.id}" aria-label="${esc(p.name)}">${badge ? `<span class="pill-y">${esc(badge)}</span>` : ''}${sale ? '<span class="sale-tag">Sale</span>' : ''}<span class="pcard-vial">${img(p)}</span></a>
       <div class="pcard-body">
         <span class="pcard-cat">${esc(catName(p.cat))}</span>
         <h3 class="pcard-name"><a href="#/product/${p.id}">${esc(p.name)}</a></h3>
         <p class="pcard-full">${esc(p.full || p.summary)}</p>
-        <div class="pcard-sizes">${p.sizes.map((x) => `<span>${esc(x.label)}</span>`).join('')}</div>
+        <div class="pcard-sizes">${multi ? p.sizes.map((x) => `<button type="button" class="size-chip" data-card-size="${x.id}" aria-pressed="false">${esc(x.label)}</button>`).join('') : `<span class="size-chip">${esc(s.label)}</span>`}</div>
         <div class="pcard-foot">
           <div class="price">${multi ? '<small>From</small> ' : ''}${money(s.price)} ${s.compare ? `<s>${money(s.compare)}</s>` : ''}</div>
-          ${multi ? `<a class="btn btn-primary btn-sm" href="#/product/${p.id}">Select</a>` : `<button class="btn btn-primary btn-sm" data-add="${p.id}" data-size="${s.id}">Add to cart</button>`}
+          ${multi ? `<button type="button" class="btn btn-primary btn-sm" data-card-act>Select</button>` : `<button class="btn btn-primary btn-sm" data-add="${p.id}" data-size="${s.id}">Add to cart</button>`}
         </div>
       </div>
     </article>`;
+  }
+
+  function pickCardSize(pcard, chip) {
+    const p = PS.getProduct(pcard.dataset.id), s = PS.getSize(p, chip.dataset.cardSize);
+    pcard.querySelectorAll('[data-card-size]').forEach((b) => { b.classList.toggle('on', b === chip); b.setAttribute('aria-pressed', b === chip); });
+    pcard.querySelector('.pcard-vial').innerHTML = img(p, s.label);
+    pcard.querySelector('.price').innerHTML = `${money(s.price)} ${s.compare ? `<s>${money(s.compare)}</s>` : ''}`;
+    const act = pcard.querySelector('[data-card-act]');
+    act.dataset.add = p.id;
+    act.dataset.size = s.id;
+    act.textContent = 'Add to cart';
   }
 
   /* ---------- shell ---------- */
@@ -116,7 +127,7 @@
   }
 
   function lineHTML(l) {
-    return `<div class="line">
+    return `<div class="line" data-key="${esc(l.key)}">
       <a class="line-img" href="#/product/${l.id}">${img(l.product, l.sizeObj.label)}</a>
       <div><a class="line-name" href="#/product/${l.id}">${esc(l.product.name)}</a>
         <span class="line-meta">${esc(l.sizeObj.label)} · ${esc(l.planObj.short)}${l.planObj.pct ? ` <b class="save">−${l.planObj.pct}%</b>` : ''}${l.free ? ` <b class="save">${l.free} free</b>` : ''}</span>
@@ -128,8 +139,8 @@
 
   function drawer(t) {
     return `<div class="drawer-head"><h2>Your cart <span class="muted">(${t.count})</span></h2><button class="icon-btn" data-close-cart aria-label="Close cart">${icon('close')}</button></div>
-      <div class="drawer-body">${t.count ? `${H.freeShip(t)}${H.tierNote(t)}${t.lines.map(lineHTML).join('')}` : `<div class="empty-cart">${icon('cart')}<h3>Your cart is empty</h3><p class="muted">Browse research peptides with lot-matched COAs.</p><a class="btn btn-primary" href="#/shop">Shop peptides</a></div>`}</div>
-      ${t.count ? `<div class="drawer-foot">${H.totalsRows(t)}<a class="btn btn-primary btn-lg btn-block" href="#/checkout">Checkout · ${money(t.merch)}</a><a class="btn btn-ghost btn-block" href="#/cart">View cart</a></div>` : ''}`;
+      <div class="drawer-body">${t.count ? `${H.tierNote(t)}${t.lines.map(lineHTML).join('')}` : `<div class="empty-cart">${icon('cart')}<h3>Your cart is empty</h3><p class="muted">Browse research peptides with lot-matched COAs.</p><a class="btn btn-primary" href="#/shop">Shop peptides</a></div>`}</div>
+      ${t.count ? `<div class="drawer-foot">${H.freeShip(t)}${H.totalsRows(t)}<a class="btn btn-primary btn-lg btn-block" href="#/checkout">Checkout · ${money(t.merch)}</a><a class="btn btn-ghost btn-block" href="#/cart">View cart</a></div>` : ''}`;
   }
 
   function summary(t, opts) {
@@ -303,6 +314,7 @@
       : [`${esc(p.name)} — ${p.liquid ? 'sterile multi-use vial' : 'lyophilized vial'} (<span data-size-label>${s.label}</span>)`, p.noCoa ? 'Manufacturer specification sheet' : 'Printed, lot-matched Certificate of Analysis'];
     included.push('Tamper-evident seal & lot label', 'Discreet, protective packaging', 'Same-day dispatch before ' + PS.company.cutoff, 'Research support from our team');
     const plans = PS.config.plans;
+    const lastWeeks = Math.max(0, Math.min(12, parseInt(PS.storage.get('customWeeks', 0), 10) || 0)); // the Custom period used last time
     const deal = dealText();
     const seqParts = (p.seq || '').split('-');
     const seq = seqParts.length > 2 && seqParts.every((x) => /^[A-Z][a-z]{2}$/.test(x)) ? seqParts : null;
@@ -325,7 +337,6 @@
               <div class="stage-panel stage-spec" data-panel="spec" hidden>${seq ? `<div class="beads">${seq.map((a, i) => `<span style="--i:${i}">${esc(a)}</span>`).join('')}</div>` : ''}<dl class="mini-spec"><dt>Formula</dt><dd>${esc(p.formula || '—')}</dd><dt>Mol. weight</dt><dd>${p.mw ? p.mw + ' g/mol' : '—'}</dd><dt>CAS</dt><dd>${esc(p.cas || '—')}</dd></dl></div>
               <div class="stage-panel stage-box" data-panel="box" hidden><div class="box-card">${img(p)}<div class="mini-coa"><span>${icon('doc')} COA inserted</span><strong>${lot ? esc(lot.code) : 'Spec sheet'}</strong></div></div></div>
             </div>
-            <p class="gallery-disclaimer">${H.disclaimer()}</p>
           </div>
 
           <div class="buybox">
@@ -342,7 +353,7 @@
               <div class="plans">${plans.map((pl, i) => `<label class="plan-opt ${i ? '' : 'selected'}"><input type="radio" name="plan" value="${pl.id}" ${i ? '' : 'checked'}>
                 <span class="plan-check">${icon('check')}</span>
                 <span class="plan-body"><strong>${pl.id === 'once' ? 'ONE-TIME PURCHASE' : `STANDING ORDER · ${pl.short.toUpperCase()}`}</strong>
-                <small>${pl.id === 'once' ? (PS.config.deal === 'bogo' ? 'Billed once · Buy 1 Get 1 free' : 'Billed once · volume savings apply') : `Billed <b data-plan-price="${pl.id}"></b> today, then every ${pl.weeks} weeks<br>Skip or cancel anytime`}</small></span>
+                <small>${pl.id === 'once' ? (PS.config.deal === 'bogo' ? 'Billed once · Buy 1 Get 1 free' : 'Billed once · volume savings apply') : `Billed <b data-plan-price="${pl.id}"></b> today, then every ${pl.custom ? `<input class="plan-weeks" name="weeks" type="number" min="1" max="12" value="${lastWeeks || 6}" inputmode="numeric" aria-label="Weeks between shipments"> weeks` : `${pl.weeks} weeks`}<br>Skip or cancel anytime`}</small>${pl.custom && lastWeeks ? `<small class="plan-last">Last time: every ${lastWeeks} week${lastWeeks > 1 ? 's' : ''}</small>` : ''}</span>
                 <span class="plan-price">${pl.pct ? `<span class="pill-y">Save ${pl.pct}%</span>` : ''}<s data-plan-compare="${pl.id}"></s><b data-plan-price="${pl.id}"></b></span></label>`).join('')}</div>
               ${deal && !(PS.config.deal === 'bogo' && p.includes) ? `<p class="deal-line"><span class="yc">${icon('check')}</span><span><strong>${deal[0]}:</strong> ${deal[1]}. Applied automatically to one-time orders.</span></p>` : ''}
               <div class="buy-row">${H.qty(1)}<button class="btn btn-primary btn-lg buy-btn" type="submit">ADD TO CART · <span data-line-price></span></button></div>
@@ -437,6 +448,14 @@
     // stack cards open their page from anywhere on the card; links and buttons inside keep their own action
     const stack = e.target.closest('.stack-card');
     if (stack && !e.target.closest('a, button')) { PS.go(stack.querySelector('.stack-img').getAttribute('href')); return; }
+    // product cards: a size button picks that size (the picture and the button follow); a click anywhere else on the card, or on Select, opens the product
+    const pcard = e.target.closest('.pcard');
+    if (pcard) {
+      const chip = e.target.closest('[data-card-size]');
+      const act = e.target.closest('[data-card-act]');
+      if (chip) { pickCardSize(pcard, chip); return; }
+      if ((act && !act.dataset.add) || !e.target.closest('a, button')) { PS.go(pcard.querySelector('.pcard-name a').getAttribute('href')); return; }
+    }
     const cyc = e.target.closest('[data-mode-cycle]');
     if (cyc) { const order = ['auto', 'light', 'dark']; applyMode(order[(order.indexOf(getMode()) + 1) % 3], cyc); return; }
     const set = e.target.closest('[data-mode-set]');

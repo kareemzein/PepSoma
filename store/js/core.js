@@ -63,7 +63,8 @@
     plans: [
       { id: 'once', label: 'One-time purchase', short: 'One-time', pct: 0 },
       { id: '4w', label: 'Standing order · every 4 weeks', short: 'Every 4 weeks', pct: 15, weeks: 4 },
-      { id: '8w', label: 'Standing order · every 8 weeks', short: 'Every 8 weeks', pct: 10, weeks: 8 },
+      // chosen on the product page: the cart and orders carry the period in the plan id ('c6' = every 6 weeks), see PS.getPlan
+      { id: 'custom', label: 'Standing order · custom', short: 'Custom', pct: 10, custom: true },
     ],
     // One-time vial deal: 'volume' = tiers below (highest qualifying tier wins);
     // 'bogo' = Buy 1 Get 1 — every second vial of the same product and size is free (stacks excluded); 'off' = no deal
@@ -80,7 +81,16 @@
   };
   new URLSearchParams(location.search).getAll('preview').join(',').split(',').forEach((f) => { if (f in PS.config.features) PS.config.features[f] = true; });
   PS.products = PS.products.filter((p) => !p.flag || PS.config.features[p.flag]);
-  PS.getPlan = (id) => PS.config.plans.find((p) => p.id === id) || PS.config.plans[0];
+  // 'once', '4w', 'custom' (the product page's Custom option), or 'cN' (custom, every N weeks, 1–12) that a cart line or order was saved with.
+  // 'Nw' ids from before Custom existed (the old 8-week plan) read as custom too.
+  PS.getPlan = (id) => {
+    const found = PS.config.plans.find((p) => p.id === id);
+    if (found) return found;
+    const m = /^(?:c(\d+)|(\d+)w)$/.exec(id);
+    if (!m) return PS.config.plans[0];
+    const n = Math.max(1, Math.min(12, +(m[1] || m[2])));
+    return { id: 'c' + n, custom: true, label: `Standing order · every ${n} week${n > 1 ? 's' : ''}`, short: n > 1 ? `Every ${n} weeks` : 'Every week', pct: 10, weeks: n };
+  };
   PS.getSize = (p, id) => p.sizes.find((s) => s.id === id) || p.sizes[0];
   PS.minPrice = (p) => Math.min(...p.sizes.map((s) => s.price));
 
@@ -180,7 +190,7 @@
   /* ---------- orders ---------- */
   const STATUS = [
     { id: 'placed', label: 'Order placed', at: 0 },
-    { id: 'verified', label: 'Research attestation verified', at: 1 },
+    { id: 'verified', label: 'Research-use terms accepted', at: 1 },
     { id: 'packed', label: 'Packed with lot-matched COA', at: 3 },
     { id: 'shipped', label: 'Shipped', at: 8 },
     { id: 'delivered', label: 'Delivered', at: 30 },
@@ -204,8 +214,9 @@
         name: `${data.first} ${data.last}`.trim(),
         org: data.org || '',
         address: { line1: data.address1, line2: data.address2 || '', city: data.city, state: data.state, zip: data.zip },
+        billing: data.billingSame ? null : { line1: data.baddress1, line2: data.baddress2 || '', city: data.bcity, state: data.bstate, zip: data.bzip },
         method: { id: totals.method.id, label: totals.method.label, eta: totals.method.eta },
-        items: totals.lines.map((l) => ({ id: l.id, name: l.product.name, size: l.sizeObj.label, plan: l.planObj.short, planId: l.planObj.id, qty: l.qty, unit: l.unit, total: l.total })),
+        items: totals.lines.map((l) => ({ id: l.id, name: l.product.name, size: l.sizeObj.label, plan: l.planObj.short, planId: l.planObj.id, weeks: l.planObj.weeks || 0, qty: l.qty, unit: l.unit, total: l.total })),
         subtotal: totals.subtotal, tierDiscount: totals.tierDiscount, tierPct: totals.tier ? totals.tier.pct : 0,
         dealDiscount: totals.dealDiscount, dealFree: totals.dealFree,
         promo: totals.promo ? totals.promo.code : null, promoDiscount: totals.promoDiscount,
