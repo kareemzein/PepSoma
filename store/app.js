@@ -11,21 +11,21 @@
   const it = (s) => `<em class="serif">${s}</em>`; // serif italic accent
   const checkItem = (s) => `<li><span class="yc">${icon('check')}</span><span>${s}</span></li>`;
 
-  // One-time vial deal, shown in the top bar and applied in the cart: 'volume' (3+/5+/10+ vial savings) or 'bogo' (Buy 1 Get 1).
-  // To preview the other one without changing this, add ?deal=bogo or ?deal=volume to the address (before the #).
+  // One-time vial deal, shown on product pages and in Home's offer card, and applied in the cart: 'volume' (3+/5+/10+ vial savings),
+  // 'bogo' (Buy 1 Get 1) or 'off' (no deal anywhere). To preview another without changing this, add ?deal=bogo, ?deal=volume or ?deal=off to the address (before the #).
   const DEAL = 'volume';
   const dealParam = new URLSearchParams(location.search).get('deal');
-  PS.config.deal = dealParam === 'bogo' || dealParam === 'volume' ? dealParam : DEAL;
+  PS.config.deal = ['bogo', 'volume', 'off'].includes(dealParam) ? dealParam : DEAL;
   if (PS.config.deal === 'bogo') {
     PS.faqs.forEach((g) => g.items.forEach((q, i) => {
       if (/volume pricing/i.test(q[0])) g.items[i] = ['Do you run any deals?', 'Yes: Buy 1 Get 1 on single vials. Every second vial of the same compound and size is free, applied automatically in your cart. Research stacks are excluded. Institutions ordering at larger scale can apply for wholesale pricing.'];
     }));
   }
-  const dealBar = () => {
-    const bogo = PS.config.deal === 'bogo';
-    const k = bogo ? 'Buy 1 Get 1 · Buy 2 Get 2' : 'Buy more, save more';
-    const v = bogo ? 'Every second vial free, same compound and size' : PS.config.tiers.slice().reverse().map((t) => `${t.min}+ vials ${t.pct}% off`).join(' · ');
-    return `<a class="deal-bar" href="#/shop"><span class="deal-k">${k}</span><span class="deal-v">${v}</span><span class="deal-tag">Auto-applied</span></a>`;
+  // [title, details] for the running deal (read from PS.config), or null when it's off
+  const dealText = () => {
+    if (PS.config.deal === 'bogo') return ['Buy 1 Get 1', 'Every second vial of the same compound and size is free'];
+    if (PS.config.deal === 'volume') return ['Buy more, save more', PS.config.tiers.slice().reverse().map((t) => `${t.min}+&nbsp;vials&nbsp;${t.pct}%&nbsp;off`).join(' · ')];
+    return null;
   };
 
   /* ---------- product card ---------- */
@@ -63,8 +63,7 @@
     const cats = PS.categories.filter((c) => c.id !== 'stacks');
     const stacks = PS.products.filter((p) => p.cat === 'stacks');
     const count = (id) => PS.products.filter((p) => p.cat === id).length;
-    return `${dealBar()}
-    <header class="site-header"><div class="container hdr">
+    return `<header class="site-header"><div class="container hdr">
       <a class="logo" href="#/" aria-label="Pepsoma home">pep<i>soma</i></a>
       <nav class="main-nav" aria-label="Main">
         <span class="nav-pill" aria-hidden="true"></span>
@@ -80,9 +79,7 @@
         ${PS.config.features.supplies ? '<a href="#/shop/supplies" class="nav-link">Supplies</a>' : ''}
         <a href="#/account" class="nav-link show-sm">${u ? 'My account' : 'Sign in'}</a>
       </nav>
-      <form class="hdr-search" data-form="search" role="search"><span class="hdr-search-icon">${icon('search')}</span><input class="input" name="q" placeholder="Search peptides, e.g. BPC-157" aria-label="Search peptides"><button class="hdr-search-x" type="button" data-search-close aria-label="Close search">${icon('x')}</button></form>
       <div class="hdr-actions">
-        <button class="round-btn hide-sm" type="button" data-search-open aria-label="Search">${icon('search')}</button>
         ${themeButton()}
         <div class="track-wrap"><a class="round-btn" href="#/track" aria-label="Track an order">${icon('truck')}</a>
           <div class="track-pane"><strong>Track an order</strong><form class="stack-form" data-form="track-go"><input class="input" name="order" placeholder="Order number, e.g. PS123456" aria-label="Order number" required><input class="input" name="email" type="email" placeholder="Email used at checkout" aria-label="Email" required><button class="btn btn-primary btn-sm" type="submit">Track ${icon('arrow')}</button></form></div></div>
@@ -169,25 +166,22 @@
     const sampleLot = PS.lots(hero)[0];
     const singles = PS.products.filter((p) => !p.includes && !p.noCoa);
     const avgPurity = singles.reduce((s, p) => s + p.purity, 0) / singles.length;
-    const r = (i) => `class="rise" style="--i:${i}"`;
     return {
       html: `
       <section class="hero"><canvas class="hero-net" data-net aria-hidden="true"></canvas><div class="container hero-grid">
         <div class="hero-copy">
-          <span ${r(0)}><span class="trust-chip"><span class="live"></span>Third-party tested · COA on every lot</span></span>
           <h1><span class="line-mask" style="--i:1"><span>Research peptides,</span></span><span class="line-mask" style="--i:2"><span><span class="swap" data-swap>${['documented', 'verified', 'traceable'].map((w, i) => `<em class="serif ${i ? '' : 'on'}">${w}</em>`).join('')}</span> to the lot.</span></span></h1>
           <p class="lead rise" style="--i:3">High-purity peptides for laboratory research. Third-party tested, traceable to the lot, dispatched within 24 hours.</p>
           <div class="btn-row rise" style="--i:4"><a class="btn btn-primary btn-lg" href="#/shop">SHOP PEPTIDES</a><a class="btn btn-yellow btn-lg" href="#/lab-tests"><em class="serif">View lab tests</em></a></div>
           <div class="hero-stats rise" style="--i:5">
             <div><strong data-count="${avgPurity.toFixed(1)}" data-dec="1" data-suffix="%">0%</strong><span>avg. HPLC purity</span></div>
-            <div><strong data-count="${PS.allLots().length}">0</strong><span>lots tested</span></div>
+            <div><strong>Every lot</strong><span>third-party tested</span></div>
             <div><strong data-count="24" data-suffix="h">0h</strong><span>dispatch</span></div>
           </div>
         </div>
         <div class="hero-art rise" style="--i:3">
           <div class="hero-glow"></div>
           <div class="hero-vials"><span class="hv hv1">${PS.vial(PS.getProduct('ghk-cu'), { theme: VT })}</span><span class="hv hv2">${PS.vial(hero, { theme: VT, size: '10 mg' })}</span><span class="hv hv3">${PS.vial(PS.getProduct('nad'), { theme: VT })}</span></div>
-          <div class="float-chip fc1">${icon('shield')}<div><strong>${sampleLot.purity}% purity</strong><small>Current lot · verified</small></div></div>
           <div class="float-chip fc2">${icon('truck')}<div><strong>Ships today</strong><small>Order by ${PS.company.cutoff}</small></div></div>
         </div>
       </div></section>
@@ -210,14 +204,20 @@
       </div></section>
 
       <section class="section"><div class="container">
-        <div class="sec-head split-head reveal"><h2>Best-selling ${it('compounds')}</h2><a class="btn btn-ghost" href="#/shop">View full catalog ${icon('arrow')}</a></div>
+        <div class="sec-head split-head reveal"><h2>Best-selling ${it('compounds')}</h2>
+          <form data-form="search" role="search" class="shop-search home-search">${icon('search')}<input class="input" name="q" placeholder="Search compounds" aria-label="Search compounds"></form>
+          <a class="btn btn-ghost" href="#/shop">View full catalog ${icon('arrow')}</a></div>
         <div class="pgrid">${best.map((p, i) => card(p, i)).join('')}</div>
       </div></section>
 
       <section class="testi"><div class="container">
-        <h2 class="reveal">Why labs choose ${it('Pepsoma')}</h2>
-        <div class="testi-grid">${PS.testimonials.map((x, i) => `<figure class="testi-card reveal" style="--d:${i}"><div class="stars">${icon('star').repeat(5)}</div><h3>${esc(x.title)}</h3><blockquote>“${esc(x.body)}”</blockquote><figcaption>— ${esc(x.who)} —</figcaption></figure>`).join('')}</div>
-        <p class="testi-note">Sample testimonials for demo purposes.</p>
+        <h2 class="reveal">Why ${it('Pepsoma')}</h2>
+        <div class="testi-grid">${[
+          ['doc', 'Lot-matched COAs', 'Each vial’s lot number matches a Certificate of Analysis, printed in the box and published online.'],
+          ['shield', 'Third-party tested', 'Every lot goes to an independent ISO/IEC 17025-accredited laboratory before it’s listed.'],
+          ['truck', '24-hour dispatch', `Orders placed before ${PS.company.cutoff} ship the same day, with tracking.`],
+          ['flask', 'Research use only', 'Documented and sold for laboratory research, with a research-use confirmation at checkout.'],
+        ].map(([ic, t, body], i) => `<div class="testi-card reveal" style="--d:${i}">${icon(ic)}<h3>${t}</h3><p>${body}</p></div>`).join('')}</div>
       </div></section>
 
       <section class="section section-cream"><div class="container">
@@ -303,6 +303,7 @@
       : [`${esc(p.name)} — ${p.liquid ? 'sterile multi-use vial' : 'lyophilized vial'} (<span data-size-label>${s.label}</span>)`, p.noCoa ? 'Manufacturer specification sheet' : 'Printed, lot-matched Certificate of Analysis'];
     included.push('Tamper-evident seal & lot label', 'Discreet, protective packaging', 'Same-day dispatch before ' + PS.company.cutoff, 'Research support from our team');
     const plans = PS.config.plans;
+    const deal = dealText();
     const seqParts = (p.seq || '').split('-');
     const seq = seqParts.length > 2 && seqParts.every((x) => /^[A-Z][a-z]{2}$/.test(x)) ? seqParts : null;
 
@@ -343,6 +344,7 @@
                 <span class="plan-body"><strong>${pl.id === 'once' ? 'ONE-TIME PURCHASE' : `STANDING ORDER · ${pl.short.toUpperCase()}`}</strong>
                 <small>${pl.id === 'once' ? (PS.config.deal === 'bogo' ? 'Billed once · Buy 1 Get 1 free' : 'Billed once · volume savings apply') : `Billed <b data-plan-price="${pl.id}"></b> today, then every ${pl.weeks} weeks<br>Skip or cancel anytime`}</small></span>
                 <span class="plan-price">${pl.pct ? `<span class="pill-y">Save ${pl.pct}%</span>` : ''}<s data-plan-compare="${pl.id}"></s><b data-plan-price="${pl.id}"></b></span></label>`).join('')}</div>
+              ${deal && !(PS.config.deal === 'bogo' && p.includes) ? `<p class="deal-line"><span class="yc">${icon('check')}</span><span><strong>${deal[0]}:</strong> ${deal[1]}. Applied automatically to one-time orders.</span></p>` : ''}
               <div class="buy-row">${H.qty(1)}<button class="btn btn-primary btn-lg buy-btn" type="submit">ADD TO CART · <span data-line-price></span></button></div>
             </form>
             <div class="info-box"><span class="info-i">i</span><div><strong>Research use attestation at checkout</strong><p>Checkout asks you to confirm you’re 21+ and purchasing for lawful in-vitro research. Orders ship within 24 hours. Damaged or incorrect? We replace it free.</p></div></div>
@@ -432,20 +434,29 @@
   }
   darkMq.addEventListener('change', syncModeUI);
   document.addEventListener('click', (e) => {
+    // stack cards open their page from anywhere on the card; links and buttons inside keep their own action
+    const stack = e.target.closest('.stack-card');
+    if (stack && !e.target.closest('a, button')) { PS.go(stack.querySelector('.stack-img').getAttribute('href')); return; }
     const cyc = e.target.closest('[data-mode-cycle]');
     if (cyc) { const order = ['auto', 'light', 'dark']; applyMode(order[(order.indexOf(getMode()) + 1) % 3], cyc); return; }
     const set = e.target.closest('[data-mode-set]');
     if (set) applyMode(set.dataset.modeSet, set);
-    // header search: the search bar takes the nav's place until you search, press Esc or click away
-    const hdr = document.querySelector('.hdr');
-    if (e.target.closest('[data-search-open]')) { const on = !hdr.classList.contains('searching'); hdr.classList.toggle('searching', on); if (on) hdr.querySelector('.hdr-search input').focus(); return; }
-    if (e.target.closest('[data-search-close]') || (hdr && hdr.classList.contains('searching') && !e.target.closest('.hdr-search'))) hdr.classList.remove('searching');
+    // dropdowns open on hover or focus, so a click on an item shuts its menu
+    if (e.target.closest('.dd a')) shutMenus();
     const rail = e.target.closest('[data-rail]');
     if (rail) { const t = document.querySelector('[data-rail-track]'); t.scrollBy({ left: rail.dataset.rail * t.clientWidth * 0.9, behavior: 'smooth' }); }
   });
-  const closeSearch = () => { const h = document.querySelector('.hdr.searching'); if (h) h.classList.remove('searching'); };
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSearch(); });
-  addEventListener('hashchange', closeSearch);
+  // a menu shut this way stays shut until the pointer leaves it, then opens on hover again
+  function shutMenus() {
+    document.querySelectorAll('.dd-wrap, .track-wrap').forEach((w) => { if (w.matches(':hover')) w.classList.add('shut'); });
+    const a = document.activeElement;
+    if (a && a.closest('.dd-wrap, .track-wrap')) a.blur();
+  }
+  document.addEventListener('pointerout', (e) => {
+    const w = e.target.closest && e.target.closest('.shut');
+    if (w && !w.contains(e.relatedTarget)) w.classList.remove('shut');
+  });
+  addEventListener('hashchange', shutMenus);
   // carousel arrows dim at either end
   document.addEventListener('scroll', (e) => {
     const t = e.target;
@@ -489,21 +500,6 @@
     setTimeout(() => words[cur].classList.remove('out'), 600);
     words[next].classList.add('on');
   }, 2600);
-
-  // product card spotlight/tilt
-  document.addEventListener('pointermove', (e) => {
-    if (e.pointerType === 'touch' || reduced()) return;
-    const card = e.target.closest('.pcard');
-    if (card) {
-      const r = card.getBoundingClientRect(), px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
-      card.style.setProperty('--mx', px * 100 + '%'); card.style.setProperty('--my', py * 100 + '%');
-      card.style.transform = `perspective(900px) rotateX(${(0.5 - py) * 5}deg) rotateY(${(px - 0.5) * 6}deg) translateY(-4px)`;
-    }
-  });
-  document.addEventListener('pointerout', (e) => {
-    const card = e.target.closest && e.target.closest('.pcard');
-    if (card && !card.contains(e.relatedTarget)) card.style.transform = '';
-  });
 
   // molecule network behind the hero headline: nodes drift, nearby ones link, all in the accent color
   function startNet(cv) {
@@ -570,7 +566,7 @@
     }
   }), { threshold: 0.3 }) : null;
 
-  // fly-to-cart: a yellow dot arcs from the button into the cart
+  // fly-to-cart: a yellow dot arcs from the button into the cart, kept inside the window all the way
   PS.on('added', ({ el }) => {
     const cart = document.querySelector('.cart-btn');
     if (!el || !cart) return;
@@ -581,34 +577,91 @@
     dot.className = 'fly';
     dot.innerHTML = icon('flask');
     document.body.appendChild(dot);
-    const x0 = a.left + a.width / 2, y0 = a.top + a.height / 2, x1 = b.left + b.width / 2, y1 = b.top + b.height / 2;
-    const mx = (x0 + x1) / 2, my = Math.min(y0, y1) - 140;
-    dot.animate([
-      { transform: `translate(${x0}px, ${y0}px) scale(.4)`, opacity: 0 },
-      { transform: `translate(${x0}px, ${y0 - 20}px) scale(1)`, opacity: 1, offset: 0.12 },
-      { transform: `translate(${mx}px, ${my}px) scale(.9)`, offset: 0.55 },
-      { transform: `translate(${x1}px, ${y1}px) scale(.3)`, opacity: 0.6 },
-    ], { duration: 650, easing: 'cubic-bezier(.45,0,.25,1)' }).onfinish = () => { dot.remove(); bump(); };
+    // the dot is 44px wide: keep its centre 28px in from every edge. A quadratic curve stays inside its control points, so clamping those is enough.
+    const fit = (v, max) => Math.min(max - 28, Math.max(28, v));
+    const x0 = fit(a.left + a.width / 2, innerWidth), y0 = fit(a.top + a.height / 2, innerHeight);
+    const x1 = fit(b.left + b.width / 2, innerWidth), y1 = fit(b.top + b.height / 2, innerHeight);
+    // a flat arc: the middle bows away from the straight line by a fifth of the distance (at most 70px), upward, or toward the middle of the screen on a steep path
+    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, lift = Math.min(70, Math.max(24, Math.hypot(x1 - x0, y1 - y0) * 0.2));
+    let nx = y0 - y1, ny = x1 - x0;
+    const len = Math.hypot(nx, ny) || 1;
+    nx /= len; ny /= len;
+    if (Math.abs(ny) > 0.3 ? ny > 0 : (nx > 0) === (mx > innerWidth / 2)) { nx = -nx; ny = -ny; }
+    const bow = (k) => [fit(mx + k * nx * lift, innerWidth), fit(my + k * ny * lift, innerHeight)];
+    let [cx, cy] = bow(1);
+    if (Math.hypot(cx - mx, cy - my) < lift * 0.6) [cx, cy] = bow(-1); // no room that way: bow the other way
+    const steps = 14;
+    dot.animate(Array.from({ length: steps + 1 }, (_, i) => {
+      const t = i / steps, u = 1 - t;
+      return {
+        transform: `translate(${u * u * x0 + 2 * u * t * cx + t * t * x1}px, ${u * u * y0 + 2 * u * t * cy + t * t * y1}px) scale(${t < 0.15 ? 0.4 + t * 4 : 1 - (t - 0.15) * 0.8})`,
+        opacity: i === 0 ? 0 : i === steps ? 0.6 : 1,
+      };
+    }), { duration: 650, easing: 'cubic-bezier(.45,0,.25,1)' }).onfinish = () => { dot.remove(); bump(); };
     dot.style.left = '0px'; dot.style.top = '0px';
   });
 
+  // Home's offer card: once the product carousel has been on screen for 4 seconds, the deal fades in mid-screen (once per browser session, not while the deal is off)
+  const OFFER = 'pepsoma.offerSeen';
+  let offerIO = null, offerTimer = 0;
+  function offerStop() {
+    clearTimeout(offerTimer);
+    if (offerIO) offerIO.disconnect();
+    offerIO = null;
+    document.querySelectorAll('.offer-card').forEach((c) => c.remove());
+  }
+  function offerWatch(main) {
+    offerStop();
+    const deal = dealText(), band = main.querySelector('.rail-band');
+    let seen = false;
+    try { seen = !!sessionStorage.getItem(OFFER); } catch (e) { /* blocked storage: shows once per page load */ }
+    if (!deal || seen || !band || !('IntersectionObserver' in window)) return;
+    const show = () => {
+      // wait while the age gate, the cart or the opening is up
+      if (document.querySelector('#ps-modal:not([hidden]), #cart-drawer:not([hidden]), .opening-cover')) { offerTimer = setTimeout(show, 1500); return; }
+      try { sessionStorage.setItem(OFFER, '1'); } catch (e) { /* ignore */ }
+      offerStop();
+      document.body.insertAdjacentHTML('beforeend', `<aside class="offer-card" role="complementary" aria-label="Offer"><button class="offer-x" type="button" data-offer-close aria-label="Close offer">${icon('close')}</button>
+        <span class="eyebrow">Auto-applied</span><h3>${deal[0]}</h3><p>${deal[1]}</p><a class="btn btn-primary btn-sm" href="#/shop">Shop peptides ${icon('arrow')}</a></aside>`);
+      const card = document.querySelector('.offer-card');
+      void card.offsetWidth;
+      card.classList.add('in');
+    };
+    offerIO = new IntersectionObserver(([en]) => {
+      clearTimeout(offerTimer);
+      if (en.isIntersecting) offerTimer = setTimeout(show, 4000);
+    }, { threshold: 0.4 });
+    offerIO.observe(band);
+  }
+  document.addEventListener('click', (e) => {
+    const x = e.target.closest('[data-offer-close], .offer-card a');
+    if (!x) return;
+    const card = x.closest('.offer-card');
+    card.classList.remove('in');
+    setTimeout(() => card.remove(), 600);
+  });
+
   // runs after every page render
-  function afterRender(route, main) {
-    main.classList.remove('entered', 'page-enter');
-    void main.offsetWidth;
-    main.classList.add('entered', 'page-enter');
-    if (io) main.querySelectorAll('[data-count]:not([data-replay]), [data-observe], [data-loop]').forEach((el) => io.observe(el));
-    else main.querySelectorAll('[data-count]').forEach(countUp);
+  // mode: 'soft' = the same page redrawn (nothing re-enters), 'vt' = a page change the browser is cross-fading, 'enter' = the page-enter fade
+  function afterRender(route, main, mode) {
+    const soft = mode === 'soft';
+    if (!soft) { main.classList.remove('entered', 'page-enter'); void main.offsetWidth; }
+    main.classList.add('entered');
+    if (mode === 'enter') main.classList.add('page-enter');
+    if (soft) main.querySelectorAll('[data-count]').forEach((el) => { el.dataset.done = 1; el.textContent = (+el.dataset.count).toFixed(+(el.dataset.dec || 0)) + (el.dataset.suffix || ''); });
+    if (io) main.querySelectorAll(soft ? '[data-observe], [data-loop]' : '[data-count]:not([data-replay]), [data-observe], [data-loop]').forEach((el) => io.observe(el));
+    else if (!soft) main.querySelectorAll('[data-count]').forEach(countUp);
     PS.$$('.theme-btn, .seg').length && syncModeUI();
     const net = main.querySelector('[data-net]');
     if (net) startNet(net);
     movePill(null);
+    if (!soft) { offerStop(); if (route.name === 'home') offerWatch(main); }
   }
 
   // keep the toggle labels right after the header re-renders (sign in / out)
   PS.on('auth', () => setTimeout(syncModeUI));
 
-  PS.boot({ name: 'a', vialTheme: VT, cartDelay: 560, header, footer, drawer, summary, pageHead, ageGate, ageDenied, cookieBanner, views, afterRender });
+  PS.boot({ name: 'a', vialTheme: VT, header, footer, drawer, summary, pageHead, ageGate, ageDenied, cookieBanner, views, afterRender });
   syncModeUI();
 
   // opening, the first time the site is opened in this browser (index.html sets html.opening): the mark traces itself, then its middle opens

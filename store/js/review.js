@@ -1158,13 +1158,34 @@
   // Variant names like ['b', 'c'] add New B / New C chips; the view reads PS.variant(id) and CSS can key off html[data-var-<id>="b"].
   const CHANGES = [
     ['Oct 1 round', [
-      ['search', 'Header search', 'A search button in the header opens a search bar in place of the menu.', '/', '[data-search-open]'],
+      ['search', 'Search', 'The header search button is gone (Oct 28). Search now sits next to "Best-selling compounds" on Home and opens the shop with your term.', '/', '.home-search'],
       ['track', 'Track an order', 'A truck button in the header opens a track-order pane.', '/', '.track-wrap'],
       ['explore', 'Explore Peptides button', 'Uses the same type as Account Login and now comes first, before it.', '/', '.hdr-actions .btn-yellow'],
       ['almost', 'Checkout heading', '"Almost there" is in one thin font. Add something to the cart first to see it.', '/checkout', '.page-head .thin'],
       ['rail', 'Browse compounds', 'A carousel of product cards replaces the scrolling compound names.', '/', '.rail-band'],
       ['labs', 'Lab Tests cards', 'One card per product, with no status column.', '/lab-tests', '.lot-cards'],
       ['coa', 'Certificate page', 'View COA opens a certificate page on the site, with the lab\'s PDF at the bottom.', '/coa/PS-BPC-2609A', '.coa-web'],
+    ]],
+    ['Oct 28 round · Whole site', [
+      ['pageflash', 'No page reload flash', 'Filters, sort, promo codes and cart changes now update in place (the product grid just fades). Moving between pages cross-fades smoothly.', '/shop', '.shop-bar'],
+      ['dd-close', 'Dropdowns close on click', 'Hover a menu, click an item: the menu closes (and on any page change) until you move away and back.', '/', '.main-nav'],
+      ['login-glow', 'Account Login glow', 'Hover Account Login: the glow is a tight ring that no longer spills below the bar.', '/', '.hdr-actions a[href="#/account"]'],
+      ['hdr-hover', 'Header hover highlight', 'Header buttons light up on hover, and the menu pill and dropdown highlight are easier to see, in light and dark.', '/', '.main-nav'],
+      ['card-glow', 'No glow on cards', 'The glow that followed the cursor over product cards is gone.', '/shop', '.pgrid'],
+      ['fly', 'Add-to-cart fly-in', 'The circle stays inside the window and follows a flatter arc.', '/shop', '.pgrid'],
+      ['add-quiet', 'Quiet add to cart', 'Adding shows no "added" notice and the cart does not open. The fly-in and the cart count are the feedback.', '/shop', '.cart-btn'],
+      ['cookie', 'Cookie banner', 'A shaded background so it stands out from the page. Open the store in a private window to see it.', '/', '.cookie-banner'],
+      ['phone', 'Phone layout', 'At phone width the floating header sits centered and a little higher, and product cards are one column at a comfortable width.', '/shop', '.pgrid'],
+      ['deal-pdp', 'Deal on product pages', 'The top deal bar is gone. The bulk deal is a short line above the quantity on product pages, and the discount shows in the checkout summary.', '/product/bpc-157', '.deal-line'],
+    ]],
+    ['Oct 28 round · Home', [
+      ['hero-pill', 'Hero pill removed', 'The "Third-party tested · COA on every lot" pill and its pulsing dot are gone.', '/', '.hero-copy'],
+      ['hero-chips', 'Hero chips', 'The floating 99.4% purity chip is gone and "Ships today" is a small, muted note.', '/', '.hero-art'],
+      ['hero-lots', 'Hero stats', '"45 lots tested" is now "Every lot, third-party tested". The 99.3% average purity stays.', '/', '.hero-stats'],
+      ['offer', 'Offer card', 'Stay on the product carousel for about 4 seconds: a small deal card fades in mid-screen. Once per session; the X closes it.', '/', '.rail-band'],
+      ['rail-static', 'Static product cards', 'Carousel cards no longer jump, lift or tilt on hover, and there is no glow behind the vials.', '/', '.rail-band'],
+      ['why', 'Why Pepsoma', 'The sample reviews are replaced with four plain points, with no hover jump.', '/', '.testi'],
+      ['stack-click', 'Stack cards are clickable', 'Click anywhere on a research stack card to open its page.', '/', '.stack-grid'],
     ]],
   ];
   const CH = CHANGES.flatMap(([g, items]) => items.map(([id, t, ask, go, sel, vars]) => ({ id, g, t, ask, go, sel, vars: vars || [] })));

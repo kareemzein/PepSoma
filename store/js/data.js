@@ -240,13 +240,6 @@
     { n: '04', title: 'Verify & get support', body: 'Match the lot number on your vial to its COA online. Our team answers technical questions within one business day.' },
   ];
 
-  // Placeholder testimonials for the demo — replace with real, verifiable reviews before launch.
-  PS.testimonials = [
-    { title: 'Documentation is the difference', body: 'Lot-matched COAs made our incoming QC a five-minute job. Purity matched our in-house HPLC within a tenth of a percent.', who: 'Principal Investigator, academic lab' },
-    { title: 'Fast and well packed', body: 'Ordered at noon, arrived next day. Vials were packed securely and labeled clearly with lot numbers. Exactly what we need.', who: 'Lab Manager, biotech R&D' },
-    { title: 'Support that knows chemistry', body: 'Asked a question about counter-ions on a Friday and had a real answer from a chemist by Monday morning.', who: 'Research Associate, CRO' },
-  ];
-
   PS.getProduct = (id) => PS.products.find((p) => p.id === id);
   PS.getCategory = (id) => PS.categories.find((c) => c.id === id);
 })();

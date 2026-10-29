@@ -66,7 +66,7 @@
       { id: '8w', label: 'Standing order · every 8 weeks', short: 'Every 8 weeks', pct: 10, weeks: 8 },
     ],
     // One-time vial deal: 'volume' = tiers below (highest qualifying tier wins);
-    // 'bogo' = Buy 1 Get 1 — every second vial of the same product and size is free (stacks excluded)
+    // 'bogo' = Buy 1 Get 1 — every second vial of the same product and size is free (stacks excluded); 'off' = no deal
     deal: 'volume',
     tiers: [ { min: 10, pct: 15 }, { min: 5, pct: 10 }, { min: 3, pct: 5 } ],
     promos: {
@@ -140,8 +140,9 @@
       const once = lines.filter((l) => l.planObj.id === 'once');
       const onceQty = once.reduce((s, l) => s + l.qty, 0);
       const bogo = C.deal === 'bogo';
-      const tier = bogo ? null : C.tiers.find((t) => onceQty >= t.min) || null;
-      const nextTier = bogo ? null : C.tiers.slice().reverse().find((t) => t.min > onceQty) || null;
+      const volume = C.deal === 'volume';
+      const tier = volume ? C.tiers.find((t) => onceQty >= t.min) || null : null;
+      const nextTier = volume ? C.tiers.slice().reverse().find((t) => t.min > onceQty) || null : null;
       const tierDiscount = tier ? PS.round(sum(once, (l) => l.total) * tier.pct / 100) : 0;
       const bogoLines = bogo ? once.filter((l) => !l.product.includes) : [];
       bogoLines.forEach((l) => { l.free = Math.floor(l.qty / 2); });

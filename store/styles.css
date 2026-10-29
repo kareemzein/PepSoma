@@ -115,6 +115,12 @@ h2 { font-size: clamp(1.8rem, 3.4vw, 2.7rem); }
 /* page enter */
 #view.page-enter { animation: pageIn .5s var(--ease-out); }
 @keyframes pageIn { from { opacity: 0; transform: translateY(10px); } }
+/* the same page redrawn (filters, sort, promo code, cart): nothing re-enters, only the product grid fades */
+#view.soft .rise, #view.soft .line-mask > span { animation: none; opacity: 1; transform: none; filter: none; }
+#view.soft .pgrid { animation: gridIn .18s var(--ease-out); }
+@keyframes gridIn { from { opacity: 0; } }
+/* a different page: the browser cross-fades the old and new page (see render() in js/ui.js) */
+html.vt-page::view-transition-old(root), html.vt-page::view-transition-new(root) { animation-duration: .22s; animation-timing-function: ease; }
 
 /* opening (first visit in this browser only): the mark traces itself, then its middle opens and you fly through onto the page.
    html.opening is set in index.html before first paint; its ::after holds the cover until app.js builds it. */
@@ -154,11 +160,6 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 @keyframes ocMark { to { transform: scale(30); opacity: 0; } }
 
 /* ---------- header ---------- */
-.deal-bar { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 4px 14px; padding: 10px 16px; background: #1b2d74; color: #fff; text-decoration: none; font-size: .85rem; text-align: center; }
-.deal-k { font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #d8d85a; }
-.deal-v { color: rgba(255,255,255,.88); }
-.deal-tag { font-size: .66rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; padding: 3px 8px; border-radius: 99px; background: #d8d85a; color: #1b2d74; }
-.deal-bar:hover .deal-k { text-decoration: underline; text-underline-offset: 3px; }
 /* #app-header is only as tall as the header, which kept it from sticking; let the header stick to the page instead */
 #app-header { display: contents; }
 .site-header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50; display: flow-root; background: var(--header-bg); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); transition: background-color .35s; }
@@ -170,7 +171,7 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .logo { font-family: var(--font-serif); font-weight: 700; font-size: 2rem; letter-spacing: -.03em; text-decoration: none; color: var(--text); line-height: 1; display: inline-flex; align-items: baseline; }
 .logo i { font-style: italic; font-weight: 500; color: var(--accent); }
 .main-nav { position: relative; display: flex; align-items: center; gap: 2px; flex: 1; }
-.nav-pill { position: absolute; top: 50%; height: 40px; transform: translateY(-50%); background: var(--bg-soft); border-radius: 999px; pointer-events: none; opacity: 0; transition: left .28s var(--ease-out), width .28s var(--ease-out), opacity .2s; z-index: 0; }
+.nav-pill { position: absolute; top: 50%; height: 40px; transform: translateY(-50%); background: var(--lav); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent); border-radius: 999px; pointer-events: none; opacity: 0; transition: left .28s var(--ease-out), width .28s var(--ease-out), opacity .2s; z-index: 0; }
 .nav-link { position: relative; z-index: 1; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; padding: 10px 14px; text-decoration: none; font-size: .95rem; font-weight: 500; border-radius: 999px; }
 .nav-link .icon { width: 15px; height: 15px; transition: transform .25s; }
 .dd-wrap:hover .nav-link .icon { transform: rotate(180deg); }
@@ -180,11 +181,16 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .dd::before { content: ''; position: absolute; left: 0; right: 0; top: -10px; height: 10px; }
 .dd a { padding: 10px 12px; border-radius: 12px; text-decoration: none; font-size: .92rem; display: flex; justify-content: space-between; gap: 10px; transition: background .15s, padding-left .2s; }
 .dd a small { color: var(--faint); }
-.dd a:hover { background: var(--bg-soft); padding-left: 16px; }
+.dd a:hover { background: var(--lav); padding-left: 16px; }
 .dd-wrap:hover .dd, .dd-wrap:focus-within .dd { opacity: 1; visibility: visible; transform: none; }
+/* a click on a menu item (or a page change) shuts the menu until the pointer leaves it */
+@media (min-width: 1025px) {
+  .dd-wrap.shut .dd { opacity: 0; visibility: hidden; transform: translateY(8px) scale(.98); }
+  .dd-wrap.shut .nav-link .icon { transform: none; }
+}
 .hdr-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
 .round-btn { position: relative; width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--text); display: grid; place-items: center; transition: transform .2s var(--ease-spring), border-color .2s; }
-.round-btn:hover { border-color: var(--line-2); transform: translateY(-1px); }
+.round-btn:hover { background: var(--lav); border-color: var(--lav-strong); transform: translateY(-1px); }
 .round-btn .icon { width: 21px; height: 21px; }
 .cart-count { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; border-radius: 10px; background: var(--primary); color: var(--primary-text); font-size: .7rem; font-weight: 700; display: grid; place-items: center; padding: 0 5px; transform: scale(.001); transition: transform .3s var(--ease-spring); }
 .cart-count.has { transform: scale(1); }
@@ -193,16 +199,7 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .nav-toggle { display: none; }
 .show-sm { display: none !important; }
 .hdr-actions .btn-yellow { font-size: .95rem; font-weight: 700; } /* same type as the Account Login pill */
-/* header search: the search button swaps the nav for a full-width search bar (the header has no room for both) */
-.hdr-search { display: none; position: relative; flex: 1; align-items: center; }
-.hdr.searching .main-nav { display: none; }
-.hdr.searching .hdr-search { display: flex; animation: pageIn .3s var(--ease-out); }
-.hdr-search .input { width: 100%; min-height: 46px; padding: 0 46px 0 44px; border-radius: 999px; }
-.hdr-search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--muted); display: flex; pointer-events: none; }
-.hdr-search-icon .icon { width: 18px; height: 18px; }
-.hdr-search-x { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border: 0; border-radius: 50%; background: none; color: var(--muted); display: grid; place-items: center; cursor: pointer; }
-.hdr-search-x:hover { background: var(--bg-soft); color: var(--text); }
-.hdr-search-x .icon { width: 16px; height: 16px; }
+.hdr-actions .btn:hover { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 26%, transparent); } /* a tight ring: it can't spill below the bar */
 /* track-order pane: opens under the truck button on hover or keyboard focus (on touch, the button goes to the Track Order page) */
 .track-wrap { position: relative; }
 .track-pane { position: absolute; top: calc(100% + 10px); right: -60px; width: 300px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-lg); padding: 16px; display: grid; gap: 10px; opacity: 0; visibility: hidden; transform: translateY(8px); transition: opacity .2s, transform .25s var(--ease-out), visibility .2s; z-index: 5; }
@@ -210,6 +207,7 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .track-pane .stack-form { display: grid; gap: 8px; }
 .track-pane .btn { margin-top: 2px; }
 .track-wrap:hover .track-pane, .track-wrap:focus-within .track-pane { opacity: 1; visibility: visible; transform: none; }
+.track-wrap.shut .track-pane { opacity: 0; visibility: hidden; transform: translateY(8px); }
 @media (hover: none) { .track-pane { display: none; } }
 
 /* theme toggle: sun / moon / auto glyphs cross-fade */
@@ -235,14 +233,11 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .swap > em { grid-area: 1 / 1; opacity: 0; transform: translateY(40%); filter: blur(6px); transition: opacity .5s var(--ease-out), transform .6s var(--ease-expo), filter .5s; white-space: nowrap; color: var(--accent); }
 .swap > em.on { opacity: 1; transform: none; filter: none; }
 .swap > em.out { opacity: 0; transform: translateY(-40%); filter: blur(6px); }
-.trust-chip { display: inline-flex; gap: 2px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 99px; padding: 7px 14px 7px 10px; font-size: .82rem; font-weight: 600; }
-.trust-chip .live { width: 8px; height: 8px; border-radius: 50%; background: #2fbf71; margin-right: 8px; box-shadow: 0 0 0 0 rgba(47,191,113,.5); animation: pulse 2s infinite; }
-@keyframes pulse { 70% { box-shadow: 0 0 0 9px rgba(47,191,113,0); } 100% { box-shadow: 0 0 0 0 rgba(47,191,113,0); } }
 .hero-stats { display: flex; gap: 0; margin: 34px 0 0; max-width: 520px; }
-.hero-stats > div { flex: 1; display: grid; gap: 4px; padding: 0 20px; }
+.hero-stats > div { flex: 1 1 auto; display: grid; gap: 4px; padding: 0 20px; }
 .hero-stats > div:first-child { padding-left: 0; }
 .hero-stats > div + div { border-left: 1px solid var(--line-2); }
-.hero-stats strong { font-family: var(--font-serif); font-style: italic; font-weight: 400; font-size: clamp(1.9rem, 3vw, 2.5rem); line-height: 1; font-variant-numeric: tabular-nums; }
+.hero-stats strong { font-family: var(--font-serif); font-style: italic; font-weight: 400; font-size: clamp(1.9rem, 3vw, 2.5rem); line-height: 1; font-variant-numeric: tabular-nums;  white-space: nowrap; }
 .hero-stats span { color: var(--muted); font-size: .85rem; }
 .hero-art { position: relative; height: 540px; perspective: 1000px; }
 .hero-glow { position: absolute; left: 50%; top: 56%; width: min(560px, 100%); aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; background: radial-gradient(circle, rgba(216,216,90,.5) 0, rgba(90,115,216,.3) 36%, transparent 68%); filter: blur(12px); animation: glow 7s ease-in-out infinite alternate; }
@@ -258,8 +253,10 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .float-chip div { display: grid; }
 .float-chip small { color: var(--muted); }
 .float-chip .icon { width: 32px; height: 32px; padding: 7px; border-radius: 50%; background: var(--yellow); color: #1b2d74; }
-.fc1 { top: 56px; left: 0; animation: float 7s ease-in-out infinite; }
-.fc2 { bottom: 40px; right: 0; animation: float 8s ease-in-out -2s infinite; }
+/* "Ships today": a quiet note, not a badge (small, muted, no bright icon circle, no float) */
+.fc2 { bottom: 40px; right: 0; gap: 8px; padding: 8px 12px; border-radius: 12px; box-shadow: none; font-size: .78rem; background: var(--surface-glass); }
+.fc2 .icon { width: 18px; height: 18px; padding: 0; background: none; color: var(--muted); }
+.fc2 strong { font-weight: 600; color: var(--muted); }
 
 /* ---------- compound carousel (home): swipe or use the arrows, snaps card by card ---------- */
 .rail-band { background: var(--cream); padding: 8px 0 64px; }
@@ -281,10 +278,12 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .sec-head.center { max-width: 720px; margin: 0 auto 44px; text-align: center; }
 .split-head { display: flex; justify-content: space-between; align-items: end; gap: 20px; flex-wrap: wrap; }
 .split-head h2 { margin: 0; }
+.split-head .home-search { flex: 0 1 320px; margin: 0 auto 0 8px; }
+.home-search .input { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
 
 /* ---------- stacks ---------- */
 .stack-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-.stack-card { position: relative; display: grid; grid-template-columns: 200px 1fr; gap: 10px; background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; transition: border-color .25s, box-shadow .3s, transform .3s var(--ease-out); }
+.stack-card { position: relative; cursor: pointer; display: grid; grid-template-columns: 200px 1fr; gap: 10px; background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; transition: border-color .25s, box-shadow .3s, transform .3s var(--ease-out); }
 .stack-card:hover { border-color: var(--yellow-line); box-shadow: var(--shadow); transform: translateY(-3px); }
 .stack-img { background: var(--bg-soft); display: grid; place-items: center; padding: 20px; }
 .stack-img .vial-group { height: 170px; transition: transform .5s var(--ease-spring); }
@@ -298,13 +297,11 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 
 /* ---------- product grid ---------- */
 .pgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-.pcard { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; display: flex; flex-direction: column; transition: transform .35s var(--ease-out), box-shadow .35s, border-color .25s; transform-style: preserve-3d; }
-.pcard:hover { box-shadow: var(--shadow-lg); border-color: var(--line-2); }
-.pcard::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(400px circle at var(--mx, 50%) var(--my, 0%), rgba(255,255,255,.14), transparent 40%); opacity: 0; transition: opacity .3s; }
-.pcard:hover::after { opacity: 1; }
-.pcard-img { position: relative; display: grid; place-items: center; height: 230px; background: radial-gradient(circle at 50% 72%, var(--lav) 0, var(--bg-soft) 62%); }
-.pcard-img .vial-single, .pcard-img .vial-group { height: 180px; transition: transform .45s var(--ease-spring); }
-.pcard:hover .pcard-img .vial-single { transform: translateY(-8px) rotate(-3deg); }
+.pcard { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; display: flex; flex-direction: column; }
+/* cards are static: no hover lift, tilt or cursor glow, and a flat panel behind the vial */
+.pcard-img { position: relative; display: grid; place-items: center; height: 230px; background: var(--bg-soft); }
+.pcard-img .vial-single, .pcard-img .vial-group { height: 180px; }
+.pcard .vial-svg { filter: none; }
 .pcard-img .pill-y { position: absolute; top: 14px; left: 14px; z-index: 2; }
 .sale-tag { position: absolute; top: 14px; right: 14px; z-index: 2; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 4px 10px; border-radius: 99px; background: var(--primary); color: var(--primary-text); }
 .pcard-body { padding: 18px 18px 20px; display: flex; flex-direction: column; flex: 1; }
@@ -316,18 +313,14 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .pcard-sizes span { font-size: .72rem; border: 1px solid var(--line); border-radius: 99px; padding: 3px 9px; color: var(--muted); }
 .pcard-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: auto; }
 
-/* ---------- testimonials ---------- */
-.testi { position: relative; overflow: hidden; background: radial-gradient(900px 400px at 20% 0%, #4a63c9, transparent 70%), linear-gradient(135deg, #14215a, #1b2d74 60%, #2c43a0); color: #fff; padding: 88px 0 60px; text-align: center; }
+/* ---------- why Pepsoma ---------- */
+.testi { position: relative; overflow: hidden; background: radial-gradient(900px 400px at 20% 0%, #4a63c9, transparent 70%), linear-gradient(135deg, #14215a, #1b2d74 60%, #2c43a0); color: #fff; padding: 88px 0; text-align: center; }
 .testi h2 { color: #fff; margin-bottom: 44px; font-weight: 400; }
-.testi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: left; }
-.testi-card { margin: 0; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); backdrop-filter: blur(10px); border-radius: var(--radius-lg); padding: 26px; transition: transform .35s var(--ease-out), background .3s; }
-.testi-card:hover { transform: translateY(-4px); background: rgba(255,255,255,.14); }
-.stars { display: flex; gap: 4px; margin-bottom: 14px; }
-.stars .icon { width: 20px; height: 20px; color: var(--yellow); }
+.testi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; text-align: left; }
+.testi-card { margin: 0; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); backdrop-filter: blur(10px); border-radius: var(--radius-lg); padding: 26px; }
+.testi-card .icon { width: 36px; height: 36px; padding: 8px; border-radius: 50%; background: rgba(255,255,255,.12); color: var(--yellow); margin-bottom: 14px; }
 .testi-card h3 { color: #fff; font-size: 1.1rem; font-weight: 700; }
-.testi-card blockquote { margin: 0 0 16px; font-size: .95rem; color: rgba(255,255,255,.85); }
-.testi-card figcaption { font-size: .82rem; color: rgba(255,255,255,.7); }
-.testi-note { font-size: .75rem; color: rgba(255,255,255,.55); margin: 28px 0 0; }
+.testi-card p { margin: 0; font-size: .95rem; color: rgba(255,255,255,.85); }
 
 /* ---------- split / live frames ---------- */
 .split { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
@@ -547,6 +540,9 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .plan-price { display: grid; justify-items: end; gap: 3px; font-size: 1.2rem; font-variant-numeric: tabular-nums; }
 .plan-price s { font-size: .85rem; color: var(--muted); }
 .plan-price s:empty { display: none; }
+.deal-line { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 14px; font-size: .88rem; color: var(--muted); }
+.deal-line .yc { width: 20px; height: 20px; }
+.deal-line strong { color: var(--text); }
 .buy-row { display: flex; gap: 12px; align-items: stretch; }
 .buy-row .qty { flex: none; }
 .buy-btn { flex: 1; position: relative; overflow: hidden; }
@@ -597,12 +593,27 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .drawer-panel .line { animation: lineIn .4s var(--ease-out) both; }
 @keyframes lineIn { from { opacity: 0; transform: translateX(16px); } }
 
+/* Home's offer card: fades in slowly mid-screen; no backdrop, the page keeps scrolling */
+.offer-card { position: fixed; z-index: 70; left: 50%; top: 50%; width: min(320px, calc(100% - 32px)); padding: 24px 24px 22px; border-radius: var(--radius-lg); background: var(--surface); border: 1px solid var(--line-2); box-shadow: var(--shadow-lg); text-align: center; opacity: 0; transform: translate(-50%, -46%); transition: opacity 1.4s var(--ease-out), transform 1.4s var(--ease-out); }
+.offer-card.in { opacity: 1; transform: translate(-50%, -50%); }
+.offer-card .eyebrow { margin-bottom: 8px; }
+.offer-card h3 { font-size: 1.4rem; margin-bottom: 6px; }
+.offer-card p { color: var(--muted); font-size: .92rem; margin: 0 0 16px; }
+.offer-x { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; border: 0; background: none; color: var(--muted); display: grid; place-items: center; }
+.offer-x:hover { background: var(--lav); color: var(--text); }
+.offer-x .icon { width: 16px; height: 16px; }
+
+/* cookie banner: shaded so it stands out from the page in light and dark */
+.cookie-banner { background: var(--lav-strong); border-color: var(--lav-deep); box-shadow: var(--shadow-lg); }
+.cookie-banner p { color: var(--text); }
+.cookie-banner .btn-ghost { border-color: var(--lav-deep); }
+
 /* fly-to-cart dot */
 .fly { position: fixed; z-index: 130; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: var(--yellow); box-shadow: 0 8px 24px rgba(0,0,0,.25); display: grid; place-items: center; pointer-events: none; }
 .fly .icon { width: 20px; height: 20px; color: #1b2d74; }
 
 /* ---------- responsive ---------- */
-@media (min-width: 1410px) { .hdr { max-width: 1410px; } } /* room for Explore Peptides beside the search and track buttons */
+@media (min-width: 1410px) { .hdr { max-width: 1410px; } } /* room for Explore Peptides beside the track button */
 @media (max-width: 1409px) { .hide-md { display: none !important; } }
 @media (max-width: 1180px) { .nav-link { padding: 10px 10px; } }
 /* between the full header and the slide-out menu, tighten up; the theme switch is also in the footer */
@@ -631,7 +642,7 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
   .hero-art { height: 440px; }
   .pgrid { grid-template-columns: repeat(3, 1fr); }
   .steps, .values { grid-template-columns: repeat(2, 1fr); }
-  .testi-grid { grid-template-columns: 1fr; }
+  .testi-grid { grid-template-columns: 1fr 1fr; }
   .stack-grid { grid-template-columns: 1fr; }
   .f-grid { grid-template-columns: 1fr 1fr; }
   .f-brand { grid-column: 1 / -1; }
@@ -649,23 +660,21 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
   .hero-art { height: 350px; }
   .hv1, .hv3 { height: 170px; }
   .hv2 { height: 255px; }
-  .float-chip { font-size: .74rem; padding: 9px 11px; }
-  .float-chip .icon { width: 26px; height: 26px; padding: 5px; }
-  .fc1 { top: 6px; } .fc2 { bottom: 6px; }
-  .pgrid { grid-template-columns: 1fr 1fr; gap: 12px; }
-  .pcard-img { height: 170px; }
-  .pcard-img .vial-single, .pcard-img .vial-group { height: 135px; }
-  .pcard-body { padding: 14px; }
-  .pcard-full, .pcard-sizes { display: none; }
-  .pcard-foot { flex-direction: column; align-items: stretch; }
-  .pcard-foot .btn { width: 100%; }
+  .fc2 { bottom: 6px; }
+  .pgrid { grid-template-columns: 1fr; gap: 16px; max-width: 330px; margin-inline: auto; }
+  .rail .pcard-img { height: 170px; }
+  .rail .pcard-img .vial-single, .rail .pcard-img .vial-group { height: 135px; }
+  .rail .pcard-body { padding: 14px; }
+  .rail .pcard-full, .rail .pcard-sizes { display: none; }
+  .rail .pcard-foot { flex-direction: column; align-items: stretch; }
+  .rail .pcard-foot .btn { width: 100%; }
+  .testi-grid { grid-template-columns: 1fr; }
+  .split-head .home-search { flex-basis: 100%; margin: 0; order: 3; }
   .stack-card { grid-template-columns: 1fr; }
   .stack-body { padding: 20px; }
   .steps, .values { grid-template-columns: 1fr; }
   .hero-stats > div { padding: 0 12px; }
-  .deal-bar { font-size: .78rem; padding: 8px 12px; }
-  .deal-tag { display: none; }
-  .site-header.scrolled .hdr { width: calc(100% - 16px); padding: 0 6px 0 16px; }
+  .site-header.scrolled .hdr { width: calc(100% - 20px); margin: 3px auto 13px; padding: 0 6px 0 16px; } /* centered, and a little higher (same total height) */
   .split-art { min-height: 320px; padding: 20px; }
   .gallery { grid-template-columns: 1fr; }
   .thumbs { grid-auto-flow: column; justify-content: start; order: 2; }

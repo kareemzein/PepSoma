@@ -506,9 +506,6 @@
         e.preventDefault();
         PS.cart.add(d.add, d.size, 1, 'once');
         PS.emit('added', { el: t, id: d.add });
-        const p = PS.getProduct(d.add);
-        PS.toast(`${esc(p.name)} added to cart`);
-        if (T().openCartOnAdd !== false) setTimeout(PS.openCart, T().cartDelay || 0);
       }
       else if (d.step) {
         const q = $('.qty-input', t.closest('.qty'));
@@ -582,8 +579,6 @@
         const p = PS.getProduct(form.dataset.id);
         PS.cart.add(p.id, data.size, data.qty, data.plan || 'once');
         PS.emit('added', { el: form.querySelector('[type=submit]'), id: p.id });
-        PS.toast(`${esc(p.name)} added to cart`);
-        setTimeout(PS.openCart, T().cartDelay || 0);
         return;
       }
       if (kind === 'search') { PS.go('#/shop?q=' + encodeURIComponent(data.q || '')); document.body.classList.remove('nav-open'); return; }
@@ -647,33 +642,56 @@
     if (current === 'cart' || (current === 'checkout' && !t.count)) render();
     else if (current === 'checkout') refreshCheckout();
   }
-  function reveal() {
+  function reveal(soft) {
     const els = $$('.reveal:not(.in)');
-    if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) { els.forEach((e) => e.classList.add('in')); return; }
+    if (soft || !('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) { els.forEach((e) => e.classList.add('in')); return; }
     const io = new IntersectionObserver((entries) => entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } }), { rootMargin: '0px 0px -8% 0px' });
     els.forEach((e) => io.observe(e));
   }
-  let lastPath = null;
+  // Same page redrawn (filters, sort, promo code, cart or sign-in changes) is "soft": nothing re-enters or jumps, only the shop grid fades.
+  // A different page cross-fades with the browser's view transition, or the quick page-enter fade where that isn't available.
+  let lastPath = null, lastName = null, latest = null, swapping = false;
   function render() {
     const r = PS.parseHash();
     const views = Object.assign({}, PS.defaultViews, T().views);
     const fn = views[r.name] || views.notFound;
     const out = fn(r) || views.notFound(r);
+    const soft = lastName === r.name && (lastPath === r.path || r.name === 'shop');
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches || !document.startViewTransition;
+    const mode = soft ? 'soft' : lastName === null || still ? 'enter' : 'vt';
     current = r.name;
+    lastPath = r.path;
+    lastName = r.name;
+    if (swapping) { latest.r = r; latest.out = out; return; } // a page change is waiting for its frame: it will draw this one
+    latest = { r, out, mode };
+    if (mode !== 'vt') { paint(); return; }
+    const root = document.documentElement;
+    swapping = true;
+    root.classList.add('vt-page');
+    try {
+      const vt = document.startViewTransition(() => { swapping = false; paint(); });
+      vt.ready.catch(() => {});
+      vt.updateCallbackDone.catch((e) => console.error(e));
+      vt.finished.then(() => root.classList.remove('vt-page'), () => root.classList.remove('vt-page'));
+    } catch (e) { swapping = false; root.classList.remove('vt-page'); paint(); }
+  }
+  function paint() {
+    const { r, out, mode } = latest;
     const main = $('#view');
+    const soft = mode === 'soft';
+    const focused = soft && main.contains(document.activeElement) ? document.activeElement.id : '';
     main.innerHTML = out.html;
+    main.classList.toggle('soft', soft);
     document.title = (out.title ? out.title + ' · ' : '') + 'Pepsoma — Research-grade peptides';
     $$('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === r.path.split('/')[1]));
     document.body.classList.remove('nav-open');
     document.body.dataset.route = r.name;
-    PS.closeCart();
-    PS.closeModal();
-    if (r.path !== lastPath) window.scrollTo(0, 0);
-    lastPath = r.path;
+    if (!soft) { PS.closeCart(); PS.closeModal(); window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); }
     $$('form[data-form="product"]', main).forEach(PS.syncProductForm);
     if (out.after) out.after();
-    if (T().afterRender) T().afterRender(r, main);
-    reveal();
+    if (T().afterRender) T().afterRender(r, main, mode);
+    reveal(soft);
+    if (focused && document.getElementById(focused)) document.getElementById(focused).focus({ preventScroll: true });
   }
   PS.render = render;
 
