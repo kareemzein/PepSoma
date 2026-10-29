@@ -1135,6 +1135,7 @@
       else if (c === 'back') step(-1);
       else if (c === 'min' || c === 'expand') { dockMin = c === 'min'; renderDock(); }
       else if (c === 'view') pickView(b.dataset.v);
+      else if (c === 'replay') { if (oldOn) { hideOld(); renderDock(); } if (PS.replayOpening) PS.replayOpening(); }
       return;
     }
     const g = b.dataset.g, it = curItem(), p = myProg();
@@ -1184,7 +1185,7 @@
       ['hero-lots', 'Hero stats', '"45 lots tested" is now "Every lot, third-party tested". The 99.3% average purity stays.', '/', '.hero-stats'],
       ['offer', 'Offer card', 'Stay on the product carousel for about 4 seconds: a small deal card fades in mid-screen. Once per session; the X closes it.', '/', '.rail-band'],
       ['rail-static', 'Static product cards', 'Carousel cards no longer jump, lift or tilt on hover, and there is no glow behind the vials.', '/', '.rail-band'],
-      ['why', 'Why Pepsoma', 'The sample reviews are replaced with four plain points, with no hover jump.', '/', '.testi'],
+      ['why', 'Why Pepsoma', 'The sample reviews are replaced with four plain points, with no hover jump. New: flat bordered cards · B: editorial columns with a top rule · C: intro on the left, divided list on the right.', '/', '.testi', ['b', 'c']],
       ['stack-click', 'Stack cards are clickable', 'Click anywhere on a research stack card to open its page.', '/', '.stack-grid'],
     ]],
     ['Oct 28 round · Shop and product', [
@@ -1212,6 +1213,11 @@
       ['lab-filter', 'Lab Tests product filter', 'A product menu above the lot search shows only that product\'s COA card. It works together with the search; when nothing matches you get the empty message.', '/lab-tests', '.lot-tools'],
       ['coa-lab', 'Certificate names the lab', 'The top of the certificate page, and of the printable PDF (button at the bottom), names the testing laboratory and its report ID instead of Pepsoma, with the line "Analysis performed by … Results are shown as reported by the laboratory." The lab and report ID are placeholders ([Testing lab], [Report ID]) until the real lab is known.', '/coa/PS-BPC-2609A', '.page-head'],
       ['chart-label', 'Chart label fixed', 'The "10.73 min · 99.4%" label on the purity chart is no longer squished: it keeps its natural shape on the certificate page, in the PDF and in the Home window.', '/coa/PS-BPC-2609A', '.coa-web-top .chromatogram'],
+    ]],
+    ['Oct 28 round · Options', [
+      ['hdr-type', 'Header type', 'The main nav links, Explore Peptides and Account Login are slimmer and a little smaller. New: DM Sans, lighter and 1px smaller · B: DM Sans in the headline\'s display cut, medium weight · C: Hanken Grotesk.', '/', '.hdr', ['b', 'c']],
+      ['opening', 'Opening mark', 'The "p" in the first-visit opening is replaced by a simple mark. New: a short peptide chain of linked beads · B: a DNA double helix. Press Replay to watch it again.', '/', null, ['b']],
+      ['hero-bg', 'Hero background', 'The drifting "stars" are replaced. New: peptide letters in a slow diagonal wave · B: binary digits in the same wave · C: a DNA helix that draws in and fades out.', '/', '.hero', ['b', 'c']],
     ]],
     ['Oct 28 round · Other pages', [
       ['about-line', 'About page', 'The line "We don’t manufacture claims — we publish data." is gone.', '/about', '.split-copy'],
@@ -1297,7 +1303,7 @@
         <h3>${esc(it.t)}</h3>
         <p class="rv-ask">${esc(it.ask)}</p>
         <div class="rv-filters">${[['old', 'Old', 'The Oct 1 store (V1) on this page'], ['new', 'New', 'The current site'], ...it.vars.map((v) => [v, 'New ' + v.toUpperCase(), 'Another version of the new page'])].map(([v, name, tip]) => `<button class="rv-chip" data-g="view" data-v="${esc(v)}" aria-pressed="${v === now}" title="${tip}">${esc(name)}</button>`).join('')}</div>
-        <div class="rv-dock-nav"><button class="rv-btn rv-sm" data-g="back">‹ Back</button><span class="rv-grow"></span><button class="rv-btn rv-main" data-g="next" title="Or ⌘↵">Next ›</button></div>`;
+        <div class="rv-dock-nav"><button class="rv-btn rv-sm" data-g="back">‹ Back</button>${it.id === 'opening' ? '<button class="rv-btn rv-sm" data-g="replay" title="Play the opening again with the chosen version">Replay</button>' : ''}<span class="rv-grow"></span><button class="rv-btn rv-main" data-g="next" title="Or ⌘↵">Next ›</button></div>`;
   }
 
   function checklistHTML() {
@@ -1324,7 +1330,7 @@
 
   /* ---------- slow motion (S): the store's animations at quarter speed ---------- */
   // CSS and Web Animations get a playbackRate; rAF timestamps, performance.now and timer delays stretch to match, so
-  // JS-driven motion (count-up stats, the molecule network) and timed steps (the cart opening after the fly-in) stay in step
+  // JS-driven motion (count-up stats, the hero background) and timed steps (the cart opening after the fly-in) stay in step
   const SLOW = 0.25, SLOW_KEY = 'pepsoma.reviewSlow';
   const realNow = performance.now.bind(performance), realInterval = window.setInterval.bind(window);
   let rate = 1, vBase = 0, rBase = 0;

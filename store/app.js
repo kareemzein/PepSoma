@@ -181,7 +181,7 @@
     const avgPurity = singles.reduce((s, p) => s + p.purity, 0) / singles.length;
     return {
       html: `
-      <section class="hero"><canvas class="hero-net" data-net aria-hidden="true"></canvas><div class="container hero-grid">
+      <section class="hero"><canvas class="hero-bg" data-herobg="${PS.variant('hero-bg')}" aria-hidden="true"></canvas><div class="container hero-grid">
         <div class="hero-copy">
           <h1><span class="line-mask" style="--i:1"><span>Research peptides,</span></span><span class="line-mask" style="--i:2"><span><span class="swap" data-swap>${['documented', 'verified', 'traceable'].map((w, i) => `<em class="serif ${i ? '' : 'on'}">${w}</em>`).join('')}</span> to the lot.</span></span></h1>
           <p class="lead rise" style="--i:3">High-purity peptides for laboratory research. Third-party tested, traceable to the lot, dispatched within 24 hours.</p>
@@ -223,14 +223,14 @@
         <div class="pgrid">${best.map((p, i) => card(p, i)).join('')}</div>
       </div></section>
 
-      <section class="testi"><div class="container">
-        <h2 class="reveal">Why ${it('Pepsoma')}</h2>
+      <section class="testi" data-why="${PS.variant('why')}"><div class="container">
+        <div class="why-head"><h2 class="reveal">Why ${it('Pepsoma')}</h2><p class="why-intro reveal">Four things we do for every lot, and say plainly.</p></div>
         <div class="testi-grid">${[
           ['doc', 'Lot-matched COAs', 'Each vial’s lot number matches a Certificate of Analysis, printed in the box and published online.'],
           ['shield', 'Third-party tested', 'Every lot goes to an independent ISO/IEC 17025-accredited laboratory before it’s listed.'],
           ['truck', '24-hour dispatch', `Orders placed before ${PS.company.cutoff} ship the same day, with tracking.`],
           ['flask', 'Research use only', 'Documented and sold for laboratory research, with a research-use confirmation at checkout.'],
-        ].map(([ic, t, body], i) => `<div class="testi-card reveal" style="--d:${i}">${icon(ic)}<h3>${t}</h3><p>${body}</p></div>`).join('')}</div>
+        ].map(([ic, t, body], i) => `<div class="testi-card reveal" style="--d:${i}">${icon(ic)}<span class="testi-n">0${i + 1}</span><h3>${t}</h3><p>${body}</p></div>`).join('')}</div>
       </div></section>
 
       <section class="section section-cream"><div class="container">
@@ -522,47 +522,89 @@
     words[next].classList.add('on');
   }, 2600);
 
-  // molecule network behind the hero headline: nodes drift, nearby ones link, all in the accent color
-  function startNet(cv) {
+  // hero background, faint and behind the headline; the kind comes from PS.variant('hero-bg'): 'new' peptide letters, 'b' binary digits (both a slow diagonal
+  // wave over a character grid), 'c' a DNA double helix that draws in and fades out. It pauses when the hero is off-screen or the tab is hidden.
+  function startHeroBg(cv) {
     const ctx = cv.getContext('2d');
     if (!ctx) return;
+    const kind = cv.dataset.herobg;
     const rnd = PS.rng(7);
-    const nodes = Array.from({ length: 34 }, () => ({ x: rnd(), y: rnd(), vx: (rnd() - 0.5) * 0.000022, vy: (rnd() - 0.5) * 0.000022, r: 1.6 + rnd() * 2.2 }));
-    let w = 0, h = 0, color = '', frame = 0, last = 0, onScreen = true;
-    const size = () => { const r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1); w = r.width; h = r.height; cv.width = w * dpr; cv.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
-    const draw = () => {
-      ctx.clearRect(0, 0, w, h);
-      ctx.strokeStyle = ctx.fillStyle = ctx.shadowColor = color;
-      const reach = Math.max(120, Math.min(w, 1000) * 0.17);
-      ctx.shadowBlur = 0; ctx.lineWidth = 1;
-      for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
-        const a = nodes[i], b = nodes[j], d = Math.hypot((a.x - b.x) * w, (a.y - b.y) * h);
-        if (d > reach) continue;
-        ctx.globalAlpha = (1 - d / reach) * 0.4;
-        ctx.beginPath(); ctx.moveTo(a.x * w, a.y * h); ctx.lineTo(b.x * w, b.y * h); ctx.stroke();
+    const SEQ = 'GEPPPGKPADDAGLVSDKPGHKAEDGKPVMEHFPGPTKPRPGPLKKTETQ'; // BPC-157, Ac-SDKP, GHK, epitalon, KPV, Semax, Selank, TB-500 fragment
+    const CW = 22, CH = 28, TAU = Math.PI * 2;
+    let w = 0, h = 0, color = '', cols = 0, rows = 0, glyphs = [], shift = [], raf = 0, last = 0, onScreen = true, t0 = 0, el = 0, n = 0;
+    const size = () => {
+      if (!cv.isConnected) { removeEventListener('resize', size); return; }
+      const r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+      w = r.width; h = r.height; cv.width = w * dpr; cv.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cols = Math.ceil(w / CW); rows = Math.ceil(h / CH);
+      glyphs = []; shift = [];
+      for (let i = 0; i < cols * rows; i++) {
+        glyphs.push(kind === 'b' ? (rnd() < 0.5 ? '0' : '1') : SEQ[(i % cols + Math.floor(i / cols) * 7) % SEQ.length]);
+        shift.push(rnd() * 0.3);
       }
-      ctx.shadowBlur = 14; ctx.globalAlpha = 0.85;
-      nodes.forEach((n) => { ctx.beginPath(); ctx.arc(n.x * w, n.y * h, n.r, 0, Math.PI * 2); ctx.fill(); });
+      draw(reduced() ? 2600 : el);
     };
-    size(); color = getComputedStyle(cv).color; draw();
+    const letters = (t) => {
+      ctx.font = '500 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = color;
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        const i = r * cols + c, v = (Math.sin(((c * CW + r * CH * 1.4) / 620 - t / 7000 + shift[i]) * TAU) + 1) / 2, a = v * v * v * 0.17;
+        if (a < 0.012) continue;
+        ctx.globalAlpha = a;
+        ctx.fillText(glyphs[i], c * CW + CW / 2, r * CH + CH / 2);
+      }
+    };
+    // one helix along a diagonal from bottom left to top right: it draws in from the left, holds, fades, rests; the twist turns slowly
+    const helix = (t) => {
+      const k = reduced() ? 7000 : t % 16000;
+      const prog = 1 - Math.pow(1 - Math.min(1, k / 6000), 3), fade = k < 10000 ? 1 : Math.max(0, 1 - (k - 10000) / 4000);
+      if (fade <= 0) return;
+      const ax = -0.04 * w, ay = 0.88 * h, bx = 1.04 * w, by = 0.12 * h, len = Math.hypot(bx - ax, by - ay), L = len * prog;
+      const ux = (bx - ax) / len, uy = (by - ay) / len, nx = -uy, ny = ux;
+      const amp = Math.max(30, Math.min(56, h * 0.09)), lam = 150, turn = reduced() ? 0 : t / 2600;
+      ctx.fillStyle = ctx.strokeStyle = color; ctx.lineCap = 'round';
+      const at = (s, off) => { const th = s / lam * TAU + turn + off; return [ax + ux * s + nx * amp * Math.sin(th), ay + uy * s + ny * amp * Math.sin(th), Math.cos(th)]; };
+      for (let s = 0; s < L; s += 6) for (let o = 0; o < 2; o++) {
+        const p = at(s, o * Math.PI), q = at(Math.min(L, s + 6), o * Math.PI), d = (p[2] + 1) / 2;
+        ctx.globalAlpha = fade * (0.1 + 0.2 * d); ctx.lineWidth = 1 + 1.2 * d;
+        ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
+      }
+      ctx.lineWidth = 1;
+      for (let s = 0; s < L; s += lam / 10) {
+        const p = at(s, 0), q = at(s, Math.PI);
+        ctx.globalAlpha = fade * 0.12 * Math.abs(Math.sin(s / lam * TAU + turn));
+        ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
+        ctx.globalAlpha = fade * 0.3;
+        [p, q].forEach((e) => { ctx.beginPath(); ctx.arc(e[0], e[1], 2.2, 0, TAU); ctx.fill(); });
+      }
+    };
+    function draw(t) {
+      ctx.clearRect(0, 0, w, h);
+      if (kind === 'c') helix(t); else letters(t);
+      ctx.globalAlpha = 1;
+    }
+    color = getComputedStyle(cv).color; size();
     if (reduced()) return;
-    const obs = 'IntersectionObserver' in window ? new IntersectionObserver(([en]) => { onScreen = en.isIntersecting; }) : null;
-    if (obs) obs.observe(cv);
-    addEventListener('resize', size);
-    const tick = (t) => {
-      if (!cv.isConnected) { removeEventListener('resize', size); if (obs) obs.disconnect(); return; }
-      requestAnimationFrame(tick);
-      const dt = Math.min(50, t - (last || t)); last = t;
-      if (!onScreen || document.hidden) return;
-      nodes.forEach((n) => {
-        n.x += n.vx * dt; n.y += n.vy * dt;
-        if (n.x < 0 || n.x > 1) n.vx *= -1;
-        if (n.y < 0 || n.y > 1) n.vy *= -1;
-      });
-      if (++frame % 30 === 0) color = getComputedStyle(cv).color; // follows light/dark switches
-      draw();
+    const tick = (now) => {
+      raf = 0;
+      if (!cv.isConnected || !onScreen || document.hidden) return;
+      raf = requestAnimationFrame(tick);
+      if (now - last < (kind === 'c' ? 33 : 41)) return; // 30 and 24 frames a second are plenty for something this slow
+      if (!t0) t0 = now;
+      last = now;
+      el = now - t0;
+      if (++n % 30 === 0) color = getComputedStyle(cv).color; // follows light/dark switches
+      draw(el);
     };
-    requestAnimationFrame(tick);
+    const wake = () => {
+      if (!cv.isConnected) { document.removeEventListener('visibilitychange', wake); if (obs) obs.disconnect(); return; }
+      if (!raf && onScreen && !document.hidden) raf = requestAnimationFrame(tick);
+    };
+    const obs = 'IntersectionObserver' in window ? new IntersectionObserver(([en]) => { onScreen = en.isIntersecting; wake(); }) : null;
+    if (obs) obs.observe(cv);
+    document.addEventListener('visibilitychange', wake);
+    addEventListener('resize', size);
+    wake();
   }
 
   // count-up numbers
@@ -673,8 +715,8 @@
     if (io) main.querySelectorAll(soft ? '[data-observe], [data-loop]' : '[data-count]:not([data-replay]), [data-observe], [data-loop]').forEach((el) => io.observe(el));
     else if (!soft) main.querySelectorAll('[data-count]').forEach(countUp);
     PS.$$('.theme-btn, .seg').length && syncModeUI();
-    const net = main.querySelector('[data-net]');
-    if (net) startNet(net);
+    const bg = main.querySelector('[data-herobg]');
+    if (bg) startHeroBg(bg);
     movePill(null);
     if (!soft) { offerStop(); if (route.name === 'home') offerWatch(main); }
   }
@@ -687,10 +729,19 @@
 
   // opening, the first time the site is opened in this browser (index.html sets html.opening): the mark traces itself, then its middle opens
   // and you fly through onto the page while the page's own entrance replays behind it. A tap skips ahead.
-  (function opening() {
+  // The mark inside comes from PS.variant('opening'): 'new' a short peptide chain (linked beads shaped like a p), 'b' a DNA double helix.
+  // Review mode's Replay button plays it again through PS.replayOpening.
+  const openingMark = () => {
+    if (PS.variant('opening') === 'b') {
+      const strand = (ph) => 'M' + Array.from({ length: 19 }, (_, i) => `${(500 + 8 * Math.sin(i / 12 * Math.PI * 2 + ph)).toFixed(1)} ${484 + i * 2}`).join('L');
+      return `<g class="oc-p"><path d="${strand(0)}" stroke-width="2"/><path d="${strand(Math.PI)}" stroke-width="2"/>${[487, 490, 493, 499, 502, 505, 511, 514, 517].map((y) => { const d = 8 * Math.sin((y - 484) / 24 * Math.PI * 2); return `<path d="M${500 - d} ${y}H${500 + d}" stroke-width="1.2"/>`; }).join('')}</g>`;
+    }
+    const beads = [[491, 515], [491, 507], [491, 499], [491, 491], [498, 485], [506, 488], [509, 496], [505, 503], [498, 505]];
+    return `<g class="oc-p"><path d="M${beads.map((b) => b.join(' ')).join('L')}L491 499" stroke-width="1.5"/>${beads.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.6"/>`).join('')}</g>`;
+  };
+  function playOpening() {
     const root = document.documentElement;
-    if (!root.classList.contains('opening')) return;
-    try { localStorage.setItem('pepsoma.opened', '1'); } catch (e) { /* ignore */ }
+    document.querySelectorAll('.opening-cover').forEach((c) => c.remove());
     const cover = document.createElement('div');
     cover.className = 'opening-cover';
     cover.setAttribute('aria-hidden', 'true');
@@ -700,7 +751,7 @@
       <g class="oc-mark"><rect class="oc-fill" x="468" y="468" width="64" height="64" rx="16"/>
         <path class="oc-line" pathLength="100" d="M500 532H516A16 16 0 0 0 532 516V484A16 16 0 0 0 516 468H500"/>
         <path class="oc-line" pathLength="100" d="M500 532H484A16 16 0 0 1 468 516V484A16 16 0 0 1 484 468H500"/>
-        <text class="oc-p" x="500" y="512" text-anchor="middle">p</text></g>
+        ${openingMark()}</g>
     </svg><div class="oc-word"><span class="oc-kicker">Research-grade peptides</span><span class="logo">pep<i>soma</i></span></div>`;
     document.body.appendChild(cover);
     root.classList.remove('opening');
@@ -722,5 +773,10 @@
     };
     const wait = setTimeout(open, 3000);
     cover.addEventListener('click', open);
-  })();
+  }
+  PS.replayOpening = playOpening;
+  if (document.documentElement.classList.contains('opening')) {
+    try { localStorage.setItem('pepsoma.opened', '1'); } catch (e) { /* ignore */ }
+    playOpening();
+  }
 })();
