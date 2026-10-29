@@ -298,6 +298,26 @@
   PS.states = [['', 'Select…'], ...'AL Alabama|AK Alaska|AZ Arizona|AR Arkansas|CA California|CO Colorado|CT Connecticut|DE Delaware|DC District of Columbia|FL Florida|GA Georgia|HI Hawaii|ID Idaho|IL Illinois|IN Indiana|IA Iowa|KS Kansas|KY Kentucky|LA Louisiana|ME Maine|MD Maryland|MA Massachusetts|MI Michigan|MN Minnesota|MS Mississippi|MO Missouri|MT Montana|NE Nebraska|NV Nevada|NH New Hampshire|NJ New Jersey|NM New Mexico|NY New York|NC North Carolina|ND North Dakota|OH Ohio|OK Oklahoma|OR Oregon|PA Pennsylvania|RI Rhode Island|SC South Carolina|SD South Dakota|TN Tennessee|TX Texas|UT Utah|VT Vermont|VA Virginia|WA Washington|WV West Virginia|WI Wisconsin|WY Wyoming|AA Armed Forces Americas|AE Armed Forces Europe|AP Armed Forces Pacific'
     .split('|').map((s) => [s.slice(0, 2), s.slice(3)])];
 
+  /* ---------- variants: review mode's New / New B / New C compare chips ---------- */
+  // PS.variant(id) is 'new' unless review mode picked another ('b', 'c', ...) for that id. Picks only count while review mode is on and are
+  // kept per tab (sessionStorage). Each id is also mirrored on <html> as data-var-<id>="<variant>", so CSS can key off it; a view reads PS.variant(id) when it renders.
+  const VARS = 'pepsoma.variants';
+  let picks = {};
+  try { picks = JSON.parse(sessionStorage.getItem(VARS)) || {}; } catch (e) { /* blocked storage: lasts until reload */ }
+  const reviewing = () => {
+    try { return /[?&]review(=|&|$)/.test(location.search) || sessionStorage.getItem('pepsoma.review') === '1'; } catch (e) { return /[?&]review(=|&|$)/.test(location.search); }
+  };
+  PS.variant = (id) => (reviewing() && picks[id]) || 'new';
+  PS.setVariant = (id, v) => {
+    if (!reviewing()) return;
+    if (v && v !== 'new') picks[id] = v; else delete picks[id];
+    try { sessionStorage.setItem(VARS, JSON.stringify(picks)); } catch (e) { /* ignore */ }
+    document.documentElement.setAttribute('data-var-' + id, PS.variant(id));
+    PS.emit('route'); // draw the current view again with the new pick
+    PS.emit('variant', { id, variant: PS.variant(id) });
+  };
+  if (reviewing()) Object.keys(picks).forEach((id) => document.documentElement.setAttribute('data-var-' + id, picks[id]));
+
   /* ---------- hash router ---------- */
   PS.routes = [
     ['/', 'home'], ['/shop', 'shop'], ['/shop/:cat', 'shop'], ['/product/:id', 'product'], ['/cart', 'cart'],

@@ -6,6 +6,7 @@
    With SHEET_URL set, every comment is also sent to a Google Sheet (setup: tools/review-sheet.gs), and the panel can show everyone's comments from it (password checked by the script).
    Guided mode walks a checklist of everything to review (GUIDE below), one item at a time, with progress kept per person and sent to the sheet's Checklist tab. */
 (function () {
+  if (window.name === 'rv-old') return; // the "Old" overlay (What changed) shows V1 as it was, without review tools of its own
   const S = PS.storage;
   // per tab (sessionStorage), so the plain link always opens the normal store
   const ON = 'pepsoma.review', asked = /[?&]review(=|&|$)/.test(location.search);

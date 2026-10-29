@@ -4,8 +4,10 @@
    Comments live in localStorage (pepsoma.<version>.reviewNotes; V1's in pepsoma.reviewNotes) and export as plain text.
    Each comment is signed with the current commenter; names are kept per device (pepsoma.reviewPeople) and N cycles them.
    With SHEET_URL set, every comment is also sent to a Google Sheet (setup: tools/review-sheet.gs), and the panel can show everyone's comments from it (password checked by the script).
-   Guided mode walks a checklist of everything to review (GUIDE below), one item at a time, with progress kept per person and sent to the sheet's Checklist tab. */
+   Guided mode walks a checklist of everything to review (GUIDE below), one item at a time, with progress kept per person and sent to the sheet's Checklist tab.
+   What changed mode walks the list of changes (CHANGES below) and compares each against Old (V1) and its New variants. */
 (function () {
+  if (window.name === 'rv-old') return; // the "Old" overlay (What changed) shows V1 as it was, without review tools of its own
   const S = PS.storage;
   // per tab (sessionStorage), so the plain link always opens the normal store
   const ON = 'pepsoma.review', asked = /[?&]review(=|&|$)/.test(location.search);
@@ -159,6 +161,9 @@
   .rv-danger .rv-row { margin-top: 6px; }
   .rv-ico { width: 16px; height: 16px; vertical-align: -3px; margin-right: 6px; }
   .rv-dock { z-index: 2147483610; left: 16px; bottom: 16px; width: 372px; max-height: calc(100vh - 120px); overflow-y: auto; padding: 14px; border-radius: 18px; background: #fff; color: #1b1a17; box-shadow: 0 18px 50px rgba(0,0,0,.3); border: 1px solid #e6e1d8; }
+  .rv-old { inset: 0; z-index: 2147483400; background: #fff; }
+  .rv-old iframe { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+  .rv-dock .rv-filters { margin: 10px 0 0; }
   .rv-dock-top { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
   .rv-dock-group { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #ff5a1f; }
   .rv-dock h3 { font-size: 17px; font-weight: 700; line-height: 1.25; margin: 0 0 4px; color: #1b1a17; display: flex; align-items: center; gap: 8px; }
@@ -319,6 +324,7 @@
   function setMode(m) {
     if (m === 'comment' && !who) { openPicker('comment'); return; }
     mode = m;
+    if (m === 'comment' && oldOn) { hideOld(); renderDock(); } // the page to point at is the new one
     if (m !== 'comment') gPicking = false;
     document.documentElement.classList.toggle('rv-on', m === 'comment');
     bar.querySelectorAll('[data-m]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.m === m)));
@@ -592,7 +598,7 @@
     });
     if (picked && !pop.hidden) box(picked, 'rv-picked');
     const mark = gPick || flashEl;
-    if (pop.hidden && mode !== 'comment' && mark && mark.isConnected) { box(mark, 'rv-picked'); tag.textContent = gPick ? 'Your note will point here' : 'Checklist: ' + (curItem() || {}).t; }
+    if (pop.hidden && mode !== 'comment' && mark && mark.isConnected) { box(mark, 'rv-picked'); tag.textContent = gPick ? 'Your note will point here' : changes ? 'Changed: ' + curChange().t : 'Checklist: ' + (curItem() || {}).t; }
     if (rate !== 1) retime();
     frame(track);
   }
@@ -685,7 +691,7 @@
       return;
     }
     const md = e.target.closest('[data-rvmode]'), ck = e.target.closest('[data-item]');
-    if (md) { setGuided(md.dataset.rvmode === 'guided'); return; }
+    if (md) { if (md.dataset.rvmode === 'changes') setChanges(); else setGuided(md.dataset.rvmode === 'guided'); return; }
     if (ck) { closePanel(); openItem(ck.dataset.item); return; }
     const f = e.target.closest('[data-f]'), src = e.target.closest('[data-src]');
     if (f) { const a = f.dataset.f; setHidden(!a ? [] : hidden.includes(a) ? hidden.filter((h) => h !== a) : [...hidden, a]); paint(); return; }
@@ -973,7 +979,8 @@
     const i = k.lastIndexOf('|'), name = k.slice(0, i), id = k.slice(i + 1), it = itemOf(id), p = prog[name] || { seen: {}, thumb: {} };
     return { key: VERSION + '|' + k, by: name, version: VERSION, group: it ? it.g : '', item: it ? it.t : id, page: HOME + '#' + (it ? it.go : '/'), opened: p.seen[id] || '', thumb: p.thumb[id] || '', comments: itemNotes(id, name).length };
   };
-  let guided = S.get(VERSION + '.reviewMode', 'free') === 'guided', panelView = 'checklist', dockMin = false;
+  const startMode = S.get(VERSION + '.reviewMode', 'free');
+  let guided = startMode === 'guided', changes = startMode === 'changes', panelView = 'checklist', dockMin = false;
   let gPick = null, gPicking = false, flashEl = null, flashT = 0;
   const THUMB = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>';
   const THUMB_DOWN = THUMB.replace('<svg ', '<svg style="transform:rotate(180deg)" ');
@@ -982,7 +989,7 @@
   const tmark = (t) => (t ? `<span class="rv-tmark" style="color:${t === 'up' ? '#16a34a' : '#c4321a'}" title="Thumbs ${t}">${t === 'up' ? THUMB : THUMB_DOWN}</span>` : '');
   // the same page in another version, still in review mode
   const versionSwitch = () => `<div class="rv-vers"><span>Version</span>${VERSIONS.map(([id, name, note]) => `<a class="rv-chip" href="${esc(verUrl(id) + '?review' + location.hash)}"${id === VERSION ? ' aria-current="page" aria-pressed="true"' : ''} title="${id === VERSION ? 'You are on ' + name : 'Open this page in ' + name}">${name} · ${note}</a>`).join('')}<a class="rv-chip" href="${esc(SITE + 'versions/')}" target="_blank" rel="noopener" title="Compare all versions side by side">All ↗</a></div>`;
-  const modeSwitch = () => `<div class="rv-filters" style="margin:0 0 10px"><button class="rv-chip" data-rvmode="free" aria-pressed="${!guided}">Free</button><button class="rv-chip" data-rvmode="guided" aria-pressed="${guided}">Guided checklist</button></div>`;
+  const modeSwitch = () => `<div class="rv-filters" style="margin:0 0 10px"><button class="rv-chip" data-rvmode="free" aria-pressed="${!guided && !changes}">Free</button><button class="rv-chip" data-rvmode="guided" aria-pressed="${guided}">Guided checklist</button><button class="rv-chip" data-rvmode="changes" aria-pressed="${changes}">What changed</button></div>`;
 
   // which checklist item a clicked element belongs to: the tightest spot containing it, on this page or in the header/footer;
   // when several items share one spot, the first listed owns it, except that in guided mode the current item wins
@@ -1011,6 +1018,7 @@
   }
   function setGuided(on) {
     if (on && !who) { openPicker('guided'); return; } // a checklist belongs to a person
+    if (changes) { changes = false; hideOld(); }
     guided = on;
     S.set(VERSION + '.reviewMode', on ? 'guided' : 'free');
     gPick = null;
@@ -1029,9 +1037,9 @@
     later(() => spot(it), move ? 450 : 60); // after the page renders
   }
   function step(d) {
-    const i = ITEMS.indexOf(curItem()) + d;
-    if (i < 0 || i >= ITEMS.length) { showHud(`<div class="rv-cur">${i < 0 ? 'This is the first item' : 'End of the checklist'}</div>`); return; }
-    openItem(ITEMS[i].id);
+    const all = changes ? CH : ITEMS, i = all.indexOf(changes ? curChange() : curItem()) + d;
+    if (i < 0 || i >= all.length) { showHud(`<div class="rv-cur">${i < 0 ? 'This is the first item' : changes ? 'End of the list' : 'End of the checklist'}</div>`); return; }
+    if (changes) openChange(all[i].id); else openItem(all[i].id);
     // straight into the box, caret at the end; not on touch screens, where it would pop the keyboard up
     const ta = $('textarea', dock);
     if (ta && !matchMedia('(pointer: coarse)').matches) { ta.focus({ preventScroll: true }); ta.setSelectionRange(ta.value.length, ta.value.length); }
@@ -1083,7 +1091,8 @@
     renderDock();
   }
   function renderDock() {
-    dock.hidden = !guided;
+    dock.hidden = !guided && !changes;
+    if (changes) { renderChanges(); return; }
     if (!guided) return;
     const p = myProg(), it = curItem(), gi = GUIDE.findIndex(([g]) => g === it.g), group = GUIDE[gi][1], th = p.thumb[it.id];
     // where you are, not how much is done: section n of all sections, and the item's place in its section
@@ -1120,6 +1129,14 @@
   dock.addEventListener('click', (e) => {
     const b = e.target.closest('[data-g]');
     if (!b) return;
+    if (changes) {
+      const c = b.dataset.g;
+      if (c === 'next') step(1);
+      else if (c === 'back') step(-1);
+      else if (c === 'min' || c === 'expand') { dockMin = c === 'min'; renderDock(); }
+      else if (c === 'view') pickView(b.dataset.v);
+      return;
+    }
     const g = b.dataset.g, it = curItem(), p = myProg();
     if (g === 'next') step(1);
     else if (g === 'back') step(-1);
@@ -1134,6 +1151,102 @@
     else if (g === 'up' || g === 'down') { p.thumb[it.id] = p.thumb[it.id] === g ? null : g; touch(it.id); renderDock(); }
   });
   dock.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); step(1); } }); // saves on the way
+
+  /* ---------- what changed: each change in order, compared against Old (V1) and its New variants ---------- */
+  // [group, [[id, title, what changed in one line, page to open, optional spot to outline, optional variant names], ...]]
+  // To add a change, add one line to a group (or a new group). Ids are stored with the variant picks, so keep them stable.
+  // Variant names like ['b', 'c'] add New B / New C chips; the view reads PS.variant(id) and CSS can key off html[data-var-<id>="b"].
+  const CHANGES = [
+    ['Oct 1 round', [
+      ['search', 'Header search', 'A search button in the header opens a search bar in place of the menu.', '/', '[data-search-open]'],
+      ['track', 'Track an order', 'A truck button in the header opens a track-order pane.', '/', '.track-wrap'],
+      ['explore', 'Explore Peptides button', 'Uses the same type as Account Login and now comes first, before it.', '/', '.hdr-actions .btn-yellow'],
+      ['almost', 'Checkout heading', '"Almost there" is in one thin font. Add something to the cart first to see it.', '/checkout', '.page-head .thin'],
+      ['rail', 'Browse compounds', 'A carousel of product cards replaces the scrolling compound names.', '/', '.rail-band'],
+      ['labs', 'Lab Tests cards', 'One card per product, with no status column.', '/lab-tests', '.lot-cards'],
+      ['coa', 'Certificate page', 'View COA opens a certificate page on the site, with the lab\'s PDF at the bottom.', '/coa/PS-BPC-2609A', '.coa-web'],
+    ]],
+  ];
+  const CH = CHANGES.flatMap(([g, items]) => items.map(([id, t, ask, go, sel, vars]) => ({ id, g, t, ask, go, sel, vars: vars || [] })));
+  let chgId = CH[0].id, oldOn = false;
+  const curChange = () => CH.find((x) => x.id === chgId) || CH[0];
+  // Old: V1 at the same page, full-window under the review tools. The iframe is named so review.js stays off inside it.
+  const oldBox = ui('<div class="rv-old" hidden><iframe name="rv-old" title="Old version (V1) of this page"></iframe></div>');
+  const oldFrame = $('iframe', oldBox);
+  function showOld(it) {
+    oldOn = true;
+    flashEl = gPick = null;
+    hl.hidden = tag.hidden = pins.hidden = true;
+    if (mode === 'comment') setMode('browse');
+    oldFrame.style.visibility = 'hidden'; // until the load handler has hidden V1's own first-visit pop-ups
+    oldFrame.src = verUrl('v1') + '#' + (it.go || '/');
+    oldBox.hidden = false;
+  }
+  function hideOld() {
+    if (!oldOn) return;
+    oldOn = false;
+    oldBox.hidden = true;
+    pins.hidden = false;
+    oldFrame.src = 'about:blank';
+  }
+  oldFrame.addEventListener('load', () => {
+    if (!oldOn) return;
+    try {
+      const d = oldFrame.contentDocument, w = oldFrame.contentWindow, it = curChange();
+      d.head.insertAdjacentHTML('beforeend', '<style>.cookie-banner, .modal-gate, html.opening::after, .opening-cover { display: none !important; }</style>');
+      d.documentElement.classList.remove('opening');
+      d.body.classList.remove('no-scroll');
+      d.documentElement.style.overflow = ''; // V1's opening locks it while it plays
+      oldFrame.style.visibility = '';
+      later(() => {
+        const el = it.sel && d.querySelector(it.sel);
+        if (!el) return; // not in V1: stay at the top
+        el.style.outline = '3px solid #ff5a1f';
+        el.style.outlineOffset = '3px';
+        w.scrollTo(0, Math.max(0, w.scrollY + el.getBoundingClientRect().top - 110));
+      }, 350);
+    } catch (e) { oldFrame.style.visibility = ''; }
+  });
+  function setChanges() {
+    if (guided && boxDirty && boxText.trim()) saveDockNote();
+    guided = false;
+    changes = true;
+    S.set(VERSION + '.reviewMode', 'changes');
+    gPick = null;
+    closePanel();
+    openChange(chgId);
+  }
+  function openChange(id) {
+    const it = CH.find((x) => x.id === id) || CH[0];
+    chgId = it.id;
+    gPick = null;
+    hideOld();
+    renderDock();
+    const move = it.go && route() !== it.go;
+    if (move) location.hash = '#' + it.go;
+    later(() => spot(it), move ? 450 : 60);
+  }
+  // the chips: Old shows V1, the rest are the item's variants of the new page
+  function pickView(v) {
+    const it = curChange();
+    if (v === 'old') { if (!oldOn) showOld(it); renderDock(); return; }
+    const was = oldOn;
+    hideOld();
+    if (PS.variant(it.id) !== v) PS.setVariant(it.id, v);
+    renderDock();
+    if (was || PS.variant(it.id) === v) later(() => spot(it), 60); // the view was drawn again, so outline the new one
+  }
+  function renderChanges() {
+    const it = curChange(), at = `${CH.indexOf(it) + 1} of ${CH.length}`, now = oldOn ? 'old' : PS.variant(it.id);
+    dock.className = 'rv rv-dock' + (dockMin ? ' rv-min' : '');
+    dock.innerHTML = dockMin
+      ? `<button class="rv-dock-pill" data-g="expand" title="Open the card"><span>${esc(it.g)}</span> · ${esc(it.t)} ${at}</button>`
+      : `<div class="rv-dock-top"><span class="rv-dock-group">What changed · ${esc(it.g)}</span><span class="rv-grow"></span><span class="rv-pos">${at}</span><button class="rv-x" data-g="min" aria-label="Shrink" title="Shrink">–</button></div>
+        <h3>${esc(it.t)}</h3>
+        <p class="rv-ask">${esc(it.ask)}</p>
+        <div class="rv-filters">${[['old', 'Old', 'The Oct 1 store (V1) on this page'], ['new', 'New', 'The current site'], ...it.vars.map((v) => [v, 'New ' + v.toUpperCase(), 'Another version of the new page'])].map(([v, name, tip]) => `<button class="rv-chip" data-g="view" data-v="${esc(v)}" aria-pressed="${v === now}" title="${tip}">${esc(name)}</button>`).join('')}</div>
+        <div class="rv-dock-nav"><button class="rv-btn rv-sm" data-g="back">‹ Back</button><span class="rv-grow"></span><button class="rv-btn rv-main" data-g="next" title="Or ⌘↵">Next ›</button></div>`;
+  }
 
   function checklistHTML() {
     const p = myProg(), seen = ITEMS.filter((x) => p.seen[x.id]).length, waiting = Object.keys(gDirty).length;
