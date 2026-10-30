@@ -326,7 +326,7 @@
   function setMode(m) {
     if (m === 'comment' && !who) { openPicker('comment'); return; }
     mode = m;
-    if (m === 'comment' && oldOn) { hideOld(); renderDock(); } // the page to point at is the new one
+    if (m === 'comment' && oldOn) { hideOld(true); renderDock(); } // the page to point at is the new one
     if (m !== 'comment') gPicking = false;
     document.documentElement.classList.toggle('rv-on', m === 'comment');
     bar.querySelectorAll('[data-m]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.m === m)));
@@ -1054,11 +1054,11 @@
     if (ta && !matchMedia('(pointer: coarse)').matches) { ta.focus({ preventScroll: true }); ta.setSelectionRange(ta.value.length, ta.value.length); }
   }
   // outline the item's spot for a moment so it's clear what to look at
-  function spot(it) {
+  function spot(it, stay) {
     const el = it.sel && document.querySelector(it.sel);
     if (!el) return;
     // near the top rather than centred, so the checklist card (bottom-left, or the bottom half on a phone) doesn't cover it
-    window.scrollTo({ top: Math.max(0, scrollY + el.getBoundingClientRect().top - 110), behavior: 'smooth' });
+    if (!stay) window.scrollTo({ top: Math.max(0, scrollY + el.getBoundingClientRect().top - 110), behavior: 'smooth' });
     flashEl = el;
     clearTimeout(flashT);
     flashT = later(() => { flashEl = null; if (pop.hidden && !gPick) hl.hidden = tag.hidden = true; }, 2400);
@@ -1257,8 +1257,9 @@
     if (oldReady) goOld(it);
     else oldBox.classList.remove('rv-away'); // still loading: the load handler shows the page when it's ready
   }
-  function hideOld() {
+  function hideOld(sync) {
     if (!oldOn) return;
+    if (sync && oldReady) try { syncScroll(oldFrame.contentDocument, document); } catch (e) { /* ignore */ }
     oldOn = false;
     oldBox.classList.add('rv-away');
     pins.hidden = false;
@@ -1274,25 +1275,57 @@
       markOld(it);
     };
     try {
-      const w = oldFrame.contentWindow, h = '#' + (it.go || '/');
+      const w = oldFrame.contentWindow, h = location.hash || '#/'; // the page you're on, not the change's: Old shouldn't move you
       if ((w.location.hash || '#/') === h) { show(); return; }
       w.addEventListener('hashchange', show, { once: true });
       w.location.hash = h;
       later(show, 400); // in case no hashchange comes
     } catch (e) { show(); }
   }
-  // outline the change's spot in V1 and bring it into view
+  // outline the change's spot in V1, and open V1 at the part of the page you were looking at
   function markOld(it) {
     try {
-      const d = oldFrame.contentDocument, w = oldFrame.contentWindow;
+      const d = oldFrame.contentDocument;
       if (oldMark) { oldMark.style.outline = oldMark.style.outlineOffset = ''; oldMark = null; }
       const el = it.sel && d.querySelector(it.sel);
-      if (!el) { w.scrollTo(0, 0); return; } // not in V1: stay at the top
-      el.style.outline = '3px solid #ff5a1f';
-      el.style.outlineOffset = '3px';
-      oldMark = el;
-      w.scrollTo(0, Math.max(0, w.scrollY + el.getBoundingClientRect().top - 110));
+      if (el) {
+        el.style.outline = '3px solid #ff5a1f';
+        el.style.outlineOffset = '3px';
+        oldMark = el;
+      }
+      syncScroll(document, d);
     } catch (e) { /* ignore */ }
+  }
+  // scroll one version to the part of the page the other shows: the part under the header there is put under the header here.
+  // "The same part" is the innermost element there at that height whose tag and classes match exactly one element on each page;
+  // with none in common, the same share of the way down.
+  const SYNC_Y = 120;
+  const stateClass = /^(in|on|open|active|shown|visible|is-.*|rv-.*)$/;
+  function keyOf(el) {
+    if (el.id) return '#' + CSS.escape(el.id);
+    const c = [...el.classList].filter((x) => !stateClass.test(x));
+    return c.length ? el.tagName.toLowerCase() + c.map((x) => '.' + CSS.escape(x)).join('') : null;
+  }
+  function pinned(el) { // fixed or sticky elements sit at the same height whatever the scroll, so they can't say where you are
+    for (const w = el.ownerDocument.defaultView; el && el.nodeType === 1; el = el.parentElement) if (/fixed|sticky/.test(w.getComputedStyle(el).position)) return true;
+    return false;
+  }
+  function syncScroll(from, to) {
+    const fw = from.defaultView, tw = to.defaultView;
+    if (fw.scrollY < 2) { tw.scrollTo({ top: 0, behavior: 'instant' }); return; } // the top is the top, however tall each hero is
+    for (const el of from.elementsFromPoint(fw.innerWidth / 2, SYNC_Y)) {
+      if (el === from.body || el === from.documentElement || pinned(el)) continue;
+      const k = keyOf(el);
+      if (!k || from.querySelectorAll(k).length !== 1) continue;
+      const twin = to.querySelectorAll(k);
+      if (twin.length !== 1) continue;
+      const r = el.getBoundingClientRect(), t = twin[0].getBoundingClientRect();
+      const f = r.height ? Math.min(1, Math.max(0, (SYNC_Y - r.top) / r.height)) : 0; // how far into it you are
+      tw.scrollTo({ top: Math.max(0, tw.scrollY + t.top + f * t.height - SYNC_Y), behavior: 'instant' }); // both pages scroll smoothly by default, which would show as movement
+      return;
+    }
+    const f = fw.scrollY / Math.max(1, from.documentElement.scrollHeight - fw.innerHeight);
+    tw.scrollTo({ top: f * Math.max(0, to.documentElement.scrollHeight - tw.innerHeight), behavior: 'instant' });
   }
   oldFrame.addEventListener('load', () => {
     if (!oldStarted) return;
@@ -1337,10 +1370,10 @@
     const it = curChange();
     if (v === 'old') { if (!oldOn) showOld(it); renderDock(); return; }
     const was = oldOn;
-    hideOld();
+    hideOld(true); // back at the part of the page you were looking at in Old
     if (PS.variant(it.id) !== v) PS.setVariant(it.id, v);
     renderDock();
-    if (was || PS.variant(it.id) === v) later(() => spot(it), 60); // the view was drawn again, so outline the new one
+    if (was || PS.variant(it.id) === v) later(() => spot(it, was), 60); // the view was drawn again, so outline the new one
   }
   function changesHTML() {
     const it = curChange(), ci = curItem(), at = `${CH.indexOf(it) + 1} of ${CH.length}`, now = oldOn ? 'old' : PS.variant(it.id);
