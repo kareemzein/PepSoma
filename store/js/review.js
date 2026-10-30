@@ -5,7 +5,7 @@
    Each comment is signed with the current commenter; names are kept per device (pepsoma.reviewPeople) and N cycles them.
    With SHEET_URL set, every comment is also sent to a Google Sheet (setup: tools/review-sheet.gs), and the panel can show everyone's comments from it (password checked by the script).
    Guided mode walks a checklist of everything to review (GUIDE below), one item at a time, with progress kept per person and sent to the sheet's Checklist tab.
-   What changed mode walks the list of changes (CHANGES below) and compares each against Old (V1) and its New variants. */
+   What changed mode walks the list of changes (CHANGES below) and compares each against Old (V1) and its New variants; it has the same note box and thumbs, filed under ids like chg:<id>. */
 (function () {
   if (window.name === 'rv-old') return; // the "Old" overlay (What changed) shows V1 as it was, without review tools of its own
   const S = PS.storage;
@@ -163,6 +163,8 @@
   .rv-dock { z-index: 2147483610; left: 16px; bottom: 16px; width: 372px; max-height: calc(100vh - 120px); overflow-y: auto; padding: 14px; border-radius: 18px; background: #fff; color: #1b1a17; box-shadow: 0 18px 50px rgba(0,0,0,.3); border: 1px solid #e6e1d8; }
   .rv-old { inset: 0; z-index: 2147483400; background: #fff; }
   .rv-old iframe { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+  .rv-old.rv-away { visibility: hidden; pointer-events: none; }
+  .rv-old-load { position: absolute; inset: 0; display: grid; place-items: center; color: #6b665d; }
   .rv-dock .rv-filters { margin: 10px 0 0; }
   .rv-dock-top { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
   .rv-dock-group { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #ff5a1f; }
@@ -348,7 +350,7 @@
     $('.rv-nm', bar).textContent = who || 'Add name';
   }
   function setWho(name, flash) {
-    if (guided && boxDirty && boxText.trim()) saveDockNote();
+    if ((guided || changes) && boxDirty && boxText.trim()) saveDockNote();
     who = name;
     savePeople();
     showWho();
@@ -553,8 +555,8 @@
     const what = el ? describe(el) : 'Whole page';
     notes.push({
       id: newId(), rev: 1, n: notes.reduce((m, x) => Math.max(m, x.n), 0) + 1,
-      by: who, page: route(), sel: el ? selectorOf(el) : null, text: el ? snippet(el) : '',
-      what: item ? `${item.g} › ${item.t}${el ? ' · ' + what : ''}` : what, item: item ? item.id : undefined,
+      by: who, page: el || !item || !item.lead ? route() : item.go, sel: el ? selectorOf(el) : null, text: el ? snippet(el) : '',
+      what: item ? `${item.lead || item.g} › ${item.t}${el ? ' · ' + what : ''}` : what, item: item ? item.id : undefined,
       cls: el ? el.tagName.toLowerCase() + classes(el) : '',
       body, width: innerWidth, theme: document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
       at: new Date().toISOString(),
@@ -673,6 +675,13 @@
       if (th('down').length) out += `   Thumbs down: ${th('down').join(', ')}\n`;
       const left = GUIDE.map(([g, items]) => [g, items.filter(([id]) => !p.seen[id]).length]).filter(([, k]) => k);
       if (left.length) out += `   Not looked at yet: ${left.map(([g, k]) => `${g} (${k})`).join(', ')}\n`;
+    });
+    Object.entries(prog).forEach(([name, p]) => {
+      const seen = CH.filter((x) => p.seen['chg:' + x.id]), th = (v) => CH.filter((x) => p.thumb['chg:' + x.id] === v).map((x) => x.t);
+      if (!seen.length) return;
+      out += `\nWHAT CHANGED — ${name}: looked at ${seen.length} of ${CH.length}\n`;
+      if (th('up').length) out += `   Thumbs up: ${th('up').join(', ')}\n`;
+      if (th('down').length) out += `   Thumbs down: ${th('down').join(', ')}\n`;
     });
     return out;
   }
@@ -965,11 +974,11 @@
     ]],
   ];
   const ITEMS = GUIDE.flatMap(([g, items]) => items.map(([id, t, ask, go, sel]) => ({ id, g, t, ask, go, sel })));
-  const itemOf = (id) => ITEMS.find((x) => x.id === id);
+  const itemOf = (id) => ITEMS.find((x) => x.id === id) || chgItem(id);
   // per person: the item they're on, when they first opened each one, and their thumbs
   const prog = S.get(VERSION + '.reviewGuide', {});
   const myProg = (name = who || 'No name') => prog[name] || (prog[name] = { cur: ITEMS[0].id, seen: {}, thumb: {} });
-  const curItem = () => itemOf(myProg().cur) || ITEMS[0];
+  const curItem = () => (changes ? chgItem('chg:' + curChange().id) : itemOf(myProg().cur) || ITEMS[0]);
   // "name|item" → a change counter, so a change made while a send is in flight is sent again
   let gDirty = S.get(VERSION + '.reviewGuideDirty', {}), guideSaved = null;
   const saveGuide = () => { S.set(VERSION + '.reviewGuide', prog); S.set(VERSION + '.reviewGuideDirty', gDirty); };
@@ -1018,7 +1027,7 @@
   }
   function setGuided(on) {
     if (on && !who) { openPicker('guided'); return; } // a checklist belongs to a person
-    if (changes) { changes = false; hideOld(); }
+    if (changes) { if (boxDirty && boxText.trim()) saveDockNote(); changes = false; hideOld(); }
     guided = on;
     S.set(VERSION + '.reviewMode', on ? 'guided' : 'free');
     gPick = null;
@@ -1077,7 +1086,7 @@
       if (n.body === body && !gPick) return;
       n.body = body;
       n.rev++;
-      if (gPick) { Object.assign(n, { page: route(), sel: selectorOf(gPick), text: snippet(gPick), what: `${it.g} › ${it.t} · ${describe(gPick)}`, cls: gPick.tagName.toLowerCase() + classes(gPick) }); n._el = undefined; }
+      if (gPick) { Object.assign(n, { page: route(), sel: selectorOf(gPick), text: snippet(gPick), what: `${it.lead || it.g} › ${it.t} · ${describe(gPick)}`, cls: gPick.tagName.toLowerCase() + classes(gPick) }); n._el = undefined; }
     } else {
       const auto = it.sel && route() === it.go ? document.querySelector(it.sel) : null;
       addNote(gPick || auto, body, it);
@@ -1092,27 +1101,33 @@
   }
   function renderDock() {
     dock.hidden = !guided && !changes;
-    if (changes) { renderChanges(); return; }
-    if (!guided) return;
-    const p = myProg(), it = curItem(), gi = GUIDE.findIndex(([g]) => g === it.g), group = GUIDE[gi][1], th = p.thumb[it.id];
-    // where you are, not how much is done: section n of all sections, and the item's place in its section
-    const sec = `${gi + 1}/${GUIDE.length}`, pos = `${group.findIndex(([id]) => id === it.id) + 1}/${group.length}`;
+    if (dock.hidden) return;
     const old = $('textarea', dock), focused = old && document.activeElement === old, caret = focused && [old.selectionStart, old.selectionEnd];
     syncBox();
-    const here = itemNotes(it.id), editing = here.find((x) => x.id === boxEdit);
     dock.className = 'rv rv-dock' + (dockMin ? ' rv-min' : '');
-    dock.innerHTML = dockMin
+    dock.innerHTML = changes ? changesHTML() : guidedHTML();
+    const ta = $('textarea', dock);
+    if (ta) { ta.value = boxText; grow(ta); if (focused) { ta.focus(); ta.setSelectionRange(Math.min(caret[0], ta.value.length), Math.min(caret[1], ta.value.length)); } }
+  }
+  function guidedHTML() {
+    const it = curItem(), gi = GUIDE.findIndex(([g]) => g === it.g), group = GUIDE[gi][1];
+    // where you are, not how much is done: section n of all sections, and the item's place in its section
+    const sec = `${gi + 1}/${GUIDE.length}`, pos = `${group.findIndex(([id]) => id === it.id) + 1}/${group.length}`;
+    return dockMin
       ? `<button class="rv-dock-pill" data-g="expand" title="Open the checklist card"><span>${esc(it.g)} ${sec}</span> · ${esc(it.t)} ${pos}</button>`
       : `<div class="rv-dock-top"><span class="rv-dock-group" title="Section ${gi + 1} of ${GUIDE.length}">${esc(it.g)} · ${sec}</span><span class="rv-grow"></span><button class="rv-btn rv-sm" data-g="list">Checklist</button><button class="rv-x" data-g="min" aria-label="Shrink" title="Shrink">–</button></div>
         <h3>${esc(it.t)}<span class="rv-pos" title="Item ${pos.replace('/', ' of ')} in ${esc(it.g)}">${pos}</span>${cmark(itemNotes(it.id).length)}</h3>
         <p class="rv-ask">${esc(it.ask)}</p>
-        <div class="rv-row" style="margin:0"><button class="rv-thumb" data-g="up" aria-pressed="${th === 'up'}">${THUMB}Good</button><button class="rv-thumb" data-g="down" aria-pressed="${th === 'down'}">${THUMB_DOWN}Needs work</button></div>
+        ${noteHTML(it)}
+        <div class="rv-dock-nav"><button class="rv-btn rv-sm" data-g="back">‹ Back</button><span class="rv-grow"></span><button class="rv-btn rv-main" data-g="next" title="Or ⌘↵ in the box">Next ›</button></div>`;
+  }
+  // thumbs, this person's notes on the item and the note box: shared by the checklist card and the What changed card
+  function noteHTML(it) {
+    const th = myProg().thumb[it.id], here = itemNotes(it.id), editing = here.find((x) => x.id === boxEdit);
+    return `<div class="rv-row" style="margin:0"><button class="rv-thumb" data-g="up" aria-pressed="${th === 'up'}">${THUMB}Good</button><button class="rv-thumb" data-g="down" aria-pressed="${th === 'down'}">${THUMB_DOWN}Needs work</button></div>
         ${here.length > 1 || (here.length && !editing) ? `<div class="rv-notes"><span>Your notes</span>${here.map((n, i) => `<button class="rv-chip" data-g="edit" data-id="${n.id}" aria-pressed="${n.id === boxEdit}" title="${esc(n.body)}">Note ${i + 1}</button>`).join('')}</div>` : ''}
         <textarea placeholder="${editing ? '' : "Anything to change? It saves as you go; if it's fine, just hit Next."}"></textarea>
-        <div class="rv-row">${gPick ? `<span class="rv-pointing">Pointing at <b>${esc(describe(gPick))}</b></span><button class="rv-x" data-g="unpoint" aria-label="Stop pointing">×</button>` : '<button class="rv-btn rv-sm" data-g="point" title="Click the exact spot this note is about">Point at a spot</button>'}<span class="rv-grow"></span>${editing ? `${boxBack ? '<span class="rv-saved">Saved ✓</span>' : ''}<button class="rv-btn rv-sm rv-red" data-g="del">Delete</button><button class="rv-btn rv-sm" data-g="new" title="Keep this note and start another on the same item">+ New note</button>` : ''}</div>
-        <div class="rv-dock-nav"><button class="rv-btn rv-sm" data-g="back">‹ Back</button><span class="rv-grow"></span><button class="rv-btn rv-main" data-g="next" title="Or ⌘↵ in the box">Next ›</button></div>`;
-    const ta = $('textarea', dock);
-    if (ta) { ta.value = boxText; grow(ta); if (focused) { ta.focus(); ta.setSelectionRange(Math.min(caret[0], ta.value.length), Math.min(caret[1], ta.value.length)); } }
+        <div class="rv-row">${gPick ? `<span class="rv-pointing">Pointing at <b>${esc(describe(gPick))}</b></span><button class="rv-x" data-g="unpoint" aria-label="Stop pointing">×</button>` : '<button class="rv-btn rv-sm" data-g="point" title="Click the exact spot this note is about">Point at a spot</button>'}<span class="rv-grow"></span>${editing ? `${boxBack ? '<span class="rv-saved">Saved ✓</span>' : ''}<button class="rv-btn rv-sm rv-red" data-g="del">Delete</button><button class="rv-btn rv-sm" data-g="new" title="Keep this note and start another on the same item">+ New note</button>` : ''}</div>`;
   }
   // the box grows with the note (up to 40vh, then it scrolls)
   function grow(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 2 + 'px'; }
@@ -1129,21 +1144,14 @@
   dock.addEventListener('click', (e) => {
     const b = e.target.closest('[data-g]');
     if (!b) return;
-    if (changes) {
-      const c = b.dataset.g;
-      if (c === 'next') step(1);
-      else if (c === 'back') step(-1);
-      else if (c === 'min' || c === 'expand') { dockMin = c === 'min'; renderDock(); }
-      else if (c === 'view') pickView(b.dataset.v);
-      else if (c === 'replay') { if (oldOn) { hideOld(); renderDock(); } if (PS.replayOpening) PS.replayOpening(); }
-      return;
-    }
     const g = b.dataset.g, it = curItem(), p = myProg();
     if (g === 'next') step(1);
     else if (g === 'back') step(-1);
     else if (g === 'list') openPanel('checklist');
     else if (g === 'min') { dockMin = true; renderDock(); }
     else if (g === 'expand') { dockMin = false; renderDock(); }
+    else if (g === 'view') pickView(b.dataset.v);
+    else if (g === 'replay') { if (oldOn) { hideOld(); renderDock(); } if (PS.replayOpening) PS.replayOpening(); }
     else if (g === 'edit') { loadBox(b.dataset.id); renderDock(); $('textarea', dock).focus(); }
     else if (g === 'new') { if (boxDirty && boxText.trim()) saveDockNote(); loadBox(null); renderDock(); $('textarea', dock).focus(); }
     else if (g === 'del') { if (confirm('Delete this note?')) { const id = boxEdit; drop((n) => n.id === id); loadBox(null); boxFor = ''; paint(); renderDock(); } }
@@ -1226,44 +1234,80 @@
     ]],
   ];
   const CH = CHANGES.flatMap(([g, items]) => items.map(([id, t, ask, go, sel, vars]) => ({ id, g, t, ask, go, sel, vars: vars || [] })));
-  let chgId = CH[0].id, oldOn = false;
+  let chgId = S.get(VERSION + '.reviewChange', CH[0].id), oldOn = false;
   const curChange = () => CH.find((x) => x.id === chgId) || CH[0];
+  // a change as a card item, so it shares the checklist's note box and thumbs; its id can't collide with a checklist id
+  const chgItem = (id) => { const c = CH.find((x) => 'chg:' + x.id === id); return c && { id, g: 'What changed · ' + c.g, lead: 'What changed', t: c.t, ask: c.ask, go: c.go, sel: c.sel }; };
   // Old: V1 at the same page, full-window under the review tools. The iframe is named so review.js stays off inside it.
-  const oldBox = ui('<div class="rv-old" hidden><iframe name="rv-old" title="Old version (V1) of this page"></iframe></div>');
+  // V1 loads once, in the background, and stays loaded: Old/New only shows or hides it, and each change only sets its hash (V1 is hash-routed).
+  const oldBox = ui('<div class="rv-old rv-away"><div class="rv-old-load">Loading old version…</div><iframe name="rv-old" title="Old version (V1) of this page" style="visibility:hidden"></iframe></div>');
   const oldFrame = $('iframe', oldBox);
+  let oldStarted = false, oldReady = false, oldTok = 0, oldMark = null;
+  function preloadOld() {
+    if (oldStarted) return;
+    oldStarted = true;
+    oldFrame.src = verUrl('v1') + '#' + (curChange().go || '/');
+  }
   function showOld(it) {
     oldOn = true;
     flashEl = gPick = null;
     hl.hidden = tag.hidden = pins.hidden = true;
     if (mode === 'comment') setMode('browse');
-    oldFrame.style.visibility = 'hidden'; // until the load handler has hidden V1's own first-visit pop-ups
-    oldFrame.src = verUrl('v1') + '#' + (it.go || '/');
-    oldBox.hidden = false;
+    preloadOld();
+    if (oldReady) goOld(it);
+    else oldBox.classList.remove('rv-away'); // still loading: the load handler shows the page when it's ready
   }
   function hideOld() {
     if (!oldOn) return;
     oldOn = false;
-    oldBox.hidden = true;
+    oldBox.classList.add('rv-away');
     pins.hidden = false;
-    oldFrame.src = 'about:blank';
+  }
+  // point the loaded V1 at the change's page and show it; V1 draws on hashchange, so the box opens once it has
+  function goOld(it) {
+    const tok = ++oldTok;
+    let done = false;
+    const show = () => {
+      if (done || tok !== oldTok || !oldOn) return;
+      done = true;
+      oldBox.classList.remove('rv-away');
+      markOld(it);
+    };
+    try {
+      const w = oldFrame.contentWindow, h = '#' + (it.go || '/');
+      if ((w.location.hash || '#/') === h) { show(); return; }
+      w.addEventListener('hashchange', show, { once: true });
+      w.location.hash = h;
+      later(show, 400); // in case no hashchange comes
+    } catch (e) { show(); }
+  }
+  // outline the change's spot in V1 and bring it into view
+  function markOld(it) {
+    try {
+      const d = oldFrame.contentDocument, w = oldFrame.contentWindow;
+      if (oldMark) { oldMark.style.outline = oldMark.style.outlineOffset = ''; oldMark = null; }
+      const el = it.sel && d.querySelector(it.sel);
+      if (!el) { w.scrollTo(0, 0); return; } // not in V1: stay at the top
+      el.style.outline = '3px solid #ff5a1f';
+      el.style.outlineOffset = '3px';
+      oldMark = el;
+      w.scrollTo(0, Math.max(0, w.scrollY + el.getBoundingClientRect().top - 110));
+    } catch (e) { /* ignore */ }
   }
   oldFrame.addEventListener('load', () => {
-    if (!oldOn) return;
+    if (!oldStarted) return;
     try {
-      const d = oldFrame.contentDocument, w = oldFrame.contentWindow, it = curChange();
+      const d = oldFrame.contentDocument;
       d.head.insertAdjacentHTML('beforeend', '<style>.cookie-banner, .modal-gate, html.opening::after, .opening-cover { display: none !important; }</style>');
       d.documentElement.classList.remove('opening');
       d.body.classList.remove('no-scroll');
       d.documentElement.style.overflow = ''; // V1's opening locks it while it plays
-      oldFrame.style.visibility = '';
-      later(() => {
-        const el = it.sel && d.querySelector(it.sel);
-        if (!el) return; // not in V1: stay at the top
-        el.style.outline = '3px solid #ff5a1f';
-        el.style.outlineOffset = '3px';
-        w.scrollTo(0, Math.max(0, w.scrollY + el.getBoundingClientRect().top - 110));
-      }, 350);
-    } catch (e) { oldFrame.style.visibility = ''; }
+    } catch (e) { /* ignore */ }
+    oldReady = true;
+    oldFrame.style.visibility = '';
+    const wait = $('.rv-old-load', oldBox);
+    if (wait) wait.remove(); // V1 can be see-through, so the label must go
+    if (oldOn) { goOld(curChange()); later(() => { if (oldOn) markOld(curChange()); }, 350); } // again once the page has settled
   });
   function setChanges() {
     if (guided && boxDirty && boxText.trim()) saveDockNote();
@@ -1272,12 +1316,16 @@
     S.set(VERSION + '.reviewMode', 'changes');
     gPick = null;
     closePanel();
+    preloadOld();
     openChange(chgId);
   }
   function openChange(id) {
-    const it = CH.find((x) => x.id === id) || CH[0];
+    if (boxDirty && boxText.trim()) saveDockNote();
+    const it = CH.find((x) => x.id === id) || CH[0], p = myProg(), k = 'chg:' + it.id;
     chgId = it.id;
+    S.set(VERSION + '.reviewChange', chgId);
     gPick = null;
+    if (!p.seen[k]) { p.seen[k] = new Date().toISOString(); touch(k); } else saveGuide();
     hideOld();
     renderDock();
     const move = it.go && route() !== it.go;
@@ -1294,15 +1342,15 @@
     renderDock();
     if (was || PS.variant(it.id) === v) later(() => spot(it), 60); // the view was drawn again, so outline the new one
   }
-  function renderChanges() {
-    const it = curChange(), at = `${CH.indexOf(it) + 1} of ${CH.length}`, now = oldOn ? 'old' : PS.variant(it.id);
-    dock.className = 'rv rv-dock' + (dockMin ? ' rv-min' : '');
-    dock.innerHTML = dockMin
+  function changesHTML() {
+    const it = curChange(), ci = curItem(), at = `${CH.indexOf(it) + 1} of ${CH.length}`, now = oldOn ? 'old' : PS.variant(it.id);
+    return dockMin
       ? `<button class="rv-dock-pill" data-g="expand" title="Open the card"><span>${esc(it.g)}</span> · ${esc(it.t)} ${at}</button>`
       : `<div class="rv-dock-top"><span class="rv-dock-group">What changed · ${esc(it.g)}</span><span class="rv-grow"></span><span class="rv-pos">${at}</span><button class="rv-x" data-g="min" aria-label="Shrink" title="Shrink">–</button></div>
-        <h3>${esc(it.t)}</h3>
+        <h3>${esc(it.t)}${cmark(itemNotes(ci.id).length)}</h3>
         <p class="rv-ask">${esc(it.ask)}</p>
         <div class="rv-filters">${[['old', 'Old', 'The Oct 1 store (V1) on this page'], ['new', 'New', 'The current site'], ...it.vars.map((v) => [v, 'New ' + v.toUpperCase(), 'Another version of the new page'])].map(([v, name, tip]) => `<button class="rv-chip" data-g="view" data-v="${esc(v)}" aria-pressed="${v === now}" title="${tip}">${esc(name)}</button>`).join('')}</div>
+        <div style="margin-top:10px">${noteHTML(ci)}</div>
         <div class="rv-dock-nav"><button class="rv-btn rv-sm" data-g="back">‹ Back</button>${it.id === 'opening' ? '<button class="rv-btn rv-sm" data-g="replay" title="Play the opening again with the chosen version">Replay</button>' : ''}<span class="rv-grow"></span><button class="rv-btn rv-main" data-g="next" title="Or ⌘↵">Next ›</button></div>`;
   }
 
@@ -1396,6 +1444,7 @@
   showWho();
   setHidden(hidden);
   renderDock();
+  if (changes) preloadOld();
   if (source === 'sheet') load(); else paint();
   frame(track);
   sync();
