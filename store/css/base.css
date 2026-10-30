@@ -59,7 +59,7 @@ p { margin: 0 0 1em; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* forms */
-.field { display: grid; gap: 6px; margin-bottom: 16px; min-width: 0; }
+.field { display: grid; gap: 6px; margin-bottom: 0; min-width: 0; }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
 .field-row.three { grid-template-columns: 1.3fr 1fr .8fr; }
 .label { font-size: .8rem; font-weight: 600; letter-spacing: .01em; }
@@ -72,9 +72,24 @@ textarea.input { resize: vertical; min-height: 110px; }
 .field-error { color: var(--danger); font-size: .78rem; min-height: 0; }
 .field-error:empty { display: none; }
 .is-invalid .input { border-color: var(--danger); }
+/* New: every field keeps a line free under it for its message, so showing one moves nothing */
+.field { margin-bottom: 6px; }
+.field > .field-error, .field > .field-error:empty { display: block; min-height: 1rem; line-height: 1rem; margin-top: -4px; }
+.field-check > .field-error, .field-check > .field-error:empty { margin-top: -6px; }
+/* New B: no spare line. The box shrinks slightly, nothing around it moves, and the message sits in the space that freed; the input's lost height goes to its bottom margin so the field stays the same size */
+html[data-var-field-err="b"] .field { position: relative; margin-bottom: 16px; }
+html[data-var-field-err="b"] .field > .field-error, html[data-var-field-err="b"] .field > .field-error:empty { position: absolute; left: 0; right: 0; top: calc(100% - 5px); min-height: 0; margin: 0; opacity: 0; transform: translateY(6px); pointer-events: none; transition: opacity .18s linear, transform .2s var(--ease-out); }
+html[data-var-field-err="b"] .field:has(textarea) { margin-bottom: 20px; }
+html[data-var-field-err="b"] .field:has(textarea) > .field-error { top: calc(100% + 1px); }
+html[data-var-field-err="b"] .field-check > .field-error { top: 100%; }
+html[data-var-field-err="b"] .field-check { margin-bottom: 20px; }
+html[data-var-field-err="b"] .is-invalid > .field-error { opacity: 1; transform: none; }
+html[data-var-field-err="b"] .field > .input:not(textarea) { height: 54px; min-height: 0; transition: border-color .15s, box-shadow .15s, height .2s var(--ease-out), margin-bottom .2s var(--ease-out); }
+html[data-var-field-err="b"] .is-invalid > .input:not(textarea) { height: 46px; margin-bottom: 8px; }
 .form-msg { color: var(--danger); font-size: .88rem; margin: 0 0 10px; }
 .form-msg:empty { display: none; }
 .field-check { margin-bottom: 10px; }
+.field-check:has(> .field-error) { margin-bottom: 6px; }
 .check { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; font-size: .9rem; line-height: 1.45; }
 .check input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .check-box { flex: none; width: 22px; height: 22px; border: 1.5px solid var(--line); border-radius: 6px; display: grid; place-items: center; background: var(--surface); transition: all .15s; margin-top: 1px; }

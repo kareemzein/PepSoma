@@ -237,6 +237,8 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 .page-head h1 { font-size: clamp(2.1rem, 4.4vw, 3.3rem); max-width: 860px; margin: 0 auto .35em; }
 .page-head .lead { max-width: 680px; margin: 0 auto; }
 .thin { font-weight: 300; letter-spacing: -.01em; }
+/* checkout's title sits 20px lower; the form below stays where it was */
+.page-head:has(+ section .checkout-grid) { padding: 84px 0 20px; }
 
 /* ---------- hero ---------- */
 .hero { position: relative; background: radial-gradient(1100px 520px at 85% 15%, var(--bg-tint), transparent 60%), var(--cream); padding: 56px 0 72px; overflow: hidden; }
@@ -608,11 +610,10 @@ button.size-chip:focus-visible { outline: 2px solid var(--focus); outline-offset
 .deal-line strong { color: var(--text); }
 .buy-row { display: flex; gap: 12px; align-items: stretch; }
 .buy-row .qty { flex: none; }
-/* the product page's quantity rolls up when it goes up and down when it goes down */
-.qty-input.roll-up { animation: qtyUp .18s var(--ease-out); }
-.qty-input.roll-down { animation: qtyDown .18s var(--ease-out); }
-@keyframes qtyUp { from { transform: translateY(60%); opacity: 0; } }
-@keyframes qtyDown { from { transform: translateY(-60%); opacity: 0; } }
+/* a quantity updates in place: the old number (the ghost) is wiped away and the new one wiped in, both over the same box (see wipeQty in ui.js) */
+.qty { position: relative; }
+.qty-ghost { position: absolute; display: grid; place-items: center; font-weight: 700; pointer-events: none; }
+.qty.sm .qty-ghost { font-size: .85rem; }
 .buy-btn { flex: 1; position: relative; overflow: hidden; }
 .buy-btn::after { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.28) 50%, transparent 70%); transform: translateX(-100%); }
 .buy-btn:hover::after { animation: shine .9s ease; }
@@ -666,12 +667,15 @@ button.size-chip:focus-visible { outline: 2px solid var(--focus); outline-offset
 .line.leaving { animation: none; overflow: hidden; pointer-events: none; transition: height .26s var(--ease-out), padding .26s var(--ease-out), opacity .18s linear, border-color .26s; }
 .line.leaving.out { padding-top: 0; padding-bottom: 0; opacity: 0; border-bottom-color: transparent; }
 /* free-shipping progress: a small inset bar just above the subtotal */
-.drawer-foot .freeship { margin: 0; padding: 8px 12px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 6px 16px -12px rgba(0,0,0,.45); font-size: .76rem; }
-.drawer-foot .freeship-text { gap: 6px; margin-bottom: 6px; }
+.drawer-foot { padding-top: 12px; }
+.drawer-foot .freeship { margin: 0; padding: 11px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 6px 16px -12px rgba(0,0,0,.45); font-size: .76rem; }
+.drawer-foot .freeship-text { gap: 6px; margin-bottom: 6px; line-height: 1.2; }
 .drawer-foot .freeship-text .icon { width: 15px; height: 15px; flex: none; }
 .drawer-foot .freeship-bar { height: 4px; }
-.billing-fields { margin-top: 6px; }
-.billing-fields > .label { display: block; margin-bottom: 10px; }
+.billing-fields { margin-top: 22px; }
+.legend-sub { font-size: 1rem; margin-bottom: 14px; }
+.save-note { margin-left: 6px; color: var(--muted); font-size: .8rem; }
+.checkout-form > .field-check { margin-bottom: 18px; }
 @keyframes lineIn { from { opacity: 0; transform: translateX(16px); } }
 
 /* Home's offer card: a wide card that fades in slowly mid-screen; no backdrop, the page keeps scrolling */
@@ -824,7 +828,6 @@ button.size-chip:focus-visible { outline: 2px solid var(--focus); outline-offset
   .bracket.tl { top: 24px; } .bracket.br { bottom: 24px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .qty-input.roll-up, .qty-input.roll-down { animation: none; }
   .rise, .line-mask > span, .reveal { opacity: 1 !important; transform: none !important; filter: none !important; }
   .window .chromatogram path { stroke-dashoffset: 0; }
   .auth-wordmark { animation: none !important; }

@@ -190,7 +190,7 @@
   /* ---------- orders ---------- */
   const STATUS = [
     { id: 'placed', label: 'Order placed', at: 0 },
-    { id: 'verified', label: 'Research-use terms accepted', at: 1 },
+    { id: 'verified', label: 'Research-use terms accepted', at: 0 }, // ticked at checkout, so done the moment the order exists
     { id: 'packed', label: 'Packed with lot-matched COA', at: 3 },
     { id: 'shipped', label: 'Shipped', at: 8 },
     { id: 'delivered', label: 'Delivered', at: 30 },
@@ -237,6 +237,25 @@
       STATUS.forEach((s, i) => { if (mins >= s.at) idx = i; });
       return { steps: STATUS.map((s, i) => Object.assign({}, s, { done: i <= idx, current: i === idx, time: order.createdAt + s.at * 60000 })), current: STATUS[idx] };
     },
+  };
+
+  /* ---------- saved details: "Save my details for next time" at checkout (this browser only; never card data) ----------
+     PS.storage 'savedDetails' is { email, phone, first, last, org, address: { line1, line2, city, state, zip }, billing: null (same as shipping) or the same shape }. */
+  const addr = (a) => ['line1', 'line2', 'city', 'state', 'zip'].reduce((o, k) => { o[k] = String((a && a[k]) || '').trim(); return o; }, {});
+  PS.details = {
+    get: () => PS.storage.get('savedDetails', null),
+    // only these fields are ever kept, so nothing else (a card, say) can end up in storage
+    set(d) {
+      const s = (k) => String(d[k] || '').trim();
+      PS.storage.set('savedDetails', { email: s('email'), phone: s('phone'), first: s('first'), last: s('last'), org: s('org'), address: addr(d.address), billing: d.billing ? addr(d.billing) : null });
+    },
+    clear: () => PS.storage.remove('savedDetails'),
+    // the details in a submitted checkout form (the form's field names, as formData gives them)
+    fromForm: (data) => ({
+      email: data.email, phone: data.phone, first: data.first, last: data.last, org: data.org,
+      address: { line1: data.address1, line2: data.address2, city: data.city, state: data.state, zip: data.zip },
+      billing: data.billingSame ? null : { line1: data.baddress1, line2: data.baddress2, city: data.bcity, state: data.bstate, zip: data.bzip },
+    }),
   };
 
   /* ---------- accounts (demo: stored locally, passwords hashed) ---------- */

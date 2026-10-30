@@ -57,7 +57,7 @@
     else input = `<input ${common} type="${o.type || 'text'}" value="${esc(o.value || '')}" placeholder="${esc(o.placeholder || '')}">`;
     return `<div class="field ${o.cls || ''}"><label class="label" for="${id}">${o.label}${req ? '' : ' <span class="optional">optional</span>'}</label>${input}${o.hint ? `<small class="hint">${o.hint}</small>` : ''}<small class="field-error" aria-live="polite"></small></div>`;
   };
-  H.check = (o) => `<div class="field field-check"><label class="check"><input type="checkbox" name="${o.name}" ${o.required ? 'required' : ''} ${o.checked ? 'checked' : ''}><span class="check-box">${PS.icon('check')}</span><span class="check-label">${o.label}</span></label><small class="field-error" aria-live="polite"></small></div>`;
+  H.check = (o) => `<div class="field field-check"><label class="check"><input type="checkbox" name="${o.name}" ${o.required ? 'required' : ''} ${o.checked ? 'checked' : ''}><span class="check-box">${PS.icon('check')}</span><span class="check-label">${o.label}</span></label>${o.required ? '<small class="field-error" aria-live="polite"></small>' : ''}</div>`;
 
   H.qty = (value, attrs) => `<div class="qty" ${attrs || ''}><button type="button" class="qty-btn" data-step="-1" aria-label="Decrease quantity">${PS.icon('minus')}</button><input class="qty-input" name="qty" type="number" min="1" max="99" value="${value || 1}" aria-label="Quantity" inputmode="numeric"><button type="button" class="qty-btn" data-step="1" aria-label="Increase quantity">${PS.icon('plus')}</button></div>`;
 
@@ -96,18 +96,28 @@
 
   H.checkoutForm = (user, t) => {
     const f = (o) => H.field(Object.assign({ form: 'co' }, o));
+    // details saved on this browser fill the form (and keep the save box ticked); otherwise a signed-in visitor's name and email do
+    const sv = PS.details.get(), bill = (sv && sv.billing) || null, ad = (sv && sv.address) || {};
+    const v = (k, d) => (sv ? sv[k] : d) || '';
     return `<form class="checkout-form" data-form="checkout" novalidate>
       <fieldset class="fs"><legend class="legend"><span class="legend-n">1</span> Contact</legend>
-        ${f({ name: 'email', label: 'Email', type: 'email', auto: 'email', validate: 'email', value: user ? user.email : '' })}
-        ${f({ name: 'phone', label: 'Phone', type: 'tel', auto: 'tel', required: false, validate: 'phone', hint: 'For delivery issues only.' })}
+        ${f({ name: 'email', label: 'Email', type: 'email', auto: 'email', validate: 'email', value: v('email', user && user.email) })}
+        ${f({ name: 'phone', label: 'Phone', type: 'tel', auto: 'tel', required: false, validate: 'phone', hint: 'For delivery issues only.', value: v('phone') })}
         ${user ? `<p class="small muted">Signed in as ${esc(user.email)}</p>` : `<p class="small muted">Have an account? <a href="#/account?next=/checkout">Sign in</a> to see order history.</p>`}
       </fieldset>
       <fieldset class="fs"><legend class="legend"><span class="legend-n">2</span> Shipping address</legend>
-        <div class="field-row">${f({ name: 'first', label: 'First name', auto: 'given-name', value: user ? user.name.split(' ')[0] : '' })}${f({ name: 'last', label: 'Last name', auto: 'family-name', value: user ? user.name.split(' ').slice(1).join(' ') : '' })}</div>
-        ${f({ name: 'org', label: 'Lab / institution', auto: 'organization', required: false })}
-        ${f({ name: 'address1', label: 'Street address', auto: 'address-line1' })}
-        ${f({ name: 'address2', label: 'Apt, suite, building', auto: 'address-line2', required: false })}
-        <div class="field-row three">${f({ name: 'city', label: 'City', auto: 'address-level2' })}${f({ name: 'state', label: 'State', options: PS.states, auto: 'address-level1' })}${f({ name: 'zip', label: 'ZIP', auto: 'postal-code', validate: 'zip', attrs: 'inputmode="numeric" maxlength="10"' })}</div>
+        <div class="field-row">${f({ name: 'first', label: 'First name', auto: 'given-name', value: v('first', user && user.name.split(' ')[0]) })}${f({ name: 'last', label: 'Last name', auto: 'family-name', value: v('last', user && user.name.split(' ').slice(1).join(' ')) })}</div>
+        ${f({ name: 'org', label: 'Lab / institution', auto: 'organization', required: false, value: v('org') })}
+        ${f({ name: 'address1', label: 'Street address', auto: 'address-line1', value: ad.line1 })}
+        ${f({ name: 'address2', label: 'Apt, suite, building', auto: 'address-line2', required: false, value: ad.line2 })}
+        <div class="field-row three">${f({ name: 'city', label: 'City', auto: 'address-level2', value: ad.city })}${f({ name: 'state', label: 'State', options: PS.states, auto: 'address-level1', value: ad.state })}${f({ name: 'zip', label: 'ZIP', auto: 'postal-code', validate: 'zip', attrs: 'inputmode="numeric" maxlength="10"', value: ad.zip })}</div>
+        ${H.check({ name: 'billingSame', label: 'Billing address same as shipping', checked: !bill })}
+        <div class="billing-fields" data-billing ${bill ? '' : 'hidden'}>
+          <h3 class="legend legend-sub">Billing address</h3>
+          ${f({ name: 'baddress1', label: 'Street address', auto: 'billing address-line1', attrs: bill ? '' : 'disabled', value: bill && bill.line1 })}
+          ${f({ name: 'baddress2', label: 'Apt, suite, building', auto: 'billing address-line2', required: false, attrs: bill ? '' : 'disabled', value: bill && bill.line2 })}
+          <div class="field-row three">${f({ name: 'bcity', label: 'City', auto: 'billing address-level2', attrs: bill ? '' : 'disabled', value: bill && bill.city })}${f({ name: 'bstate', label: 'State', options: PS.states, auto: 'billing address-level1', attrs: bill ? '' : 'disabled', value: bill && bill.state })}${f({ name: 'bzip', label: 'ZIP', auto: 'billing postal-code', validate: 'zip', attrs: 'inputmode="numeric" maxlength="10"' + (bill ? '' : ' disabled'), value: bill && bill.zip })}</div>
+        </div>
       </fieldset>
       <fieldset class="fs"><legend class="legend"><span class="legend-n">3</span> Shipping method</legend>
         <div class="options">${PS.config.shipping.map((m, i) => `<label class="option"><input type="radio" name="ship" value="${m.id}" ${i === 0 ? 'checked' : ''}><span class="option-dot"></span><span class="option-body"><span class="option-title">${esc(m.label)}</span><span class="option-sub">${esc(m.eta)}</span></span><span class="option-price" data-ship-price="${m.id}">${PS.money(t.shipPrice(m)) === '$0.00' ? 'Free' : PS.money(t.shipPrice(m))}</span></label>`).join('')}</div>
@@ -117,13 +127,6 @@
         ${f({ name: 'cardname', label: 'Name on card', auto: 'cc-name' })}
         ${f({ name: 'card', label: 'Card number', auto: 'cc-number', validate: 'card', attrs: 'inputmode="numeric" data-format="card" maxlength="19" placeholder="1234 5678 9012 3456"' })}
         <div class="field-row">${f({ name: 'exp', label: 'Expiry', auto: 'cc-exp', validate: 'exp', attrs: 'inputmode="numeric" data-format="exp" maxlength="7" placeholder="MM / YY"' })}${f({ name: 'cvc', label: 'CVC', auto: 'cc-csc', validate: 'cvc', attrs: 'inputmode="numeric" maxlength="4" placeholder="123"' })}</div>
-        ${H.check({ name: 'billingSame', label: 'Billing address same as shipping', checked: true })}
-        <div class="billing-fields" data-billing hidden>
-          <span class="label">Billing address</span>
-          ${f({ name: 'baddress1', label: 'Street address', auto: 'billing address-line1', attrs: 'disabled' })}
-          ${f({ name: 'baddress2', label: 'Apt, suite, building', auto: 'billing address-line2', required: false, attrs: 'disabled' })}
-          <div class="field-row three">${f({ name: 'bcity', label: 'City', auto: 'billing address-level2', attrs: 'disabled' })}${f({ name: 'bstate', label: 'State', options: PS.states, auto: 'billing address-level1', attrs: 'disabled' })}${f({ name: 'bzip', label: 'ZIP', auto: 'billing postal-code', validate: 'zip', attrs: 'inputmode="numeric" maxlength="10" disabled' })}</div>
-        </div>
       </fieldset>
       <fieldset class="fs attest"><legend class="legend"><span class="legend-n">5</span> Research use attestation</legend>
         ${H.check({ name: 'ruo', required: true, label: 'I confirm these materials are purchased solely for in-vitro laboratory research and <strong>not for human or animal consumption</strong>.' })}
@@ -132,8 +135,9 @@
         ${t.hasSubs ? H.check({ name: 'subs', required: true, label: 'I understand my standing order <strong>renews automatically</strong> and I’ll be charged on each ship date until I cancel. <a target="_blank" rel="noopener" href="#/policies/subscriptions">Standing Order Terms</a>' }) : ''}
         ${H.check({ name: 'marketing', label: 'Email me new lots, restocks and research-stack offers.' })}
       </fieldset>
+      ${H.check({ name: 'saveDetails', checked: !!sv, label: 'Save my details for next time <small class="save-note">Details stay on this browser only.</small>' })}
       <button class="btn btn-primary btn-lg btn-block" type="submit" data-submit>${PS.icon('lock')} Place order · <span data-total>${PS.money(t.total)}</span></button>
-      <p class="secure-note">Secure checkout. By placing your order you agree to our policies.</p>
+      <p class="secure-note">Secure checkout. By placing your order you agree to our <a href="#/policies" target="_blank" rel="noopener">policies</a>.</p>
     </form>`;
   };
 
@@ -539,6 +543,14 @@
     if (first) { first.focus(); first.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
     return !first;
   }
+  // typing clears a field's error. In New B the box grows back and the message slides down and fades first, so the text goes a moment later
+  function clearError(field) {
+    field.classList.remove('is-invalid');
+    const er = $('.field-error', field);
+    if (!er) return;
+    if (PS.variant('field-err') !== 'b' || matchMedia('(prefers-reduced-motion: reduce)').matches) { er.textContent = ''; return; }
+    setTimeout(() => { if (!field.classList.contains('is-invalid')) er.textContent = ''; }, 220);
+  }
   const formData = (form) => {
     const o = {};
     new FormData(form).forEach((v, k) => { o[k] = typeof v === 'string' ? v.trim() : v; });
@@ -591,16 +603,33 @@
     const r = $('input[name="plan"][value="custom"]', form);
     if (r && !r.checked) { r.checked = true; PS.syncProductForm(form); }
   }
-  // the product page's quantity rolls up when it goes up and down when it goes down
+  // A quantity changes in place: the old number is wiped away (a ghost copy over the box) and the new one wiped in. Going up it works from the bottom edge
+  // and going down from the top, so up reads as up. The same box holds both, so nothing shifts; each step is 90ms. Used by the product page and by the cart
+  // (the panel and the page). The real input always holds the new value; the ghost only ever sits on top of it for the 180ms.
+  function wipeQty(q, from, to) {
+    const box = q.parentNode;
+    if (q._wipe) q._wipe.cancel();
+    $$('.qty-ghost', box).forEach((g) => g.remove());
+    if (to === from || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const up = to > from, ghost = document.createElement('span');
+    ghost.className = 'qty-ghost';
+    ghost.setAttribute('aria-hidden', 'true');
+    ghost.textContent = from;
+    ghost.style.cssText = `left:${q.offsetLeft}px;top:${q.offsetTop}px;width:${q.offsetWidth}px;height:${q.offsetHeight}px`;
+    box.appendChild(ghost);
+    // the digits sit mid-box, so the edge sweeps just their band: from `a` (the digits' near edge) to `b` (their far edge), px from the box's top or bottom
+    const mid = q.offsetHeight / 2, d = parseFloat(getComputedStyle(q).fontSize) / 2, a = mid - d + 'px', b = mid + d + 'px', opt = { duration: 90, easing: 'ease-out' };
+    const out = ghost.animate(up ? [{ clipPath: `inset(0 0 ${a} 0)` }, { clipPath: `inset(0 0 ${b} 0)` }] : [{ clipPath: `inset(${a} 0 0 0)` }, { clipPath: `inset(${b} 0 0 0)` }], Object.assign({ fill: 'forwards' }, opt));
+    out.onfinish = out.oncancel = () => { if (box.contains(ghost)) ghost.remove(); };
+    q._wipe = q.animate(up ? [{ clipPath: `inset(${b} 0 0 0)` }, { clipPath: `inset(${a} 0 0 0)` }] : [{ clipPath: `inset(0 0 ${b} 0)` }, { clipPath: `inset(0 0 ${a} 0)` }], Object.assign({ delay: 90, fill: 'backwards' }, opt));
+  }
+  // the product page's quantity box, after the number was typed or stepped
   function rollQty(q) {
     const to = parseInt(q.value, 10);
     if (!to) return;
     const from = q.dataset.prev != null ? +q.dataset.prev : +q.defaultValue || 1;
     q.dataset.prev = to;
-    if (to === from || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    q.classList.remove('roll-up', 'roll-down');
-    void q.offsetWidth;
-    q.classList.add(to > from ? 'roll-up' : 'roll-down');
+    wipeQty(q, from, to);
   }
 
   /* ---------- delegated behaviors ---------- */
@@ -680,7 +709,7 @@
       if (pf && t.name === 'weeks') pickCustomPlan(pf);
       if (pf) PS.syncProductForm(pf);
       const field = t.closest('.field.is-invalid');
-      if (field) { field.classList.remove('is-invalid'); const er = $('.field-error', field); if (er) er.textContent = ''; }
+      if (field) clearError(field);
     });
 
     document.addEventListener('focusin', (e) => {
@@ -749,6 +778,7 @@
         await new Promise((r) => setTimeout(r, 900));
         const order = PS.orders.create(data, t);
         if (data.marketing) PS.storage.set('newsletter', (PS.storage.get('newsletter', [])).concat(data.email));
+        if (data.saveDetails) PS.details.set(PS.details.fromForm(data)); else PS.details.clear();
         PS.cart.clear();
         PS.go('#/order/' + order.number);
         return;
@@ -825,7 +855,9 @@
     if (pairs.some(([q]) => !$(q, root) !== !$(q, next)) || !$('.totals', root) || !!$('.promo-applied', root) !== !!$('.promo-applied', next)) return false;
     fresh.forEach((f) => {
       const o = byKey[f.dataset.key];
-      $('.qty-input', o).value = $('.qty-input', f).value;
+      const q = $('.qty-input', o), from = parseInt(q.value, 10) || 0, to = parseInt($('.qty-input', f).value, 10) || 0;
+      q.value = to;
+      wipeQty(q, from, to);
       ['.line-price', '.line-meta'].forEach((q) => { $(q, o).innerHTML = $(q, f).innerHTML; });
     });
     old.filter((l) => !keys.includes(l.dataset.key)).forEach(collapseLine);
