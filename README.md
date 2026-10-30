@@ -12,8 +12,9 @@ Both are published from this repo as one site with two links:
 | Pepsoma (the store) | https://kareemzein.github.io/PepSoma/ | `store/` |
 | Pepsoma feedback | https://kareemzein.github.io/PepSoma/pepsoma-feedback/ | `pepsoma-feedback/` |
 | V1 in review mode | https://kareemzein.github.io/PepSoma/review/ | `versions/v1/js/review.js` |
-| V2 (the live store) in review mode | https://kareemzein.github.io/PepSoma/?review | `store/js/review.js` |
-| Versions (Original, V1, V2) | https://kareemzein.github.io/PepSoma/versions/ | `versions/` |
+| V2 in review mode (its own comments) | https://kareemzein.github.io/PepSoma/review-v2/ | `versions/v2/js/review.js` |
+| V3 (the live store) in review mode | https://kareemzein.github.io/PepSoma/?review | `store/js/review.js` |
+| Versions (Original, V1, V2, V3) | https://kareemzein.github.io/PepSoma/versions/ | `versions/` |
 
 ## What the store does
 
@@ -68,8 +69,9 @@ store/                   the storefront (published at the main address)
   css/base.css           base layout that styles.css builds on
 
 versions/                frozen copies of earlier versions of the store (don't edit), published at /versions/
-  index.html             the switcher page: Original, V1, V2 (live). Add a line here when a version is frozen
-  v1/                    the store as reviewed on Oct 1. Its review mode keeps the Oct 1 comments; the live store's (V2) comments are kept apart (VERSION in store/js/review.js), same sheet
+  index.html             the switcher page: Original, V1, V2, V3 (live). Add a line here when a version is frozen
+  v1/                    the store as reviewed on Oct 1. Its review mode keeps the Oct 1 comments; each later version's comments are kept apart (VERSION in store/js/review.js), same sheet
+  v2/                    the store as reviewed on Oct 30, with its own review mode and comments
 
 tools/review-sheet.gs    Google Apps Script that collects review-mode comments in a Google Sheet (not published; setup steps inside)
 

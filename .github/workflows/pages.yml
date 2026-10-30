@@ -47,8 +47,9 @@ jobs:
           forward a ../
           forward b ../pepsoma-feedback/designs/b/
           forward v1 ../pepsoma-feedback/first-draft/
-          # V1 with comment mode on (see store/js/review.js); V2 review is the store with ?review
+          # V1 and V2 with comment mode on (see store/js/review.js); V3 review is the store with ?review
           forward review "../versions/v1/?review"
+          forward review-v2 "../versions/v2/?review"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

@@ -23,7 +23,7 @@
   const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyIdUV2k7x63p800wluyHXTep0wn75DTpMdP9AAMuqC_VhSArNgiq0Kh2GTXICJj96e/exec';
   // every version, oldest first; the last is the live store. When the live store is frozen into versions/<id>/, add the next one here
   // (and to versions/index.html), then copy this file into the frozen copy's js/.
-  const VERSIONS = [['v1', 'V1', 'Oct 1'], ['v2', 'V2', 'live']], LATEST = VERSIONS[VERSIONS.length - 1][0];
+  const VERSIONS = [['v1', 'V1', 'Oct 1'], ['v2', 'V2', 'Oct 30'], ['v3', 'V3', 'live']], LATEST = VERSIONS[VERSIONS.length - 1][0];
   const frozen = location.pathname.match(/\/versions\/(v\d+)\//), VERSION = frozen ? frozen[1] : LATEST;
   // the live store's address. Each version's comments are filed in the sheet under HOME, so versions stay apart;
   // V1's were made before versions existed and keep the bare address

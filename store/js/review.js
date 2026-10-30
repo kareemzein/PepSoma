@@ -5,9 +5,10 @@
    Each comment is signed with the current commenter; names are kept per device (pepsoma.reviewPeople) and N cycles them.
    With SHEET_URL set, every comment is also sent to a Google Sheet (setup: tools/review-sheet.gs), and the panel can show everyone's comments from it (password checked by the script).
    Guided mode walks a checklist of everything to review (GUIDE below), one item at a time, with progress kept per person and sent to the sheet's Checklist tab.
-   What changed mode walks the list of changes (CHANGES below) and compares each against Old (V1) and its New variants; it has the same note box and thumbs, filed under ids like chg:<id>. */
+   What changed mode walks the list of changes (CHANGES below) and compares each against every older version (V1, V2, and the options V2 had for that item) and its New variants; it has the same note box and thumbs, filed under ids like chg:<id>.
+   Each older version shows in its own full-window frame, loaded once in the background; "All changes" in the card opens the whole list in the right panel (grouped, with looked-at, thumb and comment marks; click one to jump). */
 (function () {
-  if (window.name === 'rv-old') return; // the "Old" overlay (What changed) shows V1 as it was, without review tools of its own
+  if (window.name.startsWith('rv-old')) return; // the older-version frames (What changed) show V1 and V2 as they were, without review tools of their own
   const S = PS.storage;
   // per tab (sessionStorage), so the plain link always opens the normal store
   const ON = 'pepsoma.review', asked = /[?&]review(=|&|$)/.test(location.search);
@@ -24,7 +25,7 @@
   const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyIdUV2k7x63p800wluyHXTep0wn75DTpMdP9AAMuqC_VhSArNgiq0Kh2GTXICJj96e/exec';
   // every version, oldest first; the last is the live store. When the live store is frozen into versions/<id>/, add the next one here
   // (and to versions/index.html), then copy this file into the frozen copy's js/.
-  const VERSIONS = [['v1', 'V1', 'Oct 1'], ['v2', 'V2', 'live']], LATEST = VERSIONS[VERSIONS.length - 1][0];
+  const VERSIONS = [['v1', 'V1', 'Oct 1'], ['v2', 'V2', 'Oct 30'], ['v3', 'V3', 'live']], LATEST = VERSIONS[VERSIONS.length - 1][0];
   const frozen = location.pathname.match(/\/versions\/(v\d+)\//), VERSION = frozen ? frozen[1] : LATEST;
   // the live store's address. Each version's comments are filed in the sheet under HOME, so versions stay apart;
   // V1's were made before versions existed and keep the bare address
@@ -167,6 +168,7 @@
   .rv-old-load { position: absolute; inset: 0; display: grid; place-items: center; color: #6b665d; }
   .rv-dock .rv-filters { margin: 10px 0 0; }
   .rv-dock-top { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .rv-dock-top .rv-pos, .rv-dock-top .rv-btn { flex: none; white-space: nowrap; }
   .rv-dock-group { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #ff5a1f; }
   .rv-dock h3 { font-size: 17px; font-weight: 700; line-height: 1.25; margin: 0 0 4px; color: #1b1a17; display: flex; align-items: center; gap: 8px; }
   .rv-notes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: #6b665d; }
@@ -197,6 +199,7 @@
   .rv-ck:hover { background: #f4f0e8; }
   .rv-ck.rv-seen { background: #e9edfb; color: #33407a; }
   .rv-ck.rv-cur { border-color: #1b1a17; }
+  .rv-btn[aria-pressed="true"] { background: #1b1a17; color: #fff; border-color: #1b1a17; }
   .rv-welcome { overflow-y: auto; align-items: start; }
   .rv-wl { width: min(980px, 100%); margin: auto; padding: 28px 30px 26px; border-radius: 22px; background: #fff; color: #1b1a17; box-shadow: 0 24px 70px rgba(0,0,0,.35); }
   .rv-wl .rv-kick { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #ff5a1f; margin: 0 0 8px; }
@@ -615,6 +618,8 @@
   /* ---------- the list of all comments ---------- */
   function renderPanel() {
     if (guided && panelView === 'checklist') { panel.innerHTML = checklistHTML(); return; }
+    if (changes && panelView === 'changes') { renderChangeList(); return; }
+    listShown = false;
     const typed = $('[data-key] input', panel), keep = typed && [typed.value, document.activeElement === typed];
     const all = list(), mine = source === 'local';
     const authors = [...new Set(all.map(byName))];
@@ -629,6 +634,7 @@
         ${!mine && sheetState === 'locked' ? `<form class="rv-key" data-key><input type="password" placeholder="Password" aria-label="Password for everyone's comments" autocomplete="current-password"><button class="rv-btn rv-sm rv-main">Unlock</button></form>` : ''}` : ''}
         <div class="rv-tools">
           ${guided ? '<button class="rv-btn rv-sm" data-p="checklist">← Checklist</button>' : ''}
+          ${changes ? '<button class="rv-btn rv-sm" data-p="changes">← All changes</button>' : ''}
           <button class="rv-btn rv-sm rv-main" data-p="page">+ Comment on this page</button>
           ${mine || sheetState === 'locked' ? '' : '<button class="rv-btn rv-sm" data-p="refresh">Refresh</button><button class="rv-btn rv-sm" data-p="lock">Lock</button>'}
           <button class="rv-btn rv-sm" data-p="copy"${all.length ? '' : ' disabled'}>Copy all</button>
@@ -654,8 +660,13 @@
     const input = $('[data-key] input', panel);
     if (input && keep) { input.value = keep[0]; if (keep[1]) input.focus(); }
   }
-  function openPanel(view) { closePop(); setMode('browse'); panelView = view || 'checklist'; renderPanel(); panel.hidden = false; }
-  function closePanel() { panel.hidden = true; }
+  function openPanel(view) { closePop(); setMode('browse'); panelView = view || 'checklist'; renderPanel(); panel.hidden = false; markList(); if (changes && panelView === 'changes') keepRow($('.rv-list', panel), true); }
+  function closePanel() { panel.hidden = true; listShown = false; markList(); }
+  // the card's All changes button shows whether the list is open
+  function markList() {
+    const b = $('[data-g="all"]', dock), on = !panel.hidden && panelView === 'changes';
+    if (b) { b.setAttribute('aria-pressed', String(on)); b.title = (on ? 'Close' : 'Open') + ' the list of every change'; }
+  }
 
   function exportText() {
     const day = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -699,9 +710,10 @@
       }, 120);
       return;
     }
-    const md = e.target.closest('[data-rvmode]'), ck = e.target.closest('[data-item]');
+    const md = e.target.closest('[data-rvmode]'), ck = e.target.closest('[data-item]'), cg = e.target.closest('[data-chg]');
     if (md) { if (md.dataset.rvmode === 'changes') setChanges(); else setGuided(md.dataset.rvmode === 'guided'); return; }
     if (ck) { closePanel(); openItem(ck.dataset.item); return; }
+    if (cg) { openChange(cg.dataset.chg); if (matchMedia('(max-width: 600px)').matches) closePanel(); return; } // on a phone the panel covers the page
     const f = e.target.closest('[data-f]'), src = e.target.closest('[data-src]');
     if (f) { const a = f.dataset.f; setHidden(!a ? [] : hidden.includes(a) ? hidden.filter((h) => h !== a) : [...hidden, a]); paint(); return; }
     if (src) { setSource(src.dataset.src); return; }
@@ -718,8 +730,9 @@
     else if (act === 'page') { widen = []; openPop(null); }
     else if (act === 'refresh') load();
     else if (act === 'guide') openWelcome();
-    else if (act === 'comments') { panelView = 'comments'; renderPanel(); }
+    else if (act === 'comments') { panelView = 'comments'; renderPanel(); markList(); }
     else if (act === 'checklist') { panelView = 'checklist'; renderPanel(); }
+    else if (act === 'changes') { panelView = 'changes'; renderPanel(); markList(); }
     else if (act === 'restart') {
       const name = who || 'No name', p = myProg();
       if (!confirm(`Start ${name}'s checklist over? This clears what's marked as looked at and the thumbs. Comments stay.`)) return;
@@ -765,7 +778,7 @@
     if (!k) return 'All comments sent to the Google Sheet ✓';
     return `<span class="rv-warn">${k} change${k === 1 ? '' : 's'} not sent to the Google Sheet yet${syncFailed ? ' (offline? retrying)' : ''}</span>`;
   }
-  function showSync() { const el = $('.rv-sync', panel); if (el) el.innerHTML = syncText(); }
+  function showSync() { const el = $('.rv-sync:not([data-keep])', panel); if (el) el.innerHTML = syncText(); }
   async function sync() {
     if (!SHEET_URL || syncing) return;
     const rows = unsent().map((n) => ({ n, rev: n.rev })), removing = gone.slice(), gRows = Object.entries(gDirty);
@@ -989,7 +1002,7 @@
     return { key: VERSION + '|' + k, by: name, version: VERSION, group: it ? it.g : '', item: it ? it.t : id, page: HOME + '#' + (it ? it.go : '/'), opened: p.seen[id] || '', thumb: p.thumb[id] || '', comments: itemNotes(id, name).length };
   };
   const startMode = S.get(VERSION + '.reviewMode', 'free');
-  let guided = startMode === 'guided', changes = startMode === 'changes', panelView = 'checklist', dockMin = false;
+  let guided = startMode === 'guided', changes = startMode === 'changes', panelView = 'checklist', listShown = false, dockMin = false;
   let gPick = null, gPicking = false, flashEl = null, flashT = 0;
   const THUMB = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>';
   const THUMB_DOWN = THUMB.replace('<svg ', '<svg style="transform:rotate(180deg)" ');
@@ -1027,7 +1040,7 @@
   }
   function setGuided(on) {
     if (on && !who) { openPicker('guided'); return; } // a checklist belongs to a person
-    if (changes) { if (boxDirty && boxText.trim()) saveDockNote(); changes = false; hideOld(); }
+    if (changes) { if (boxDirty && boxText.trim()) saveDockNote(); changes = false; hideOld(); pickV2(null); }
     guided = on;
     S.set(VERSION + '.reviewMode', on ? 'guided' : 'free');
     gPick = null;
@@ -1148,6 +1161,7 @@
     if (g === 'next') step(1);
     else if (g === 'back') step(-1);
     else if (g === 'list') openPanel('checklist');
+    else if (g === 'all') { if (!panel.hidden && panelView === 'changes') closePanel(); else openPanel('changes'); }
     else if (g === 'min') { dockMin = true; renderDock(); }
     else if (g === 'expand') { dockMin = false; renderDock(); }
     else if (g === 'view') pickView(b.dataset.v);
@@ -1157,143 +1171,133 @@
     else if (g === 'del') { if (confirm('Delete this note?')) { const id = boxEdit; drop((n) => n.id === id); loadBox(null); boxFor = ''; paint(); renderDock(); } }
     else if (g === 'point') { if (!who) { openPicker(); return; } gPicking = true; setMode('comment'); }
     else if (g === 'unpoint') { gPick = null; hl.hidden = tag.hidden = true; renderDock(); }
-    else if (g === 'up' || g === 'down') { p.thumb[it.id] = p.thumb[it.id] === g ? null : g; touch(it.id); renderDock(); }
+    else if (g === 'up' || g === 'down') { p.thumb[it.id] = p.thumb[it.id] === g ? null : g; touch(it.id); renderDock(); if (!panel.hidden) renderPanel(); }
   });
   dock.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); step(1); } }); // saves on the way
 
-  /* ---------- what changed: each change in order, compared against Old (V1) and its New variants ---------- */
-  // [group, [[id, title, what changed in one line, page to open, optional spot to outline, optional variant names], ...]]
+  /* ---------- what changed: each change in order, compared against V1, V2 and V2's options, and its New variants ---------- */
+  // [group, [[id, title, what changed in one line, page to open, optional spot to outline, optional variant names, optional V2 options], ...]]
   // To add a change, add one line to a group (or a new group). Ids are stored with the variant picks, so keep them stable.
   // Variant names like ['b', 'c'] add New B / New C chips; the view reads PS.variant(id) and CSS can key off html[data-var-<id>="b"].
+  // V2 options, like ['why', ['b', 'c']], mean V2 had the option id `why` with those extra letters: they add V2 B / V2 C chips that set that option in the V2 frame.
   const CHANGES = [
-    ['Oct 1 round', [
-      ['search', 'Search', 'The header search button is gone (Oct 28). Search now sits next to "Best-selling compounds" on Home and opens the shop with your term.', '/', '.home-search'],
-      ['track', 'Track an order', 'A truck button in the header opens a track-order pane.', '/', '.track-wrap'],
-      ['explore', 'Explore Peptides button', 'Uses the same type as Account Login and now comes first, before it.', '/', '.hdr-actions .btn-yellow'],
-      ['almost', 'Checkout heading', '"Almost there" is in one thin font. Add something to the cart first to see it.', '/checkout', '.page-head .thin'],
-      ['rail', 'Browse compounds', 'A carousel of product cards replaces the scrolling compound names.', '/', '.rail-band'],
-      ['labs', 'Lab Tests cards', 'One card per product, with no status column.', '/lab-tests', '.lot-cards'],
-      ['coa', 'Certificate page', 'View COA opens a certificate page on the site, with the lab\'s PDF at the bottom.', '/coa/PS-BPC-2609A', '.coa-web'],
+    ['Whole site and header', [
+      ['track-delay', 'Track an order pop-up', 'The pop-up under the truck button now opens a moment after you hover, and it shows more slowly.', '/', '.track-wrap'],
+      ['explore-size', 'Explore Peptides button', 'It is the same size as the "Hi Kareem / Account & Orders" button, with type a little bigger than the login button\'s and no longer the heavy bold.', '/', '.hdr-actions .btn-yellow'],
+      ['acct-hover', 'Account button', 'The Account button keeps its glow but no longer lifts on hover. Explore Peptides keeps both its glow and its lift.', '/', '.hdr-actions a[href="#/account"]'],
+      ['title-fade', 'Page title fade', 'The title at the top of Shop now fades in every time you arrive, the same way it does from the Shop Peptides menu.', '/shop', '.page-head'],
+      ['card-hover', 'Product cards', 'Product cards on Shop, Home and the stacks have no glow and no mouse tilt. Hover lifts the card and grows the product picture slightly.', '/shop', '.pgrid'],
+      ['added-notice', 'Added-to-cart notice', 'The notice is back, at the top of the screen with a green outline. The first time it has a "Show cart" button; after that the button is the header\'s cart icon with a > chevron.', '/shop', '.cart-btn'],
     ]],
-    ['Oct 28 round · Whole site', [
-      ['pageflash', 'No page reload flash', 'Filters, sort, promo codes and cart changes now update in place (the product grid just fades). Moving between pages cross-fades smoothly.', '/shop', '.shop-bar'],
-      ['dd-close', 'Dropdowns close on click', 'Hover a menu, click an item: the menu closes (and on any page change) until you move away and back.', '/', '.main-nav'],
-      ['login-glow', 'Account Login glow', 'Hover Account Login: the glow is a tight ring that no longer spills below the bar.', '/', '.hdr-actions a[href="#/account"]'],
-      ['hdr-hover', 'Header hover highlight', 'Header buttons light up on hover, and the menu pill and dropdown highlight are easier to see, in light and dark.', '/', '.main-nav'],
-      ['card-glow', 'No glow on cards', 'The glow that followed the cursor over product cards is gone.', '/shop', '.pgrid'],
-      ['fly', 'Add-to-cart fly-in', 'The circle stays inside the window and follows a flatter arc.', '/shop', '.pgrid'],
-      ['add-quiet', 'Quiet add to cart', 'Adding shows no "added" notice and the cart does not open. The fly-in and the cart count are the feedback.', '/shop', '.cart-btn'],
-      ['cookie', 'Cookie banner', 'A shaded background so it stands out from the page. Open the store in a private window to see it.', '/', '.cookie-banner'],
-      ['phone', 'Phone layout', 'At phone width the floating header sits centered and a little higher, and product cards are one column at a comfortable width.', '/shop', '.pgrid'],
-      ['deal-pdp', 'Deal on product pages', 'The top deal bar is gone. The bulk deal is a short line above the quantity on product pages, and the discount shows in the checkout summary.', '/product/bpc-157', '.deal-line'],
+    ['Home', [
+      ['headline-font', 'Headline words', '"traceable" and the other rotating words use the same font as the rest of the headline.', '/', '.hero h1'],
+      ['most-selling', 'Most-selling compounds', 'The heading reads "Most-selling compounds" instead of "Best-selling compounds".', '/', '.sec-head:has(.home-search)'],
+      ['ships-chip', 'Ships today chip', 'The chip has V1\'s design again, and it stays still while the vials bob.', '/', '.fc2'],
+      ['offer-card', 'Offer card', 'The offer card shows only after you have scrolled to Most-selling compounds and 10 seconds have passed since the page loaded. It is more rectangular, bigger and better looking.', '/', '.pgrid'],
+      ['why', 'Why Pepsoma', 'Option B is gone. New is the flat cards, New B is the intro with a list (V2\'s C), and both use V1\'s section background.', '/', '.testi', [], ['why', ['b', 'c']]],
+      ['rail', 'Browse compounds', 'The section is now one slow row moving left to right, with no dots. Each item has a faint colored outline that rotates around it, and bigger, more visible names and pills. Clicking one scrolls to that product\'s card in Most-selling compounds and gives it a small green glow that fades; compounds not in that grid open their product page.', '/', '.rail-band'],
+      ['opening', 'Opening mark', 'V2\'s option B, the DNA helix, is now the only opening mark, tilted 45 degrees. Press Replay to watch it again.', '/', null, [], ['opening', ['b']]],
+      ['hero-bg', 'Hero background', 'V2\'s option C, the DNA helix, is now the only hero background. It runs from the bottom-left corner to the top-right and disappears from the tail. The next one starts slightly above the first, then one below, for five in all, and then the same sequence runs top-left to bottom-right.', '/', '.hero', [], ['hero-bg', ['b', 'c']]],
+      ['hdr-type', 'Header type', 'V2\'s New header type stays, and options B and C are removed.', '/', '.hdr', [], ['hdr-type', ['b', 'c']]],
     ]],
-    ['Oct 28 round · Home', [
-      ['hero-pill', 'Hero pill removed', 'The "Third-party tested · COA on every lot" pill and its pulsing dot are gone.', '/', '.hero-copy'],
-      ['hero-chips', 'Hero chips', 'The floating 99.4% purity chip is gone and "Ships today" is a small, muted note.', '/', '.hero-art'],
-      ['hero-lots', 'Hero stats', '"45 lots tested" is now "Every lot, third-party tested". The 99.3% average purity stays.', '/', '.hero-stats'],
-      ['offer', 'Offer card', 'Stay on the product carousel for about 4 seconds: a small deal card fades in mid-screen. Once per session; the X closes it.', '/', '.rail-band'],
-      ['rail-static', 'Static product cards', 'Carousel cards no longer jump, lift or tilt on hover, and there is no glow behind the vials.', '/', '.rail-band'],
-      ['why', 'Why Pepsoma', 'The sample reviews are replaced with four plain points, with no hover jump. New: flat bordered cards · B: editorial columns with a top rule · C: intro on the left, divided list on the right.', '/', '.testi', ['b', 'c']],
-      ['stack-click', 'Stack cards are clickable', 'Click anywhere on a research stack card to open its page.', '/', '.stack-grid'],
+    ['Product and cart', [
+      ['qty-swap', 'Quantity number', 'The number updates in place with no roll. The old digit disappears bit by bit from the bottom and the new one is revealed the same way, quickly.', '/product/bpc-157', '.buy-row .qty'],
+      ['drawer-qty', 'Cart panel quantities', 'The cart panel uses the same quantity animation as the product page. Going up reads as up and going down reads as down.', '/shop', '.cart-btn'],
+      ['free-box', 'Free-shipping box', 'There is a smaller gap to the line above it, and the space at the top and bottom of the box is even.', '/shop', '.cart-btn'],
     ]],
-    ['Oct 28 round · Shop and product', [
-      ['card-size', 'Product card sizes', 'Size buttons are centered, closer to the price. Click one: the vial picture switches to that size and "Select" becomes "Add to cart" (it adds that size). Click anywhere else on a card to open the product.', '/shop', '.pcard'],
-      ['pdp-notice', 'Product page notice removed', 'The "Pepsoma LLC supplies research materials…" paragraph under the product picture is gone. The research-use notice stays in the footer and at checkout.', '/product/bpc-157', '.gallery'],
-      ['so-custom', 'Standing order: Custom', 'Every 4 weeks is still the default. "Custom" replaces 8 weeks: pick 1 to 12 weeks, then add to cart. The period is remembered, and other product pages suggest it ("Last time: every N weeks") under Custom.', '/product/bpc-157', '.plans'],
-      ['qty-roll', 'Quantity roll', 'Press + and −: the number rolls up when it goes up and down when it goes down. (No motion if the device is set to reduce motion.)', '/product/bpc-157', '.buy-row .qty'],
+    ['Checkout and order', [
+      ['almost', '"Almost there"', 'The heading sits a little lower.', '/checkout', '.page-head'],
+      ['billing', 'Billing address', 'The checkbox and the billing fields moved up to directly under Shipping address. The heading is bigger, slightly smaller than "Shipping address", with space between it and the checkbox.', '/checkout', '.checkout-form .fs:nth-of-type(2)'],
+      ['secure-note', 'Secure checkout line', 'The word "policies" links to the policies page, in a new tab.', '/checkout', '.secure-note'],
+      ['field-errors', 'Field errors', 'Errors no longer move anything. New: space is reserved under each field for the message. New B: the box shrinks slightly with the message under it, and typing brings the box back with a small animation as the message disappears.', '/checkout', '.checkout-form'],
+      ['order-terms', 'Order page status', 'Research-use terms show as checked as soon as the order page loads, with no pending state. Place an order first.', '/checkout'],
+      ['save-details', 'Save my details', 'A checkbox at checkout saves your name, address and contact details on this browser and fills them in next time. Cards are not saved.', '/checkout', '.checkout-form'],
     ]],
-    ['Oct 28 round · Cart and checkout', [
-      ['drawer-qty', 'Cart panel: quantities and trash', 'Add something, then open the cart with the cart button. + and − change only the number, the line price and the totals. At 0, or on the trash can (now an outlined can), the line shrinks out smoothly.', '/shop', '.cart-btn'],
-      ['free-bar', 'Free-shipping bar at the bottom', 'In the cart panel the bar sits at the bottom, just above the subtotal, as a small inset bar. Add something and open the cart to see it.', '/shop', '.cart-btn'],
-      ['billing', 'Billing address', 'Untick "Billing address same as shipping" and billing address fields appear (required while shown); tick it again and they hide. The cart needs an item to reach checkout.', '/checkout', '.checkout-form .fs:nth-of-type(4)'],
-      ['card-16', 'Card number length', 'The card number takes at most 16 digits, typed or pasted. The cart needs an item to reach checkout.', '/checkout', '[name="card"]'],
-      ['secure-note', 'Secure checkout line', 'Under the Place order button it now reads "Secure checkout. By placing your order you agree to our policies." The cart needs an item to reach checkout.', '/checkout', '.secure-note'],
-      ['order-terms', 'Order status wording', 'On the order confirmation page the second status step reads "Research-use terms accepted". Place an order first; the page you land on is the one to look at.', '/checkout'],
+    ['Account', [
+      ['signin-swap', 'After signing in', 'An animated transition takes you into the account page instead of an instant swap.', '/account', '.auth-card'],
+      ['profile', 'Profile', 'You can edit your name, email, phone and saved address.', '/account', '.auth-card'],
+      ['order-lines', 'Order history items', 'Each order lists its items as lines like "2 × BPC-157 10 mg", kept light.', '/orders', '.order-list'],
+      ['manage-orders', 'Manage orders box', 'A box on the right of Order history has Return, Order again and Get support. Support offers a message through the Contact page, or email; for email you pick the order or "Other question", and a button opens an email in a new tab with the subject filled in.', '/orders', '.order-list'],
     ]],
-    ['Oct 28 round · Account', [
-      ['auth-pages', 'Sign in and Create account pages', 'Sign in is its own page and links to "New here? Create an account", which is a separate page that links back. The big faded Pepsoma mark bleeds in from the side behind each. Sign out first if you are signed in.', '/account', '.auth-card'],
-      ['hdr-account', 'Header account button', 'Signed in, the button reads "Hi <first name>" with a smaller "Account & Orders" under it. Hover or tab to it: Account, Order history, Standing orders, Sign out. Signed out it is still "Account Login". Sign in first to see it.', '/', '.hdr-actions .acct-wrap'],
-      ['orders-page', 'Order history page', 'Every order on the account in its own page (number, date, items, total, status), each opening its order. Open it from the account menu, the Account page or Resources. Signed out it asks you to sign in, then returns here. Sign in first.', '/orders', '.order-list'],
-      ['sub-manage', 'Standing orders: Manage', 'Each standing order has Manage: change the period (every 4 weeks or custom), the start date and an optional end date; the next shipment date updates as you edit. Cancelling is inside Manage and asks you to confirm. Needs a signed-in account with a standing order (place one at checkout).', '/account', '#standing-orders'],
-      ['order-thumbs', 'Order page pictures', 'Each item on an order shows its product picture, and the picture and the name both open the product. Sign in and open any order from the list.', '/orders', '.order-list'],
-    ]],
-    ['Oct 28 round · Lab tests', [
-      ['lab-filter', 'Lab Tests product filter', 'A product menu above the lot search shows only that product\'s COA card. It works together with the search; when nothing matches you get the empty message.', '/lab-tests', '.lot-tools'],
-      ['coa-lab', 'Certificate names the lab', 'The top of the certificate page, and of the printable PDF (button at the bottom), names the testing laboratory and its report ID instead of Pepsoma, with the line "Analysis performed by … Results are shown as reported by the laboratory." The lab and report ID are placeholders ([Testing lab], [Report ID]) until the real lab is known.', '/coa/PS-BPC-2609A', '.page-head'],
-      ['chart-label', 'Chart label fixed', 'The "10.73 min · 99.4%" label on the purity chart is no longer squished: it keeps its natural shape on the certificate page, in the PDF and in the Home window.', '/coa/PS-BPC-2609A', '.coa-web-top .chromatogram'],
-    ]],
-    ['Oct 28 round · Options', [
-      ['hdr-type', 'Header type', 'The main nav links, Explore Peptides and Account Login are slimmer and a little smaller. New: DM Sans, lighter and 1px smaller · B: DM Sans in the headline\'s display cut, medium weight · C: Hanken Grotesk.', '/', '.hdr', ['b', 'c']],
-      ['opening', 'Opening mark', 'The "p" in the first-visit opening is replaced by a simple mark. New: a short peptide chain of linked beads · B: a DNA double helix. Press Replay to watch it again.', '/', null, ['b']],
-      ['hero-bg', 'Hero background', 'The drifting "stars" are replaced. New: peptide letters in a slow diagonal wave · B: binary digits in the same wave · C: a DNA helix that draws in and fades out.', '/', '.hero', ['b', 'c']],
-    ]],
-    ['Oct 28 round · Other pages', [
-      ['about-line', 'About page', 'The line "We don’t manufacture claims — we publish data." is gone.', '/about', '.split-copy'],
-      ['contact-info', 'Contact page', 'The phone number, hours and mailing address are gone; the email is the only contact detail listed.', '/contact', '.contact-list'],
-      ['notfound', '404 page', 'The text on the page-not-found screen sits in the middle of the window.', '/nope', '.notfound'],
+    ['Lab tests', [
+      ['lab-search', 'Search', 'Results animate smoothly as you type.', '/lab-tests', '.lot-tools'],
+      ['coa-popup', 'Certificate', 'The certificate opens as a pop-up again, as in V1. /coa/<lot> links still work and open the pop-up over Lab Tests.', '/coa/PS-BPC-2609A', '.coa-web'],
+      ['coa-pdf', 'Download PDF', 'The button moved below the certificate\'s header area.', '/coa/PS-BPC-2609A', '.coa-web'],
     ]],
   ];
-  const CH = CHANGES.flatMap(([g, items]) => items.map(([id, t, ask, go, sel, vars]) => ({ id, g, t, ask, go, sel, vars: vars || [] })));
-  let chgId = S.get(VERSION + '.reviewChange', CH[0].id), oldOn = false;
+  const CH = CHANGES.flatMap(([g, items]) => items.map(([id, t, ask, go, sel, vars, v2opts]) => ({ id, g, t, ask, go, sel, vars: vars || [], v2opts })));
+  let chgId = S.get(VERSION + '.reviewChange', CH[0].id), oldOn = '';
   const curChange = () => CH.find((x) => x.id === chgId) || CH[0];
   // a change as a card item, so it shares the checklist's note box and thumbs; its id can't collide with a checklist id
   const chgItem = (id) => { const c = CH.find((x) => 'chg:' + x.id === id); return c && { id, g: 'What changed · ' + c.g, lead: 'What changed', t: c.t, ask: c.ask, go: c.go, sel: c.sel }; };
-  // Old: V1 at the same page, full-window under the review tools. The iframe is named so review.js stays off inside it.
-  // V1 loads once, in the background, and stays loaded: Old/New only shows or hides it, and each change only sets its hash (V1 is hash-routed).
-  const oldBox = ui('<div class="rv-old rv-away"><div class="rv-old-load">Loading old version…</div><iframe name="rv-old" title="Old version (V1) of this page" style="visibility:hidden"></iframe></div>');
-  const oldFrame = $('iframe', oldBox);
-  let oldStarted = false, oldReady = false, oldTok = 0, oldMark = null;
+  // Older versions: V1 and V2 at the same page, each in its own full-window frame under the review tools. The frames are named so review.js
+  // stays off inside them (V1's copy checks for exactly rv-old, V2's for a name starting with it).
+  // Each loads once, in the background, and stays loaded: a chip only shows or hides it, and each change only sets its hash (both are hash-routed).
+  // `oldOn` is the id of the one on screen ('' for none).
+  const olds = {};
+  [['v1', 'rv-old', 'V1'], ['v2', 'rv-old-v2', 'V2']].forEach(([id, name, label]) => {
+    const box = ui(`<div class="rv-old rv-away"><div class="rv-old-load">Loading ${label}…</div><iframe name="${name}" title="${label} of this page" style="visibility:hidden"></iframe></div>`);
+    olds[id] = { id, box, frame: $('iframe', box), started: false, ready: false, tok: 0, mark: null, from: null };
+  });
   function preloadOld() {
-    if (oldStarted) return;
-    oldStarted = true;
-    oldFrame.src = verUrl('v1') + '#' + (curChange().go || '/');
+    Object.values(olds).forEach((o) => {
+      if (o.started) return;
+      o.started = true;
+      o.frame.src = verUrl(o.id) + '#' + (curChange().go || '/');
+    });
   }
-  function showOld(it) {
-    oldOn = true;
+  // `id` is the version to show; one already on screen is what this one opens scrolled to
+  function showOld(it, id) {
+    const o = olds[id], prev = oldOn && oldOn !== id ? olds[oldOn] : null;
+    oldOn = id;
     flashEl = gPick = null;
     hl.hidden = tag.hidden = pins.hidden = true;
     if (mode === 'comment') setMode('browse');
     preloadOld();
-    if (oldReady) goOld(it);
-    else oldBox.classList.remove('rv-away'); // still loading: the load handler shows the page when it's ready
+    o.from = prev;
+    if (o.ready) goOld(it, o, prev ? prev.frame.contentDocument : document);
+    else { // still loading: the load handler shows the page when it's ready
+      Object.values(olds).forEach((x) => x.box.classList.toggle('rv-away', x !== o));
+    }
   }
   function hideOld(sync) {
     if (!oldOn) return;
-    if (sync && oldReady) try { syncScroll(oldFrame.contentDocument, document); } catch (e) { /* ignore */ }
-    oldOn = false;
-    oldBox.classList.add('rv-away');
+    const o = olds[oldOn];
+    if (sync && o.ready) try { syncScroll(o.frame.contentDocument, document); } catch (e) { /* ignore */ }
+    oldOn = '';
+    o.box.classList.add('rv-away');
     pins.hidden = false;
   }
-  // point the loaded V1 at the change's page and show it; V1 draws on hashchange, so the box opens once it has
-  function goOld(it) {
-    const tok = ++oldTok;
+  // point the loaded frame at the page you're on and show it; the page draws on hashchange, so the box opens once it has
+  function goOld(it, o, from) {
+    const tok = ++o.tok;
     let done = false;
     const show = () => {
-      if (done || tok !== oldTok || !oldOn) return;
+      if (done || tok !== o.tok || oldOn !== o.id) return;
       done = true;
-      oldBox.classList.remove('rv-away');
-      markOld(it);
+      markOld(it, o, from);
+      Object.values(olds).forEach((x) => x.box.classList.toggle('rv-away', x !== o)); // after the scroll is matched, so the other one is still measurable
     };
     try {
-      const w = oldFrame.contentWindow, h = location.hash || '#/'; // the page you're on, not the change's: Old shouldn't move you
+      const w = o.frame.contentWindow, h = location.hash || '#/'; // the page you're on, not the change's: Old shouldn't move you
       if ((w.location.hash || '#/') === h) { show(); return; }
       w.addEventListener('hashchange', show, { once: true });
       w.location.hash = h;
       later(show, 400); // in case no hashchange comes
     } catch (e) { show(); }
   }
-  // outline the change's spot in V1, and open V1 at the part of the page you were looking at
-  function markOld(it) {
+  // outline the change's spot in the frame, and with `from` open it at the part of the page you were looking at there (no `from`: leave the scroll)
+  function markOld(it, o, from) {
     try {
-      const d = oldFrame.contentDocument;
-      if (oldMark) { oldMark.style.outline = oldMark.style.outlineOffset = ''; oldMark = null; }
+      const d = o.frame.contentDocument;
+      Object.values(olds).forEach((x) => { if (x.mark) { x.mark.style.outline = x.mark.style.outlineOffset = ''; x.mark = null; } });
       const el = it.sel && d.querySelector(it.sel);
       if (el) {
         el.style.outline = '3px solid #ff5a1f';
         el.style.outlineOffset = '3px';
-        oldMark = el;
+        o.mark = el;
       }
-      syncScroll(document, d);
+      if (from) syncScroll(from, d);
     } catch (e) { /* ignore */ }
   }
   // scroll one version to the part of the page the other shows: the part under the header there is put under the header here.
@@ -1327,21 +1331,35 @@
     const f = fw.scrollY / Math.max(1, from.documentElement.scrollHeight - fw.innerHeight);
     tw.scrollTo({ top: f * Math.max(0, to.documentElement.scrollHeight - tw.innerHeight), behavior: 'instant' });
   }
-  oldFrame.addEventListener('load', () => {
-    if (!oldStarted) return;
+  Object.values(olds).forEach((o) => o.frame.addEventListener('load', () => {
+    if (!o.started) return;
     try {
-      const d = oldFrame.contentDocument;
-      d.head.insertAdjacentHTML('beforeend', '<style>.cookie-banner, .modal-gate, html.opening::after, .opening-cover { display: none !important; }</style>');
+      const d = o.frame.contentDocument;
+      d.head.insertAdjacentHTML('beforeend', '<style>.cookie-banner, .modal-gate, .offer-card, html.opening::after, .opening-cover { display: none !important; }</style>');
       d.documentElement.classList.remove('opening');
       d.body.classList.remove('no-scroll');
-      d.documentElement.style.overflow = ''; // V1's opening locks it while it plays
+      d.documentElement.style.overflow = ''; // the opening locks it while it plays
     } catch (e) { /* ignore */ }
-    oldReady = true;
-    oldFrame.style.visibility = '';
-    const wait = $('.rv-old-load', oldBox);
-    if (wait) wait.remove(); // V1 can be see-through, so the label must go
-    if (oldOn) { goOld(curChange()); later(() => { if (oldOn) markOld(curChange()); }, 350); } // again once the page has settled
-  });
+    o.ready = true;
+    o.frame.style.visibility = '';
+    const wait = $('.rv-old-load', o.box);
+    if (wait) wait.remove(); // the page can be see-through, so the label must go
+    if (o.id === 'v2') pickV2();
+    if (oldOn === o.id) { goOld(curChange(), o, o.from ? o.from.frame.contentDocument : document); later(() => { if (oldOn === o.id) markOld(curChange(), o, o.from ? null : document); }, 350); } // again once the page has settled
+  }));
+  // V2 shows one of its own options through its PS.variant, which draws the view again in place (V2 keeps its picks apart from the live store's).
+  // `v2Want` is the option the V2 chip asked for ([id, letter]); anything else V2 has picked, such as from its own review mode in this tab, is put back to its plain version.
+  let v2Want = null;
+  function pickV2(want) {
+    if (want !== undefined) v2Want = want;
+    const o = olds.v2;
+    if (!o.ready) return; // applied by the load handler
+    try {
+      const w = o.frame.contentWindow, picks = JSON.parse(w.sessionStorage.getItem('pepsoma.v2.variants')) || {};
+      Object.keys(picks).forEach((id) => { if (!v2Want || id !== v2Want[0]) w.PS.setVariant(id, 'new'); });
+      if (v2Want && w.PS.variant(v2Want[0]) !== v2Want[1]) w.PS.setVariant(v2Want[0], v2Want[1]);
+    } catch (e) { /* ignore */ }
+  }
   function setChanges() {
     if (guided && boxDirty && boxText.trim()) saveDockNote();
     guided = false;
@@ -1360,15 +1378,23 @@
     gPick = null;
     if (!p.seen[k]) { p.seen[k] = new Date().toISOString(); touch(k); } else saveGuide();
     hideOld();
+    pickV2(null); // plain V2 again, not the last item's option
     renderDock();
+    if (!panel.hidden && changes && panelView === 'changes') renderPanel();
     const move = it.go && route() !== it.go;
     if (move) location.hash = '#' + it.go;
     later(() => spot(it), move ? 450 : 60);
   }
-  // the chips: Old shows V1, the rest are the item's variants of the new page
+  // the chips: V1 and V2 (and V2's option letters, as v2:b) show an older version, the rest are the item's variants of the new page
   function pickView(v) {
-    const it = curChange();
-    if (v === 'old') { if (!oldOn) showOld(it); renderDock(); return; }
+    const it = curChange(), [ver, opt] = v.split(':');
+    if (ver === 'v1' || ver === 'v2') {
+      if (ver === 'v2') pickV2(opt ? [it.v2opts[0], opt] : null); // the option is set before the frame is shown
+      if (oldOn !== ver) showOld(it, ver);
+      else if (ver === 'v2') markOld(it, olds.v2); // redrawn in place: outline again, scroll stays
+      renderDock();
+      return;
+    }
     const was = oldOn;
     hideOld(true); // back at the part of the page you were looking at in Old
     if (PS.variant(it.id) !== v) PS.setVariant(it.id, v);
@@ -1376,15 +1402,58 @@
     if (was || PS.variant(it.id) === v) later(() => spot(it, was), 60); // the view was drawn again, so outline the new one
   }
   function changesHTML() {
-    const it = curChange(), ci = curItem(), at = `${CH.indexOf(it) + 1} of ${CH.length}`, now = oldOn ? 'old' : PS.variant(it.id);
+    const it = curChange(), ci = curItem(), at = `${CH.indexOf(it) + 1} of ${CH.length}`, now = oldOn ? (oldOn === 'v2' && v2Want ? 'v2:' + v2Want[1] : oldOn) : PS.variant(it.id);
+    const [v2id, v2more] = it.v2opts || [], listOpen = !panel.hidden && panelView === 'changes';
+    // V1, V2, each V2 option this item had, then New and its variants
+    const chips = [['v1', 'V1', 'The Oct 1 store (V1) on this page'], ['v2', 'V2', 'The Oct 30 store (V2) on this page'],
+      ...(v2more || []).map((v) => ['v2:' + v, 'V2 ' + v.toUpperCase(), 'V2\'s option ' + v.toUpperCase() + ' on this page']),
+      ['new', 'New', 'The current site'], ...it.vars.map((v) => [v, 'New ' + v.toUpperCase(), 'Another version of the new page'])];
     return dockMin
       ? `<button class="rv-dock-pill" data-g="expand" title="Open the card"><span>${esc(it.g)}</span> · ${esc(it.t)} ${at}</button>`
-      : `<div class="rv-dock-top"><span class="rv-dock-group">What changed · ${esc(it.g)}</span><span class="rv-grow"></span><span class="rv-pos">${at}</span><button class="rv-x" data-g="min" aria-label="Shrink" title="Shrink">–</button></div>
+      : `<div class="rv-dock-top"><span class="rv-dock-group">What changed · ${esc(it.g)}</span><span class="rv-grow"></span><span class="rv-pos">${at}</span><button class="rv-btn rv-sm" data-g="all" aria-pressed="${listOpen}" title="${listOpen ? 'Close' : 'Open'} the list of every change">All changes</button><button class="rv-x" data-g="min" aria-label="Shrink" title="Shrink">–</button></div>
         <h3>${esc(it.t)}${cmark(itemNotes(ci.id).length)}</h3>
         <p class="rv-ask">${esc(it.ask)}</p>
-        <div class="rv-filters">${[['old', 'Old', 'The Oct 1 store (V1) on this page'], ['new', 'New', 'The current site'], ...it.vars.map((v) => [v, 'New ' + v.toUpperCase(), 'Another version of the new page'])].map(([v, name, tip]) => `<button class="rv-chip" data-g="view" data-v="${esc(v)}" aria-pressed="${v === now}" title="${tip}">${esc(name)}</button>`).join('')}</div>
+        <div class="rv-filters">${chips.map(([v, name, tip]) => `<button class="rv-chip" data-g="view" data-v="${esc(v)}" aria-pressed="${v === now}" title="${tip}">${esc(name)}</button>`).join('')}</div>
         <div style="margin-top:10px">${noteHTML(ci)}</div>
         <div class="rv-dock-nav"><button class="rv-btn rv-sm" data-g="back">‹ Back</button>${it.id === 'opening' ? '<button class="rv-btn rv-sm" data-g="replay" title="Play the opening again with the chosen version">Replay</button>' : ''}<span class="rv-grow"></span><button class="rv-btn rv-main" data-g="next" title="Or ⌘↵">Next ›</button></div>`;
+  }
+
+  // the right panel's list of every change, grouped like the checklist; the current change is outlined
+  function changeListHTML() {
+    const p = myProg(), seen = CH.filter((x) => p.seen['chg:' + x.id]).length, cur = curChange().id;
+    return `<header>
+        <h2><span class="rv-grow">All changes · ${esc(who || 'No name')}</span><button class="rv-btn rv-sm" data-p="close" aria-label="Close">✕</button></h2>
+        ${modeSwitch()}
+        <div class="rv-sync" data-keep>${seen} of ${CH.length} looked at</div>
+        <div class="rv-tools">
+          <button class="rv-btn rv-sm rv-main" data-p="comments">Comments (${notes.length})</button>
+          <button class="rv-btn rv-sm" data-p="guide">How it works</button>
+          <button class="rv-btn rv-sm" data-p="exit">Exit review</button>
+        </div>
+        ${versionSwitch()}
+      </header>
+      <div class="rv-list">${CHANGES.map(([g, items]) => {
+        const k = items.filter(([id]) => p.seen['chg:' + id]).length;
+        return `<div class="rv-grp"><div class="rv-grp-h"><span>${esc(g)}</span><span>${k}/${items.length}</span></div><div class="rv-grp-bar"><i style="width:${Math.round((k / items.length) * 100)}%"></i></div>` +
+          items.map(([id, t]) => `<button class="rv-ck${p.seen['chg:' + id] ? ' rv-seen' : ''}${cur === id ? ' rv-cur' : ''}" data-chg="${id}"${cur === id ? ' aria-current="true"' : ''}><span class="rv-grow">${esc(t)}</span>${tmark(p.thumb['chg:' + id])}${cmark(itemNotes('chg:' + id).length)}</button>`).join('') + '</div>';
+      }).join('')}</div>`;
+  }
+  // drawn again as you move, so the list keeps its scroll; the first time it shows, the current row goes in the middle, and after that it only moves to keep the row in view
+  function renderChangeList() {
+    const l0 = $('.rv-list', panel), top = listShown && l0 ? l0.scrollTop : 0;
+    panel.innerHTML = changeListHTML();
+    const l = $('.rv-list', panel);
+    l.scrollTop = top;
+    if (!panel.hidden) keepRow(l, !listShown);
+    listShown = true;
+  }
+  function keepRow(l, centre) {
+    const row = $('.rv-cur', l);
+    if (!row) return;
+    const a = l.getBoundingClientRect(), r = row.getBoundingClientRect();
+    if (centre) l.scrollTop += r.top - a.top - (a.height - r.height) / 2;
+    else if (r.top < a.top) l.scrollTop += r.top - a.top - 8;
+    else if (r.bottom > a.bottom) l.scrollTop += r.bottom - a.bottom + 8;
   }
 
   function checklistHTML() {
