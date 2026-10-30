@@ -29,14 +29,13 @@
   };
 
   /* ---------- product card ---------- */
-  function card(p, i, still) {
+  function card(p, i) {
     const s = p.sizes[0];
     const multi = p.sizes.length > 1;
     // one navy "Sale" tag wherever the card shows a crossed-out price (stacks keep their "Save x%" pill)
     const sale = p.badge === 'Sale' || (s.compare && !/save/i.test(p.badge || ''));
     const badge = p.badge && p.badge !== 'Sale' ? p.badge : '';
-    // still: no scroll reveal (cards off to the side of a carousel would never scroll into view vertically)
-    return `<article class="pcard${still ? '' : ' reveal'}" data-id="${p.id}" style="--d:${(i || 0) % 4}">
+    return `<article class="pcard reveal" data-id="${p.id}" style="--d:${(i || 0) % 4}">
       <a class="pcard-img" href="#/product/${p.id}" aria-label="${esc(p.name)}">${badge ? `<span class="pill-y">${esc(badge)}</span>` : ''}${sale ? '<span class="sale-tag">Sale</span>' : ''}<span class="pcard-vial">${img(p)}</span></a>
       <div class="pcard-body">
         <span class="pcard-cat">${esc(catName(p.cat))}</span>
@@ -179,11 +178,14 @@
     const sampleLot = PS.lots(hero)[0];
     const singles = PS.products.filter((p) => !p.includes && !p.noCoa);
     const avgPurity = singles.reduce((s, p) => s + p.purity, 0) / singles.length;
+    // the Browse row: every compound, twice over so the loop has no seam (the second copy is hidden from keyboards and screen readers)
+    const chip = (p, i, copy) => `<a class="mchip" href="#/product/${p.id}" data-chip="${p.id}" style="--c:${p.accent};--o:${i * 47}deg"${copy ? ' tabindex="-1"' : ''}><b>${esc(p.name)}</b><span>${esc(catName(p.cat))}</span></a>`;
+    const chips = (copy) => singlesAll.map((p, i) => chip(p, i, copy)).join('');
     return {
       html: `
-      <section class="hero"><canvas class="hero-bg" data-herobg="${PS.variant('hero-bg')}" aria-hidden="true"></canvas><div class="container hero-grid">
+      <section class="hero"><canvas class="hero-bg" data-herobg aria-hidden="true"></canvas><div class="container hero-grid">
         <div class="hero-copy">
-          <h1><span class="line-mask" style="--i:1"><span>Research peptides,</span></span><span class="line-mask" style="--i:2"><span><span class="swap" data-swap>${['documented', 'verified', 'traceable'].map((w, i) => `<em class="serif ${i ? '' : 'on'}">${w}</em>`).join('')}</span> to the lot.</span></span></h1>
+          <h1><span class="line-mask" style="--i:1"><span>Research peptides,</span></span><span class="line-mask" style="--i:2"><span><span class="swap" data-swap>${['documented', 'verified', 'traceable'].map((w, i) => `<em class="${i ? '' : 'on'}">${w}</em>`).join('')}</span> to the lot.</span></span></h1>
           <p class="lead rise" style="--i:3">High-purity peptides for laboratory research. Third-party tested, traceable to the lot, dispatched within 24 hours.</p>
           <div class="btn-row rise" style="--i:4"><a class="btn btn-primary btn-lg" href="#/shop">SHOP PEPTIDES</a><a class="btn btn-yellow btn-lg" href="#/lab-tests"><em class="serif">View lab tests</em></a></div>
           <div class="hero-stats rise" style="--i:5">
@@ -199,11 +201,9 @@
         </div>
       </div></section>
 
-      <section class="rail-band" aria-label="Browse compounds"><div class="container">
-        <div class="sec-head split-head"><h2>Browse ${it('compounds')}</h2>
-          <div class="rail-nav"><button class="round-btn rail-prev" data-rail="-1" aria-label="Previous compounds" disabled>${icon('arrow')}</button><button class="round-btn" data-rail="1" aria-label="More compounds">${icon('arrow')}</button></div></div>
-        <div class="rail" data-rail-track>${singlesAll.map((p) => card(p, 0, true)).join('')}</div>
-      </div></section>
+      <section class="chips-band" aria-label="Browse compounds" data-drift>
+        <div class="marquee" style="--dur:${Math.round(singlesAll.length * 5.5)}s"><div class="marquee-track">${chips()}</div><div class="marquee-track" aria-hidden="true">${chips(true)}</div></div>
+      </section>
 
       <section class="section"><div class="container">
         <div class="sec-head center reveal"><h2>Choose your ${it('research stack')}</h2><p class="lead muted">Complementary compounds, pre-kitted. Each vial ships with its own lot-matched COA.</p></div>
@@ -217,10 +217,10 @@
       </div></section>
 
       <section class="section"><div class="container">
-        <div class="sec-head split-head reveal"><h2>Best-selling ${it('compounds')}</h2>
+        <div class="sec-head split-head reveal"><h2>Most-selling ${it('compounds')}</h2>
           <form data-form="search" role="search" class="shop-search home-search">${icon('search')}<input class="input" name="q" placeholder="Search compounds" aria-label="Search compounds"></form>
           <a class="btn btn-ghost" href="#/shop">View full catalog ${icon('arrow')}</a></div>
-        <div class="pgrid">${best.map((p, i) => card(p, i)).join('')}</div>
+        <div class="pgrid" data-best>${best.map((p, i) => card(p, i)).join('')}</div>
       </div></section>
 
       <section class="testi" data-why="${PS.variant('why')}"><div class="container">
@@ -230,7 +230,7 @@
           ['shield', 'Third-party tested', 'Every lot goes to an independent ISO/IEC 17025-accredited laboratory before it’s listed.'],
           ['truck', '24-hour dispatch', `Orders placed before ${PS.company.cutoff} ship the same day, with tracking.`],
           ['flask', 'Research use only', 'Documented and sold for laboratory research, with a research-use confirmation at checkout.'],
-        ].map(([ic, t, body], i) => `<div class="testi-card reveal" style="--d:${i}">${icon(ic)}<span class="testi-n">0${i + 1}</span><h3>${t}</h3><p>${body}</p></div>`).join('')}</div>
+        ].map(([ic, t, body], i) => `<div class="testi-card reveal" style="--d:${i}">${icon(ic)}<h3>${t}</h3><p>${body}</p></div>`).join('')}</div>
       </div></section>
 
       <section class="section section-cream"><div class="container">
@@ -464,9 +464,34 @@
     if (set) applyMode(set.dataset.modeSet, set);
     // dropdowns open on hover or focus, so a click on an item shuts its menu
     if (e.target.closest('.dd a, .dd button')) shutMenus();
-    const rail = e.target.closest('[data-rail]');
-    if (rail) { const t = document.querySelector('[data-rail-track]'); t.scrollBy({ left: rail.dataset.rail * t.clientWidth * 0.9, behavior: 'smooth' }); }
+    // Browse row: a compound that has a card in Most-selling compounds scrolls to it and lights it up; any other opens its page
+    const chip = e.target.closest('[data-chip]');
+    if (chip) {
+      const card = document.querySelector(`[data-best] .pcard[data-id="${chip.dataset.chip}"]`);
+      if (card) { e.preventDefault(); spotlight(card); }
+    }
   });
+  // scroll the card to just under the header, then (once the scrolling has stopped) give it a green glow that fades
+  function spotlight(card) {
+    if (!card.classList.contains('in')) { // its scroll reveal hasn't run: show it now, without the slide, so the scroll aims at where it really sits
+      card.style.transition = 'none';
+      card.classList.add('in');
+      void card.offsetWidth;
+      card.style.transition = '';
+    }
+    card.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });
+    let y = -1, still = 0, frames = 0;
+    const wait = () => {
+      still = Math.abs(scrollY - y) < 1 ? still + 1 : 0;
+      y = scrollY;
+      if (still < 6 && ++frames < 240) { requestAnimationFrame(wait); return; }
+      card.classList.remove('glow'); void card.offsetWidth; card.classList.add('glow');
+      clearTimeout(card._glow);
+      card._glow = setTimeout(() => card.classList.remove('glow'), 2200);
+      card.querySelector('.pcard-name a').focus({ preventScroll: true }); // keyboard users carry on from the card
+    };
+    requestAnimationFrame(wait);
+  }
   // a menu shut this way stays shut until the pointer leaves it, then opens on hover again
   function shutMenus() {
     document.querySelectorAll('.dd-wrap, .track-wrap').forEach((w) => { if (w.matches(':hover')) w.classList.add('shut'); });
@@ -478,14 +503,6 @@
     if (w && !w.contains(e.relatedTarget)) w.classList.remove('shut');
   });
   addEventListener('hashchange', shutMenus);
-  // carousel arrows dim at either end
-  document.addEventListener('scroll', (e) => {
-    const t = e.target;
-    if (!t.matches || !t.matches('[data-rail-track]')) return;
-    const [prev, next] = t.parentElement.querySelectorAll('[data-rail]');
-    prev.disabled = t.scrollLeft < 4;
-    next.disabled = t.scrollLeft + t.clientWidth > t.scrollWidth - 4;
-  }, true);
 
   /* ---------- motion ---------- */
   // sliding pill behind the nav link you're pointing at
@@ -522,65 +539,61 @@
     words[next].classList.add('on');
   }, 2600);
 
-  // hero background, faint and behind the headline; the kind comes from PS.variant('hero-bg'): 'new' peptide letters, 'b' binary digits (both a slow diagonal
-  // wave over a character grid), 'c' a DNA double helix that draws in and fades out. It pauses when the hero is off-screen or the tab is hidden.
+  // hero background, faint and behind the headline: DNA double helices, one at a time. Five run from the bottom left corner to the top right (the middle
+  // one first, then one a step above it, one below, two above, two below); each draws in, leaves the screen at the far corner and loses its tail along
+  // the path, so none stays. Then the same five run from the top left to the bottom right, and it starts over. It pauses when the hero is off-screen
+  // or the tab is hidden.
   function startHeroBg(cv) {
     const ctx = cv.getContext('2d');
     if (!ctx) return;
-    const kind = cv.dataset.herobg;
-    const rnd = PS.rng(7);
-    const SEQ = 'GEPPPGKPADDAGLVSDKPGHKAEDGKPVMEHFPGPTKPRPGPLKKTETQ'; // BPC-157, Ac-SDKP, GHK, epitalon, KPV, Semax, Selank, TB-500 fragment
-    const CW = 22, CH = 28, TAU = Math.PI * 2;
-    let w = 0, h = 0, color = '', cols = 0, rows = 0, glyphs = [], shift = [], raf = 0, last = 0, onScreen = true, t0 = 0, el = 0, n = 0;
+    const TAU = Math.PI * 2;
+    const DRAW = 3400, ERASE = 3000, EACH = DRAW + ERASE + 200; // ms a strand takes to draw in, to lose its tail, and with a short rest after
+    const SLOTS = [0, -1, 1, -2, 2]; // steps from the middle line, negative above it
+    let w = 0, h = 0, color = '', raf = 0, last = 0, onScreen = true, t0 = 0, el = 0, n = 0;
     const size = () => {
       if (!cv.isConnected) { removeEventListener('resize', size); return; }
       const r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
       w = r.width; h = r.height; cv.width = w * dpr; cv.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      cols = Math.ceil(w / CW); rows = Math.ceil(h / CH);
-      glyphs = []; shift = [];
-      for (let i = 0; i < cols * rows; i++) {
-        glyphs.push(kind === 'b' ? (rnd() < 0.5 ? '0' : '1') : SEQ[(i % cols + Math.floor(i / cols) * 7) % SEQ.length]);
-        shift.push(rnd() * 0.3);
-      }
-      draw(reduced() ? 2600 : el);
+      draw(reduced() ? DRAW : el);
     };
-    const letters = (t) => {
-      ctx.font = '500 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = color;
-      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-        const i = r * cols + c, v = (Math.sin(((c * CW + r * CH * 1.4) / 620 - t / 7000 + shift[i]) * TAU) + 1) / 2, a = v * v * v * 0.17;
-        if (a < 0.012) continue;
-        ctx.globalAlpha = a;
-        ctx.fillText(glyphs[i], c * CW + CW / 2, r * CH + CH / 2);
-      }
+    const ease = (x) => x * x * (3 - 2 * x);
+    // the strand playing at time t: which diagonal (0 bottom left to top right, 1 top left to bottom right), its slot, and how far its head and tail have got along the path (0 to 1)
+    const strand = (t) => {
+      const k = Math.floor(t / EACH) % 10, l = t % EACH;
+      return { diag: k < 5 ? 0 : 1, slot: SLOTS[k % 5], head: ease(Math.min(1, l / DRAW)), tail: ease(Math.max(0, Math.min(1, (l - DRAW) / ERASE))) };
     };
-    // one helix along a diagonal from bottom left to top right: it draws in from the left, holds, fades, rests; the twist turns slowly
     const helix = (t) => {
-      const k = reduced() ? 7000 : t % 16000;
-      const prog = 1 - Math.pow(1 - Math.min(1, k / 6000), 3), fade = k < 10000 ? 1 : Math.max(0, 1 - (k - 10000) / 4000);
-      if (fade <= 0) return;
-      const ax = -0.04 * w, ay = 0.88 * h, bx = 1.04 * w, by = 0.12 * h, len = Math.hypot(bx - ax, by - ay), L = len * prog;
-      const ux = (bx - ax) / len, uy = (by - ay) / len, nx = -uy, ny = ux;
-      const amp = Math.max(30, Math.min(56, h * 0.09)), lam = 150, turn = reduced() ? 0 : t / 2600;
-      ctx.fillStyle = ctx.strokeStyle = color; ctx.lineCap = 'round';
+      const { diag, slot, head, tail } = strand(t);
+      const amp = Math.max(30, Math.min(56, h * 0.09)), lam = 150, pad = amp * 3.5, turn = reduced() ? 0 : t / 2600;
+      const a = diag ? [-0.04 * w, 0.12 * h] : [-0.04 * w, 0.88 * h], b = diag ? [1.04 * w, 0.88 * h] : [1.04 * w, 0.12 * h];
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / len, uy = (b[1] - a[1]) / len, nx = -uy, ny = ux;
+      // the path starts and ends well outside the hero, shifted sideways by its slot
+      const ax = a[0] - ux * pad + nx * slot * amp * 2.4, ay = a[1] - uy * pad + ny * slot * amp * 2.4, L = len + 2 * pad, s0 = tail * L, s1 = head * L;
       const at = (s, off) => { const th = s / lam * TAU + turn + off; return [ax + ux * s + nx * amp * Math.sin(th), ay + uy * s + ny * amp * Math.sin(th), Math.cos(th)]; };
-      for (let s = 0; s < L; s += 6) for (let o = 0; o < 2; o++) {
-        const p = at(s, o * Math.PI), q = at(Math.min(L, s + 6), o * Math.PI), d = (p[2] + 1) / 2;
-        ctx.globalAlpha = fade * (0.1 + 0.2 * d); ctx.lineWidth = 1 + 1.2 * d;
-        ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
+      const seen = (p) => p[0] > -40 && p[0] < w + 40 && p[1] > -40 && p[1] < h + 40;
+      ctx.fillStyle = ctx.strokeStyle = color; ctx.lineCap = 'round';
+      for (let s = s0; s < s1; s += 6) {
+        const f = Math.min(1, (s - s0) / 160); // the tail thins out
+        for (let o = 0; o < 2; o++) {
+          const p = at(s, o * Math.PI), q = at(Math.min(s1, s + 6), o * Math.PI), d = (p[2] + 1) / 2;
+          if (!seen(p) && !seen(q)) continue;
+          ctx.globalAlpha = f * (0.1 + 0.2 * d); ctx.lineWidth = 1 + 1.2 * d;
+          ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
+        }
       }
       ctx.lineWidth = 1;
-      for (let s = 0; s < L; s += lam / 10) {
-        const p = at(s, 0), q = at(s, Math.PI);
-        ctx.globalAlpha = fade * 0.12 * Math.abs(Math.sin(s / lam * TAU + turn));
+      for (let s = Math.ceil(s0 / (lam / 10)) * (lam / 10); s < s1; s += lam / 10) {
+        const p = at(s, 0), q = at(s, Math.PI), f = Math.min(1, (s - s0) / 160);
+        if (!seen(p) && !seen(q)) continue;
+        ctx.globalAlpha = f * 0.12 * Math.abs(Math.sin(s / lam * TAU + turn));
         ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke();
-        ctx.globalAlpha = fade * 0.3;
+        ctx.globalAlpha = f * 0.3;
         [p, q].forEach((e) => { ctx.beginPath(); ctx.arc(e[0], e[1], 2.2, 0, TAU); ctx.fill(); });
       }
     };
     function draw(t) {
       ctx.clearRect(0, 0, w, h);
-      if (kind === 'c') helix(t); else letters(t);
+      helix(t);
       ctx.globalAlpha = 1;
     }
     color = getComputedStyle(cv).color; size();
@@ -589,7 +602,7 @@
       raf = 0;
       if (!cv.isConnected || !onScreen || document.hidden) return;
       raf = requestAnimationFrame(tick);
-      if (now - last < (kind === 'c' ? 33 : 41)) return; // 30 and 24 frames a second are plenty for something this slow
+      if (now - last < 33) return; // 30 frames a second is plenty for something this slow
       if (!t0) t0 = now;
       last = now;
       el = now - t0;
@@ -620,6 +633,7 @@
     const el = en.target;
     if (el.matches('[data-count]')) { if (en.isIntersecting && !el.dataset.done) { el.dataset.done = 1; countUp(el); } return; }
     if (el.matches('[data-observe]')) { if (en.isIntersecting) el.classList.add('in'); return; }
+    if (el.matches('[data-drift]')) { el.classList.toggle('off', !en.isIntersecting); return; } // the Browse row stands still while off-screen
     if (el.matches('[data-loop]')) {
       clearInterval(el._loop);
       if (!en.isIntersecting) return;
@@ -664,8 +678,9 @@
     dot.style.left = '0px'; dot.style.top = '0px';
   });
 
-  // Home's offer card: once the product carousel has been on screen for 4 seconds, the deal fades in mid-screen (once per browser session, not while the deal is off)
-  const OFFER = 'pepsoma.offerSeen';
+  // Home's offer card: the deal fades in mid-screen once the visitor has scrolled to Most-selling compounds AND 10 seconds have passed since the page loaded,
+  // whichever comes last (once per browser session, not while the deal is off)
+  const OFFER = 'pepsoma.offerSeen', OFFER_AFTER = 10000;
   let offerIO = null, offerTimer = 0;
   function offerStop() {
     clearTimeout(offerTimer);
@@ -675,26 +690,30 @@
   }
   function offerWatch(main) {
     offerStop();
-    const deal = dealText(), band = main.querySelector('.rail-band');
+    const deal = dealText(), grid = main.querySelector('[data-best]');
     let seen = false;
     try { seen = !!sessionStorage.getItem(OFFER); } catch (e) { /* blocked storage: shows once per page load */ }
-    if (!deal || seen || !band || !('IntersectionObserver' in window)) return;
+    if (!deal || seen || !grid || !('IntersectionObserver' in window)) return;
     const show = () => {
       // wait while the age gate, the cart or the opening is up
       if (document.querySelector('#ps-modal:not([hidden]), #cart-drawer:not([hidden]), .opening-cover')) { offerTimer = setTimeout(show, 1500); return; }
       try { sessionStorage.setItem(OFFER, '1'); } catch (e) { /* ignore */ }
       offerStop();
+      const big = PS.config.deal === 'bogo' ? ['', '1+1', 'free vial'] : ['up to', Math.max(...PS.config.tiers.map((t) => t.pct)) + '%', 'off'];
       document.body.insertAdjacentHTML('beforeend', `<aside class="offer-card" role="complementary" aria-label="Offer"><button class="offer-x" type="button" data-offer-close aria-label="Close offer">${icon('close')}</button>
-        <span class="eyebrow">Auto-applied</span><h3>${deal[0]}</h3><p>${deal[1]}</p><a class="btn btn-primary btn-sm" href="#/shop">Shop peptides ${icon('arrow')}</a></aside>`);
+        <div class="offer-badge" aria-hidden="true">${big[0] ? `<small>${big[0]}</small>` : ''}<strong>${big[1]}</strong><small>${big[2]}</small></div>
+        <div><span class="eyebrow">Auto-applied</span><h3>${deal[0]}</h3><p>${deal[1]}</p><a class="btn btn-primary" href="#/shop">Shop peptides ${icon('arrow')}</a></div></aside>`);
       const card = document.querySelector('.offer-card');
       void card.offsetWidth;
       card.classList.add('in');
     };
+    // the grid's top has come up into the screen: now it is only a matter of the 10 seconds (performance.now() counts from the page load)
     offerIO = new IntersectionObserver(([en]) => {
-      clearTimeout(offerTimer);
-      if (en.isIntersecting) offerTimer = setTimeout(show, 4000);
-    }, { threshold: 0.4 });
-    offerIO.observe(band);
+      if (!en.isIntersecting) return;
+      offerIO.disconnect();
+      offerTimer = setTimeout(show, Math.max(0, OFFER_AFTER - performance.now()));
+    }, { rootMargin: '0px 0px -20% 0px' });
+    offerIO.observe(grid);
   }
   document.addEventListener('click', (e) => {
     const x = e.target.closest('[data-offer-close], .offer-card a');
@@ -702,6 +721,35 @@
     const card = x.closest('.offer-card');
     card.classList.remove('in');
     setTimeout(() => card.remove(), 600);
+  });
+
+  // added-to-cart notice, at the top of the screen under the header. The first time in this browser its button reads "Show cart"; after that
+  // it is the header's cart icon with a > tip. Either opens the cart.
+  const NOTICE = 'cartNoticeSeen';
+  const chevR = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+  let noticeTimer = 0;
+  function noticeHide(n) {
+    clearTimeout(noticeTimer);
+    n.classList.remove('in');
+    setTimeout(() => n.remove(), 300);
+  }
+  PS.on('added', ({ id }) => {
+    const p = PS.getProduct(id);
+    if (!p) return;
+    const first = !PS.storage.get(NOTICE, false);
+    PS.storage.set(NOTICE, true);
+    document.querySelectorAll('.added-notice').forEach((n) => n.remove());
+    document.body.insertAdjacentHTML('beforeend', `<div class="added-notice" role="status">${icon('check')}<span>${esc(p.name)} added to cart</span><button type="button" class="notice-btn" data-open-cart data-notice-go${first ? '' : ' aria-label="Show cart"'}>${first ? 'Show cart' : icon('cart') + chevR}</button></div>`);
+    const n = document.querySelector('.added-notice');
+    void n.offsetWidth;
+    n.classList.add('in');
+    const tick = () => { if (n.matches(':hover, :focus-within')) noticeTimer = setTimeout(tick, 1500); else noticeHide(n); }; // stays while the pointer or keyboard is on it
+    clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(tick, 5000);
+  });
+  document.addEventListener('click', (e) => {
+    const go = e.target.closest('[data-notice-go]');
+    if (go) noticeHide(go.closest('.added-notice'));
   });
 
   // runs after every page render
@@ -712,9 +760,10 @@
     main.classList.add('entered');
     if (mode === 'enter') main.classList.add('page-enter');
     if (soft) main.querySelectorAll('[data-count]').forEach((el) => { el.dataset.done = 1; el.textContent = (+el.dataset.count).toFixed(+(el.dataset.dec || 0)) + (el.dataset.suffix || ''); });
-    if (io) main.querySelectorAll(soft ? '[data-observe], [data-loop]' : '[data-count]:not([data-replay]), [data-observe], [data-loop]').forEach((el) => io.observe(el));
+    if (io) main.querySelectorAll(soft ? '[data-observe], [data-loop], [data-drift]' : '[data-count]:not([data-replay]), [data-observe], [data-loop], [data-drift]').forEach((el) => io.observe(el));
     else if (!soft) main.querySelectorAll('[data-count]').forEach(countUp);
     PS.$$('.theme-btn, .seg').length && syncModeUI();
+    if (!(window.CSS && CSS.registerProperty)) main.querySelectorAll('[data-drift]').forEach((el) => el.classList.add('static-ring')); // no animated ring: the faint static one stays
     const bg = main.querySelector('[data-herobg]');
     if (bg) startHeroBg(bg);
     movePill(null);
@@ -729,15 +778,10 @@
 
   // opening, the first time the site is opened in this browser (index.html sets html.opening): the mark traces itself, then its middle opens
   // and you fly through onto the page while the page's own entrance replays behind it. A tap skips ahead.
-  // The mark inside comes from PS.variant('opening'): 'new' a short peptide chain (linked beads shaped like a p), 'b' a DNA double helix.
-  // Review mode's Replay button plays it again through PS.replayOpening.
+  // The mark inside is a DNA double helix, tilted 45 degrees. Review mode's Replay button plays it again through PS.replayOpening.
   const openingMark = () => {
-    if (PS.variant('opening') === 'b') {
-      const strand = (ph) => 'M' + Array.from({ length: 19 }, (_, i) => `${(500 + 8 * Math.sin(i / 12 * Math.PI * 2 + ph)).toFixed(1)} ${484 + i * 2}`).join('L');
-      return `<g class="oc-p"><path d="${strand(0)}" stroke-width="2"/><path d="${strand(Math.PI)}" stroke-width="2"/>${[487, 490, 493, 499, 502, 505, 511, 514, 517].map((y) => { const d = 8 * Math.sin((y - 484) / 24 * Math.PI * 2); return `<path d="M${500 - d} ${y}H${500 + d}" stroke-width="1.2"/>`; }).join('')}</g>`;
-    }
-    const beads = [[491, 515], [491, 507], [491, 499], [491, 491], [498, 485], [506, 488], [509, 496], [505, 503], [498, 505]];
-    return `<g class="oc-p"><path d="M${beads.map((b) => b.join(' ')).join('L')}L491 499" stroke-width="1.5"/>${beads.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.6"/>`).join('')}</g>`;
+    const strand = (ph) => 'M' + Array.from({ length: 19 }, (_, i) => `${(500 + 8 * Math.sin(i / 12 * Math.PI * 2 + ph)).toFixed(1)} ${484 + i * 2}`).join('L');
+    return `<g class="oc-p"><g class="oc-tilt" transform="rotate(45 500 502)"><path d="${strand(0)}" stroke-width="2"/><path d="${strand(Math.PI)}" stroke-width="2"/>${[487, 490, 493, 499, 502, 505, 511, 514, 517].map((y) => { const d = 8 * Math.sin((y - 484) / 24 * Math.PI * 2); return `<path d="M${500 - d} ${y}H${500 + d}" stroke-width="1.2"/>`; }).join('')}</g></g>`;
   };
   function playOpening() {
     const root = document.documentElement;

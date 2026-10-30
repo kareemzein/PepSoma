@@ -207,24 +207,21 @@ html.opening::after { content: ''; position: fixed; inset: 0; z-index: 200; back
 @keyframes bump { 30% { transform: scale(1.18); } 60% { transform: scale(.94); } }
 .nav-toggle { display: none; }
 .show-sm { display: none !important; }
-/* header type (review item hdr-type): New is DM Sans, a slimmer weight and 1px smaller; Explore Peptides and Account Login share one rule so they always match.
-   B is DM Sans in its large "display" optical size (the headline's cut) at medium weight; C is Hanken Grotesk. B and C only show in review mode. */
+/* header type: DM Sans, a slimmer weight and 1px smaller; Explore Peptides and Account Login share one rule so they always match. */
 .hdr-actions .btn-pill { font-size: .875rem; font-weight: 600; }
-html[data-var-hdr-type="b"] .main-nav .nav-link, html[data-var-hdr-type="b"] .hdr-actions .btn-pill { font-variation-settings: 'opsz' 40; font-weight: 500; }
-html[data-var-hdr-type="c"] .main-nav .nav-link, html[data-var-hdr-type="c"] .hdr-actions .btn-pill { font-family: 'Hanken Grotesk', var(--font-body); font-weight: 500; }
-html[data-var-hdr-type="c"] .hdr-actions .btn-pill { font-weight: 600; }
-@media (min-width: 1025px) {
-  html[data-var-hdr-type="b"] .main-nav .nav-link { font-size: .92rem; }
-  html[data-var-hdr-type="c"] .main-nav .nav-link { font-size: .9rem; }
-}
+/* Explore Peptides: a little larger than Account Login in a medium weight, and as tall as the two-line "Hi ..." button */
+.hdr-actions .btn-yellow { font-size: 1rem; font-weight: 500; }
+.hdr-actions .btn-pill { min-height: 48px; }
 .hdr-actions .btn:hover { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 26%, transparent); } /* a tight ring: it can't spill below the bar */
+.hdr-actions .btn-primary.btn-pill:hover { transform: none; } /* the account button glows but doesn't lift; Explore Peptides keeps both */
 /* track-order pane: opens under the truck button on hover or keyboard focus (on touch, the button goes to the Track Order page) */
 .track-wrap { position: relative; }
-.track-pane { position: absolute; top: calc(100% + 10px); right: -60px; width: 300px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-lg); padding: 16px; display: grid; gap: 10px; opacity: 0; visibility: hidden; transform: translateY(8px); transition: opacity .2s, transform .25s var(--ease-out), visibility .2s; z-index: 5; }
+.track-pane { position: absolute; top: calc(100% + 10px); right: -60px; width: 300px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-lg); padding: 16px; display: grid; gap: 10px; opacity: 0; visibility: hidden; transform: translateY(8px); transition: opacity .15s, transform .2s var(--ease-out), visibility .15s; z-index: 5; }
 .track-pane::before { content: ''; position: absolute; left: 0; right: 0; top: -12px; height: 12px; }
 .track-pane .stack-form { display: grid; gap: 8px; }
 .track-pane .btn { margin-top: 2px; }
-.track-wrap:hover .track-pane, .track-wrap:focus-within .track-pane { opacity: 1; visibility: visible; transform: none; }
+/* it opens a moment after the pointer arrives (so a pass over the button doesn't flash it) and fades in slowly; it closes quickly */
+.track-wrap:hover .track-pane, .track-wrap:focus-within .track-pane { opacity: 1; visibility: visible; transform: none; transition: opacity .5s var(--ease-out) .35s, transform .55s var(--ease-out) .35s, visibility 0s .35s; }
 .track-wrap.shut .track-pane { opacity: 0; visibility: hidden; transform: translateY(8px); }
 @media (hover: none) { .track-pane { display: none; } }
 
@@ -248,7 +245,7 @@ html[data-var-hdr-type="c"] .hdr-actions .btn-pill { font-weight: 600; }
 .hero h1 { margin: 18px 0 20px; font-size: clamp(2.5rem, 5.2vw, 4.3rem); line-height: 1.04; }
 .hero .lead { max-width: 540px; }
 .swap { position: relative; display: inline-grid; vertical-align: bottom; }
-.swap > em { grid-area: 1 / 1; opacity: 0; transform: translateY(40%); filter: blur(6px); transition: opacity .5s var(--ease-out), transform .6s var(--ease-expo), filter .5s; white-space: nowrap; color: var(--accent); }
+.swap > em { grid-area: 1 / 1; font-style: normal; opacity: 0; transform: translateY(40%); filter: blur(6px); transition: opacity .5s var(--ease-out), transform .6s var(--ease-expo), filter .5s; white-space: nowrap; color: var(--accent); }
 .swap > em.on { opacity: 1; transform: none; filter: none; }
 .swap > em.out { opacity: 0; transform: translateY(-40%); filter: blur(6px); }
 .hero-stats { display: flex; gap: 0; margin: 34px 0 0; max-width: 520px; }
@@ -271,22 +268,33 @@ html[data-var-hdr-type="c"] .hdr-actions .btn-pill { font-weight: 600; }
 .float-chip div { display: grid; }
 .float-chip small { color: var(--muted); }
 .float-chip .icon { width: 32px; height: 32px; padding: 7px; border-radius: 50%; background: var(--yellow); color: #1b2d74; }
-/* "Ships today": a quiet note, not a badge (small, muted, no bright icon circle, no float) */
-.fc2 { bottom: 40px; right: 0; gap: 8px; padding: 8px 12px; border-radius: 12px; box-shadow: none; font-size: .78rem; background: var(--surface-glass); }
-.fc2 .icon { width: 18px; height: 18px; padding: 0; background: none; color: var(--muted); }
-.fc2 strong { font-weight: 600; color: var(--muted); }
+/* "Ships today": V1's chip, but it stays put while the vials bob */
+.fc2 { bottom: 40px; right: 0; }
 
-/* ---------- compound carousel (home): swipe or use the arrows, snaps card by card ---------- */
-.rail-band { background: var(--cream); padding: 8px 0 64px; }
-.rail-band .sec-head { margin-bottom: 24px; }
-.rail-nav { display: flex; gap: 8px; }
-.rail-nav .round-btn:disabled { opacity: .35; pointer-events: none; }
-.rail-prev .icon { transform: rotate(180deg); }
-.rail { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - 3 * 20px) / 4); gap: 20px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding: 4px 2px 12px; margin: -4px -2px 0; }
-.rail::-webkit-scrollbar { display: none; }
-.rail .pcard { scroll-snap-align: start; }
-@media (max-width: 1024px) { .rail { grid-auto-columns: calc((100% - 2 * 16px) / 3); gap: 16px; } }
-@media (max-width: 640px) { .rail { grid-auto-columns: 72%; gap: 12px; } }
+/* ---------- compound row (home): one slow row drifting left to right, paused on hover or focus. Each compound has a faint ring in its own color that slowly turns. ---------- */
+@property --ring { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
+.chips-band { background: var(--cream); padding: 8px 0 64px; overflow: hidden; animation: ring 14s linear infinite; }
+.chips-band.off, .chips-band.static-ring { animation-play-state: paused; }
+.chips-band.static-ring { animation: none; }
+@keyframes ring { to { --ring: 360deg; } }
+.marquee { display: flex; overflow: hidden; padding: 8px 0; -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
+.marquee-track { display: flex; gap: 16px; padding-right: 16px; flex: none; animation: mq var(--dur, 150s) linear infinite reverse; }
+.marquee:hover .marquee-track, .marquee:focus-within .marquee-track, .chips-band.off .marquee-track { animation-play-state: paused; }
+@keyframes mq { to { transform: translateX(-100%); } }
+.mchip { --c: var(--accent); display: inline-flex; align-items: center; gap: 12px; white-space: nowrap; padding: 15px 28px; border-radius: 99px; border: 2px solid transparent; text-decoration: none; color: var(--text);
+  background: linear-gradient(var(--surface), var(--surface)) padding-box, conic-gradient(from calc(var(--ring, 0deg) + var(--o, 0deg)), color-mix(in srgb, var(--c) 22%, transparent) 0%, color-mix(in srgb, var(--c) 80%, transparent) 14%, color-mix(in srgb, var(--c) 22%, transparent) 34%, color-mix(in srgb, var(--c) 22%, transparent) 100%) border-box;
+  transition: transform .2s var(--ease-out), box-shadow .2s; }
+.mchip b { font-size: 1.15rem; font-weight: 700; letter-spacing: -.01em; }
+.mchip span { font-size: .95rem; font-weight: 500; color: var(--muted); }
+.mchip:hover, .mchip:focus-visible { transform: translateY(-2px); box-shadow: 0 8px 20px color-mix(in srgb, var(--c) 18%, transparent); }
+.mchip:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+/* a card the row has just scrolled to: a small green glow that fades */
+[data-best] .pcard { scroll-margin-top: calc(var(--header-h) + 24px); }
+.pcard.glow { animation: cardGlow 2s ease-out; }
+@keyframes cardGlow {
+  from { box-shadow: 0 0 0 2px var(--success), 0 0 26px 6px color-mix(in srgb, var(--success) 45%, transparent); }
+  to { box-shadow: 0 0 0 2px transparent, 0 0 26px 6px transparent; }
+}
 
 /* ---------- sections ---------- */
 .section-lav { background: var(--bg-soft); }
@@ -316,9 +324,16 @@ html[data-var-hdr-type="c"] .hdr-actions .btn-pill { font-weight: 600; }
 /* ---------- product grid ---------- */
 .pgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
 .pcard { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; display: flex; flex-direction: column; cursor: pointer; }
-/* cards are static: no hover lift, tilt or cursor glow, and a flat panel behind the vial */
+/* a flat panel behind the vial. Hovering lifts the card and grows the vial a little: no tilt, no glow.
+   The lift uses `translate` so it doesn't fight the scroll reveal's `transform` transition (which comes with a delay per card). */
+.pcard { transition: translate .3s var(--ease-out), border-color .25s; }
+.pcard.reveal { transition: opacity .65s var(--ease-out), transform .65s var(--ease-out), filter .65s var(--ease-out), translate .3s var(--ease-out), border-color .25s; transition-delay: calc(var(--d, 0) * 90ms), calc(var(--d, 0) * 90ms), calc(var(--d, 0) * 90ms), 0s, 0s; }
 .pcard-img { position: relative; display: grid; place-items: center; height: 230px; background: var(--bg-soft); }
-.pcard-img .vial-single, .pcard-img .vial-group { height: 180px; }
+.pcard-img .vial-single, .pcard-img .vial-group { height: 180px; transition: transform .5s var(--ease-spring); }
+@media (hover: hover) {
+  .pcard:hover { translate: 0 -4px; border-color: var(--line-2); }
+  .pcard:hover .pcard-img .vial-single, .pcard:hover .pcard-img .vial-group { transform: scale(1.06); }
+}
 .pcard .vial-svg { filter: none; }
 .pcard-img .pill-y { position: absolute; top: 14px; left: 14px; z-index: 2; }
 .sale-tag { position: absolute; top: 14px; right: 14px; z-index: 2; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding: 4px 10px; border-radius: 99px; background: var(--primary); color: var(--primary-text); }
@@ -337,29 +352,22 @@ button.size-chip:focus-visible { outline: 2px solid var(--focus); outline-offset
 .pcard-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 
 /* ---------- why Pepsoma ---------- */
-/* Why Pepsoma: New is flat bordered cards; B (data-why="b") is editorial columns with a top rule; C (data-why="c") is an intro on the left and a divided list on the right. Nothing moves on hover. */
-.testi { background: var(--bg-soft); padding: 88px 0; }
-.testi h2 { margin-bottom: 12px; font-weight: 400; }
-.why-intro { display: none; margin: 0; color: var(--muted); font-size: 1.15rem; }
+/* On V1's navy section. New is four flat cards; B (data-why="b") is an intro on the left and a divided list on the right. Nothing moves on hover. */
+.testi { background: radial-gradient(900px 400px at 20% 0%, #4a63c9, transparent 70%), linear-gradient(135deg, #14215a, #1b2d74 60%, #2c43a0); color: #fff; padding: 88px 0; }
+.testi h2 { color: #fff; margin-bottom: 12px; font-weight: 400; }
+.why-intro { display: none; margin: 0; color: rgba(255,255,255,.75); font-size: 1.15rem; }
 .why-head { margin-bottom: 40px; }
 .testi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-.testi-card { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
-.testi-card .icon { display: block; width: 24px; height: 24px; color: var(--accent); margin-bottom: 16px; stroke-width: 1.6; }
-.testi-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
-.testi-card p { margin: 0; font-size: .95rem; color: var(--muted); }
-.testi-n { display: none; }
-.testi[data-why="b"] { background: var(--bg); }
-.testi[data-why="b"] .testi-grid { gap: 48px; }
-.testi[data-why="b"] .testi-card { background: none; border: 0; border-top: 1px solid var(--text); border-radius: 0; padding: 22px 0 0; }
-.testi[data-why="b"] .testi-card .icon { display: none; }
-.testi[data-why="b"] .testi-n { display: block; font-family: var(--font-serif); font-style: italic; font-size: 1.5rem; line-height: 1; color: var(--accent); margin-bottom: 40px; }
-.testi[data-why="c"] { background: var(--bg); }
-.testi[data-why="c"] .container { display: grid; grid-template-columns: 5fr 7fr; gap: 80px; align-items: start; }
-.testi[data-why="c"] .why-head { margin: 0; position: sticky; top: calc(var(--header-h) + 30px); }
-.testi[data-why="c"] .why-intro { display: block; max-width: 340px; }
-.testi[data-why="c"] .testi-grid { display: block; border-bottom: 1px solid var(--line-2); }
-.testi[data-why="c"] .testi-card { display: grid; grid-template-columns: 24px 1fr; gap: 0 20px; background: none; border: 0; border-top: 1px solid var(--line-2); border-radius: 0; padding: 28px 0; }
-.testi[data-why="c"] .testi-card .icon { grid-row: 1 / 3; margin: 2px 0 0; }
+.testi-card { margin: 0; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); border-radius: var(--radius); padding: 24px; }
+.testi-card .icon { display: block; width: 24px; height: 24px; color: var(--yellow); margin-bottom: 16px; stroke-width: 1.6; }
+.testi-card h3 { color: #fff; font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+.testi-card p { margin: 0; font-size: .95rem; color: rgba(255,255,255,.8); }
+.testi[data-why="b"] .container { display: grid; grid-template-columns: 5fr 7fr; gap: 80px; align-items: start; }
+.testi[data-why="b"] .why-head { margin: 0; position: sticky; top: calc(var(--header-h) + 30px); }
+.testi[data-why="b"] .why-intro { display: block; max-width: 340px; }
+.testi[data-why="b"] .testi-grid { display: block; border-bottom: 1px solid rgba(255,255,255,.18); }
+.testi[data-why="b"] .testi-card { display: grid; grid-template-columns: 24px 1fr; gap: 0 20px; background: none; border: 0; border-top: 1px solid rgba(255,255,255,.18); border-radius: 0; padding: 28px 0; }
+.testi[data-why="b"] .testi-card .icon { grid-row: 1 / 3; margin: 2px 0 0; }
 
 /* ---------- split / live frames ---------- */
 .split { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
@@ -666,15 +674,30 @@ button.size-chip:focus-visible { outline: 2px solid var(--focus); outline-offset
 .billing-fields > .label { display: block; margin-bottom: 10px; }
 @keyframes lineIn { from { opacity: 0; transform: translateX(16px); } }
 
-/* Home's offer card: fades in slowly mid-screen; no backdrop, the page keeps scrolling */
-.offer-card { position: fixed; z-index: 70; left: 50%; top: 50%; width: min(320px, calc(100% - 32px)); padding: 24px 24px 22px; border-radius: var(--radius-lg); background: var(--surface); border: 1px solid var(--line-2); box-shadow: var(--shadow-lg); text-align: center; opacity: 0; transform: translate(-50%, -46%); transition: opacity 1.4s var(--ease-out), transform 1.4s var(--ease-out); }
+/* Home's offer card: a wide card that fades in slowly mid-screen; no backdrop, the page keeps scrolling */
+.offer-card { position: fixed; z-index: 70; left: 50%; top: 50%; width: min(640px, calc(100% - 32px)); display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 28px; padding: 28px 60px 28px 28px; border-radius: 24px; background: linear-gradient(135deg, var(--surface), var(--bg-tint)); border: 1px solid var(--line-2); box-shadow: var(--shadow-lg); opacity: 0; transform: translate(-50%, -46%); transition: opacity 1.4s var(--ease-out), transform 1.4s var(--ease-out); }
 .offer-card.in { opacity: 1; transform: translate(-50%, -50%); }
+.offer-badge { width: 112px; height: 112px; border-radius: 22px; background: var(--yellow); color: #1b2d74; display: grid; align-content: center; justify-items: center; line-height: 1; }
+.offer-badge strong { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 2.6rem; letter-spacing: -.02em; }
+.offer-badge small { font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.offer-badge small:first-child { margin-bottom: 4px; }
+.offer-badge strong + small { margin-top: 4px; }
 .offer-card .eyebrow { margin-bottom: 8px; }
-.offer-card h3 { font-size: 1.4rem; margin-bottom: 6px; }
-.offer-card p { color: var(--muted); font-size: .92rem; margin: 0 0 16px; }
-.offer-x { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; border: 0; background: none; color: var(--muted); display: grid; place-items: center; }
+.offer-card h3 { font-size: 1.6rem; margin-bottom: 6px; }
+.offer-card p { color: var(--muted); font-size: .98rem; margin: 0 0 18px; }
+.offer-x { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 50%; border: 0; background: none; color: var(--muted); display: grid; place-items: center; }
 .offer-x:hover { background: var(--lav); color: var(--text); }
 .offer-x .icon { width: 16px; height: 16px; }
+
+/* added-to-cart notice: at the top of the screen, just under the sticky header, with a green outline */
+.added-notice { position: fixed; z-index: 80; left: 50%; top: calc(env(safe-area-inset-top, 0px) + var(--header-h) + 10px); display: flex; align-items: center; gap: 12px; width: max-content; max-width: calc(100% - 32px); padding: 10px 10px 10px 16px; border-radius: 16px; background: var(--surface); color: var(--text); border: 2px solid var(--success); box-shadow: var(--shadow-lg); font-size: .92rem; font-weight: 600; opacity: 0; transform: translate(-50%, -12px); transition: opacity .25s ease, transform .3s var(--ease-out); }
+.added-notice.in { opacity: 1; transform: translate(-50%, 0); }
+.added-notice > .icon { flex: none; width: 20px; height: 20px; color: var(--success); stroke-width: 2.4; }
+.added-notice > span { min-width: 0; overflow-wrap: anywhere; }
+.notice-btn { flex: none; display: inline-flex; align-items: center; gap: 2px; padding: 8px 14px; border-radius: 999px; border: 0; background: var(--primary); color: var(--primary-text); font-size: .85rem; font-weight: 700; line-height: 1; }
+.notice-btn:hover { background: var(--primary-hover); }
+.notice-btn .icon { width: 20px; height: 20px; }
+.notice-btn .icon + .icon { width: 16px; height: 16px; stroke-width: 2.4; margin-left: -2px; }
 
 /* cookie banner: shaded so it stands out from the page in light and dark */
 .cookie-banner { background: var(--lav-strong); border-color: var(--lav-deep); box-shadow: var(--shadow-lg); }
@@ -745,8 +768,8 @@ button.size-chip:focus-visible { outline: 2px solid var(--focus); outline-offset
   .pgrid { grid-template-columns: repeat(3, 1fr); }
   .steps, .values { grid-template-columns: repeat(2, 1fr); }
   .testi-grid { grid-template-columns: 1fr 1fr; }
-  .testi[data-why="c"] .container { grid-template-columns: 1fr; gap: 32px; }
-  .testi[data-why="c"] .why-head { position: static; }
+  .testi[data-why="b"] .container { grid-template-columns: 1fr; gap: 32px; }
+  .testi[data-why="b"] .why-head { position: static; }
   .stack-grid { grid-template-columns: 1fr; }
   .f-grid { grid-template-columns: 1fr 1fr; }
   .f-brand { grid-column: 1 / -1; }
@@ -765,16 +788,19 @@ button.size-chip:focus-visible { outline: 2px solid var(--focus); outline-offset
   .hero-art { height: 350px; }
   .hv1, .hv3 { height: 170px; }
   .hv2 { height: 255px; }
+  .float-chip { font-size: .74rem; padding: 9px 11px; }
+  .float-chip .icon { width: 26px; height: 26px; padding: 5px; }
   .fc2 { bottom: 6px; }
   .pgrid { grid-template-columns: 1fr; gap: 16px; max-width: 330px; margin-inline: auto; }
-  .rail .pcard-img { height: 170px; }
-  .rail .pcard-img .vial-single, .rail .pcard-img .vial-group { height: 135px; }
-  .rail .pcard-body { padding: 14px; }
-  .rail .pcard-full, .rail .pcard-sizes { display: none; }
-  .rail .pcard-foot { flex-direction: column; align-items: stretch; }
-  .rail .pcard-foot .btn { width: 100%; }
   .testi-grid { grid-template-columns: 1fr; }
   .split-head .home-search { flex-basis: 100%; margin: 0; order: 3; }
+  .mchip { padding: 12px 22px; }
+  .mchip b { font-size: 1.05rem; }
+  .offer-card { gap: 18px; padding: 22px 48px 22px 20px; }
+  .offer-badge { width: 76px; height: 76px; border-radius: 16px; }
+  .offer-badge strong { font-size: 1.7rem; }
+  .offer-badge small { font-size: .62rem; letter-spacing: .1em; }
+  .offer-card h3 { font-size: 1.3rem; }
   .stack-card { grid-template-columns: 1fr; }
   .stack-body { padding: 20px; }
   .steps, .values { grid-template-columns: 1fr; }
@@ -804,4 +830,9 @@ button.size-chip:focus-visible { outline: 2px solid var(--focus); outline-offset
   .auth-wordmark { animation: none !important; }
   .window .win-rows li b { background: rgba(47,191,113,.16); color: var(--success); }
   .hero-glow, .hv { animation: none; }
+  .chips-band, .marquee-track { animation: none; }
+  .marquee { overflow-x: auto; scrollbar-width: none; }
+  .marquee-track[aria-hidden] { display: none; }
+  .pcard.glow { animation: none; box-shadow: 0 0 0 2px var(--success); }
+  .added-notice, .added-notice.in { transform: translateX(-50%); }
 }

@@ -853,15 +853,16 @@
     const io = new IntersectionObserver((entries) => entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } }), { rootMargin: '0px 0px -8% 0px' });
     els.forEach((e) => io.observe(e));
   }
-  // Same page redrawn (filters, sort, promo code, cart or sign-in changes) is "soft": nothing re-enters or jumps, only the shop grid fades.
-  // A different page cross-fades with the browser's view transition, or the quick page-enter fade where that isn't available.
+  // Same page redrawn (filters, sort, search, promo code, cart or sign-in changes) is "soft": nothing re-enters or jumps, only the shop grid fades.
+  // Any other arrival, including one category of Shop to another, is a new page: it cross-fades with the browser's view transition (or the quick
+  // page-enter fade where that isn't available), and the title's rise-in plays again.
   let lastPath = null, lastName = null, latest = null, swapping = false;
   function render() {
     const r = PS.parseHash();
     const views = Object.assign({}, PS.defaultViews, T().views);
     const fn = views[r.name] || views.notFound;
     const out = fn(r) || views.notFound(r);
-    const soft = lastName === r.name && (lastPath === r.path || r.name === 'shop');
+    const soft = lastName === r.name && lastPath === r.path;
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches || !document.startViewTransition;
     const mode = soft ? 'soft' : lastName === null || still ? 'enter' : 'vt';
     current = r.name;
