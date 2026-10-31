@@ -33,7 +33,7 @@ Both are published from this repo as one site with two links:
 **Demo promo codes:** `WELCOME10` (10% off), `LAB15` (15% off $250+), `SHIPFREE`
 **Demo card:** `4242 4242 4242 4242`, any future expiry, any CVC
 
-Everything is saved in the browser's `localStorage`. There's no backend, no card is charged and no email is sent.
+With Supabase keys, accounts, the catalog, orders and standing orders live in the database (see Backend). Without keys, or when Supabase can't be reached, everything is saved in the browser's `localStorage` instead. No card is charged yet.
 
 ## Run locally
 
@@ -44,6 +44,20 @@ python3 -m http.server 8000
 ```
 
 There's no build step and no dependencies. (Online, the store is served at the main address instead of `/store/`; the deploy step does that.)
+
+## Backend (Supabase)
+
+Copy `.env.example` to `.env` (gitignored), fill in the project URL and anon/publishable key, then run `node tools/env.mjs`. That writes `store/js/env.js` (also gitignored). The deploy writes the same file from the `SUPABASE_URL` and `SUPABASE_ANON_KEY` Actions secrets. The anon key is public by design; row-level security protects the data. Never use the secret/service_role key here.
+
+Database setup, in the Supabase SQL Editor, in order: `supabase/schema.sql`, `supabase/seed.sql`, `supabase/002_account_order_edits.sql`. New schema changes go in a new numbered file, never a rerun from scratch.
+
+**The catalog:** once keys are on, products come from the database. After changing `store/js/data.js`, run `node tools/seed-products.mjs` and run the new `seed.sql`. It overwrites dashboard edits to those products, except `active`. `data.js` remains the fallback when Supabase can't be reached.
+
+**By hand until shipping is built**, in the Table Editor on `orders`: set `status`, `label_created_at` (closes the address window) and `shipped_at`. `needs_address_review` true means a customer moved the order to another state: check it before printing the label, then clear it. Changes are listed in `order_address_edits`.
+
+**Tax:** `tax_rates` is empty, so every state is 0% until the accountant advises (`docs/TODO.md`).
+
+`supabase/functions/order-address-email` emails the checkout address after each address change. It needs deploying with the secrets `RESEND_API_KEY`, `EMAIL_FROM` and `WEBHOOK_SECRET`, JWT verification off, and a Database Webhook on inserts into `order_address_edits` that sends the `x-webhook-secret` header.
 
 ## Deploy (GitHub Pages)
 
@@ -62,6 +76,7 @@ store/                   the storefront (published at the main address)
   favicon.svg
   js/data.js             products, prices, categories, FAQs, company info   ← edit content here
   js/core.js             storage, pricing rules, cart, orders, accounts, router
+  js/backend.js          Supabase: replaces accounts, saved details, orders and standing orders from core.js when keys are set
   js/visuals.js          SVG vials, lot/COA data, chromatograms
   js/policies.js         all policy pages
   js/ui.js               forms, default pages, cart drawer/modals, app boot
@@ -73,6 +88,9 @@ versions/                frozen copies of earlier versions of the store (don't e
   v1/                    the store as reviewed on Oct 1. Its review mode keeps the Oct 1 comments; each later version's comments are kept apart (VERSION in store/js/review.js), same sheet
   v2/                    the store as reviewed on Oct 30, with its own review mode and comments
 
+supabase/                database setup (run in order), and the address-change email function
+tools/env.mjs            writes store/js/env.js from .env
+tools/seed-products.mjs  writes supabase/seed.sql from store/js/data.js
 tools/review-sheet.gs    Google Apps Script that collects review-mode comments in a Google Sheet (not published; setup steps inside)
 
 pepsoma-feedback/        design feedback page (published at /pepsoma-feedback/)

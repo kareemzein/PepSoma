@@ -115,7 +115,7 @@
 <p>A tracking number is emailed when your label is created. You can also check status any time on our <a href="#/track">Track Order</a> page.</p>
 
 <h2>Address accuracy</h2>
-<p>Please double-check your shipping address. We are not responsible for packages delivered to an address entered incorrectly. You can change the address yourself on your order page for one hour after ordering, as long as the order hasn’t shipped. After that, contact ${mail(C.email)} immediately — we can update the address only before the order ships. Packages returned to us as undeliverable can be reshipped at the customer’s expense.</p>
+<p>Please double-check your shipping address. We are not responsible for packages delivered to an address entered incorrectly. If you were signed in when you ordered, you can change the address yourself on your order page for one hour after ordering, as long as the shipping label hasn’t been created. Otherwise, contact ${mail(C.email)} immediately — we can update the address only before the order ships. Packages returned to us as undeliverable can be reshipped at the customer’s expense.</p>
 
 <h2>Lost, stolen or damaged packages</h2>
 <p>Title and risk of loss pass to you when the package is handed to the carrier. That said, we want your research on schedule: if tracking shows no movement for 5 business days, or your package arrives damaged, email ${mail(C.email)} within <strong>7 days</strong> of the delivery date (or expected delivery date) with your order number and photos of any damage. We will open a carrier claim and, where appropriate, reship or refund. For packages the carrier marks as delivered but you did not receive, we’ll file a carrier claim on your behalf and work with you on a resolution.</p>`,

@@ -234,6 +234,9 @@
       PS.emit('orders', order);
       return order;
     },
+    steps: STATUS,
+    // js/backend.js: an order that needs support to change its address (a guest's, once real accounts are on)
+    guestOnly: () => false,
     // the shipping address can be changed for an hour after ordering, as long as the order hasn't shipped
     editUntil: (order) => order.createdAt + 60 * 60000,
     editable(order) {
@@ -276,6 +279,14 @@
       address: { line1: data.address1, line2: data.address2, city: data.city, state: data.state, zip: data.zip },
       billing: data.billingSame ? null : { line1: data.baddress1, line2: data.baddress2, city: data.bcity, state: data.bstate, zip: data.bzip },
     }),
+  };
+
+  /* ---------- standing orders: a customer's changes to one, by key (order number|product id|size). Browser only here; js/backend.js moves them to the database ---------- */
+  PS.subs = {
+    settings: () => PS.storage.get('subSettings', {}),
+    cancelled: () => PS.storage.get('cancelledSubs', []),
+    save(key, cfg) { const set = PS.subs.settings(); set[key] = cfg; PS.storage.set('subSettings', set); return { ok: true }; },
+    cancel(key) { PS.storage.set('cancelledSubs', PS.subs.cancelled().concat(key)); return { ok: true }; },
   };
 
   /* ---------- accounts (demo: stored locally, passwords hashed) ---------- */

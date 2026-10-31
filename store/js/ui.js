@@ -178,8 +178,8 @@
 
   H.orderStatus = (o) => {
     const s = PS.orders.status(o);
-    return `<ol class="timeline">${s.steps.map((st) => `<li class="${st.done ? 'done' : ''} ${st.current ? 'current' : ''}"><span class="tl-dot">${st.done ? PS.icon('check') : ''}</span><span class="tl-body"><strong>${st.label}</strong><small>${st.done ? new Date(st.time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Pending'}</small>${st.id === 'shipped' && st.done ? `<small>Tracking: <code>${esc(o.tracking)}</code></small>` : ''}</span></li>`).join('')}</ol>
-    <p class="small muted">Demo timeline runs in minutes instead of days so you can watch it progress.</p>`;
+    return `<ol class="timeline">${s.steps.map((st) => `<li class="${st.done ? 'done' : ''} ${st.current ? 'current' : ''}"><span class="tl-dot">${st.done ? PS.icon('check') : ''}</span><span class="tl-body"><strong>${st.label}</strong><small>${st.done ? (st.time ? new Date(st.time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Done') : 'Pending'}</small>${st.id === 'shipped' && st.done && o.tracking ? `<small>Tracking: <code>${esc(o.tracking)}</code></small>` : ''}</span></li>`).join('')}</ol>
+    ${o.status ? '' : '<p class="small muted">Demo timeline runs in minutes instead of days so you can watch it progress.</p>'}`;
   };
 
   // each line shows the product picture; the picture and the name both open the product page
@@ -276,7 +276,7 @@
     return e && n > e ? null : n;
   }
   const subsOf = (orders) => {
-    const set = PS.storage.get('subSettings', {}), off = PS.storage.get('cancelledSubs', []);
+    const set = PS.subs.settings(), off = PS.subs.cancelled();
     return orders.flatMap((o) => o.items.filter((i) => i.planId !== 'once').map((i) => {
       const key = o.number + '|' + i.id + '|' + i.size, cfg = set[key] || {};
       const cur = PS.getPlan(cfg.planId || i.planId), start = cfg.start || isoDay(o.createdAt), end = cfg.end || '';
@@ -323,12 +323,13 @@
     const sv = PS.details.get(), ad = (sv && sv.address) || {};
     if (!edit) {
       return `<div class="profile-head"><h2 class="h3">Profile</h2><button class="btn btn-sm btn-secondary" type="button" data-profile-edit>Edit</button></div>
-        <p>${esc(u.name)}<br><span class="muted">${esc(u.email)}</span></p>
+        ${PS.details.importable && PS.details.importable() ? '<div class="notice"><p>This browser has saved details from an earlier visit. Add them to your account?</p><div class="btn-row"><button class="btn btn-sm btn-secondary" type="button" data-details-import="yes">Add them</button><button class="btn btn-sm btn-ghost" type="button" data-details-import="no">No, remove them</button></div></div>' : ''}
+        <p>${esc(u.name)}<br><span class="muted">${esc(u.email)}</span>${u.pendingEmail ? `<br><small class="muted">Waiting for you to confirm ${esc(u.pendingEmail)}. Check your inbox.</small>` : ''}</p>
         ${sv ? `<dl class="profile-facts"><div><dt>Phone</dt><dd>${sv.phone ? esc(sv.phone) : '—'}</dd></div><div><dt>Lab / institution</dt><dd>${sv.org ? esc(sv.org) : '—'}</dd></div>
           <div><dt>Saved address</dt><dd>${ad.line1 ? `${esc(ad.line1)}${ad.line2 ? ', ' + esc(ad.line2) : ''}<br>${esc(ad.city)}, ${esc(ad.state)} ${esc(ad.zip)} <button class="link-btn" type="button" data-address-remove>Remove</button>` : 'None'}</dd></div></dl>`
           : '<p class="small muted">No phone or address saved yet. <button class="link-btn" type="button" data-profile-edit>Add details</button></p>'}
         <button class="btn btn-secondary" data-signout>Sign out</button>
-        <p class="small muted profile-note">Your details stay on this browser until real accounts exist.</p>`;
+        ${PS.backend && PS.backend.signedIn() ? '' : '<p class="small muted profile-note">Your details stay on this browser until real accounts exist.</p>'}`;
     }
     const f = (o) => H.field(Object.assign({ form: 'pf' }, o)), parts = u.name.split(' ');
     return `<h2 class="h3">${sv ? 'Edit profile' : 'Add your details'}</h2><form class="stack-form" data-form="profile" novalidate>
@@ -399,7 +400,7 @@
           <div class="card pad"><h2 class="h3">Status</h2>${H.orderStatus(o)}<div class="btn-row"><a class="btn btn-secondary" href="#/track?order=${o.number}&email=${encodeURIComponent(o.email)}">Track this order</a><a class="btn btn-ghost" href="#/shop">Continue shopping</a></div></div>
           <div class="card pad"><h2 class="h3">Summary</h2>${H.orderItems(o)}
             <div class="order-meta"><div><span class="label">Ship to</span><p>${esc(o.name)}${o.org ? '<br>' + esc(o.org) : ''}<br>${esc(o.address.line1)}${o.address.line2 ? ', ' + esc(o.address.line2) : ''}<br>${esc(o.address.city)}, ${esc(o.address.state)} ${esc(o.address.zip)}</p>
-              ${PS.orders.editable(o) ? `<button class="link-btn" type="button" data-order-edit="${o.number}">Change address</button><br><small class="muted">Until ${PS.time(PS.orders.editUntil(o))}</small>` : '<small class="muted">The one-hour window to change this has closed. <a href="#/contact">Contact us</a> for help.</small>'}
+              ${PS.orders.editable(o) ? `<button class="link-btn" type="button" data-order-edit="${o.number}">Change address</button><br><small class="muted">Until ${PS.time(PS.orders.editUntil(o))}</small>` : PS.orders.guestOnly(o) ? '<small class="muted">To change this address, <a href="#/account">sign in</a> if the order is on your account, or <a href="#/contact">contact us</a> before it ships.</small>' : '<small class="muted">The one-hour window to change this has closed. <a href="#/contact">Contact us</a> for help.</small>'}
               ${o.addressEdits ? `<br><small class="muted">Updated ${PS.time(o.addressEdits[o.addressEdits.length - 1].at)}</small>` : ''}</div>
             <div><span class="label">Method</span><p>${esc(o.method.label)}<br><small class="muted">${esc(o.method.eta)}</small></p></div>
             <div><span class="label">Payment</span><p>${esc(o.payment.brand)} ending ${esc(o.payment.last4)}<br><small class="muted">Demo — not charged</small></p></div></div>
@@ -785,9 +786,18 @@
       else if ('profileEdit' in d) { $('#profile').innerHTML = profileHtml(PS.auth.current(), true); $('#pf-first').focus(); }
       else if ('profileCancel' in d) { $('#profile').innerHTML = profileHtml(PS.auth.current(), false); $('[data-profile-edit]', $('#profile')).focus(); }
       else if ('addressRemove' in d) {
-        PS.details.set(Object.assign({}, PS.details.get(), { address: {}, billing: null }));
-        PS.toast('Saved address removed.');
-        render();
+        Promise.resolve(PS.details.set(Object.assign({}, PS.details.get(), { address: {}, billing: null }))).then((r) => {
+          if (r && !r.ok) { PS.toast(esc(r.msg), 'error'); return; }
+          PS.toast('Saved address removed.');
+          render();
+        });
+      }
+      else if (d.detailsImport) {
+        PS.details.importLocal(d.detailsImport === 'yes').then((r) => {
+          if (!r.ok) { PS.toast(esc(r.msg), 'error'); return; }
+          if (d.detailsImport === 'yes') PS.toast('Details added to your account.');
+          render();
+        });
       }
       else if (d.help) { PS.openModal(helpHtml(d.help)); }
       else if (d.helpEmail) { const u = PS.auth.current(); swapModal(helpEmailHtml(d.helpEmail, u ? PS.orders.forEmail(u.email) : [])); }
@@ -803,12 +813,12 @@
         if (s) swapModal(cancelAskHtml(s));
       }
       else if (d.cancelSub) {
-        const list = PS.storage.get('cancelledSubs', []);
-        list.push(d.cancelSub);
-        PS.storage.set('cancelledSubs', list);
-        PS.closeModal();
-        PS.toast('Standing order cancelled — no further charges.');
-        render();
+        Promise.resolve(PS.subs.cancel(d.cancelSub)).then((r) => {
+          if (!r.ok) { PS.toast(esc(r.msg), 'error'); return; }
+          PS.closeModal();
+          PS.toast('Standing order cancelled — no further charges.');
+          render();
+        });
       }
       else if ('ageAccept' in d) { PS.storage.set('ageOk', Date.now()); PS.closeModal(true); if (current === 'coa') render(); } // a direct certificate link brings its pop-up back
       else if ('ageExit' in d) { $('.modal-panel').innerHTML = T().ageDenied(); }
@@ -908,9 +918,9 @@
       const btn = $('button[type="submit"]', form);
       if (kind === 'manage-sub') {
         if (data.end && data.end < data.start) { $('.form-msg', form).textContent = 'The end date has to come after the start date.'; return; }
-        const weeks = data.plan === '4w' ? 4 : weeksIn(data.weeks), set = PS.storage.get('subSettings', {});
-        set[data.key] = { planId: data.plan === '4w' ? '4w' : 'c' + weeks, start: data.start, end: data.end || '' };
-        PS.storage.set('subSettings', set);
+        const weeks = data.plan === '4w' ? 4 : weeksIn(data.weeks);
+        const r = await PS.subs.save(data.key, { planId: data.plan === '4w' ? '4w' : 'c' + weeks, start: data.start, end: data.end || '' });
+        if (!r.ok) { $('.form-msg', form).textContent = r.msg; return; }
         PS.closeModal();
         PS.toast('Standing order updated.');
         render();
@@ -919,10 +929,12 @@
       if (kind === 'checkout') {
         const t = PS.cart.totals(data.ship);
         if (!t.lines.length) { PS.toast('Your cart is empty.', 'error'); return; }
+        const btnHtml = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Processing…';
         await new Promise((r) => setTimeout(r, 900));
-        const order = PS.orders.create(data, t);
+        const order = await PS.orders.create(data, t);
+        if (!order) { btn.disabled = false; btn.innerHTML = btnHtml; PS.toast('We couldn’t place your order. Please try again.', 'error'); return; }
         if (data.marketing) PS.storage.set('newsletter', (PS.storage.get('newsletter', [])).concat(data.email));
         if (data.saveDetails) PS.details.set(PS.details.fromForm(data)); else PS.details.clear();
         PS.cart.clear();
@@ -944,7 +956,9 @@
         return;
       }
       if (kind === 'order-address') {
-        const r = PS.orders.updateAddress(form.dataset.order, { name: data.name.trim(), phone: data.phone || '', org: data.org || '', address: { line1: data.address1, line2: data.address2 || '', city: data.city, state: data.state, zip: data.zip } });
+        btn.disabled = true;
+        const r = await PS.orders.updateAddress(form.dataset.order, { name: data.name.trim(), phone: data.phone || '', org: data.org || '', address: { line1: data.address1, line2: data.address2 || '', city: data.city, state: data.state, zip: data.zip } });
+        btn.disabled = false;
         if (!r.ok) { $('.form-msg', form).textContent = r.msg; return; }
         PS.closeModal();
         PS.toast('Shipping address updated.');
@@ -952,11 +966,14 @@
         return;
       }
       if (kind === 'profile') {
-        const prev = PS.details.get(), r = PS.auth.update({ name: `${data.first} ${data.last}`, email: data.email });
+        btn.disabled = true;
+        const prev = PS.details.get(), r = await PS.auth.update({ name: `${data.first} ${data.last}`, email: data.email });
+        btn.disabled = false;
         if (!r.ok) { $('.form-msg', form).textContent = r.msg; return; }
-        PS.details.set({ email: data.email, phone: data.phone, first: data.first, last: data.last, org: data.org, address: { line1: data.address1, line2: data.address2, city: data.city, state: data.state, zip: data.zip }, billing: prev && prev.billing });
+        const saved = await PS.details.set({ email: data.email, phone: data.phone, first: data.first, last: data.last, org: data.org, address: { line1: data.address1, line2: data.address2, city: data.city, state: data.state, zip: data.zip }, billing: prev && prev.billing });
+        if (saved && !saved.ok) { $('.form-msg', form).textContent = saved.msg; return; }
         PS.emit('auth'); // the header's "Hi <name>" and this page follow the new name at once
-        PS.toast('Profile saved.');
+        PS.toast(r.pending ? esc(r.msg) : 'Profile saved.');
         return;
       }
       if (kind === 'signin' || kind === 'signup') {
@@ -1134,7 +1151,7 @@
       refreshCart();
       if (!signingIn) goAfterAuth(); // a sign-in from its form waits for the welcome (see arrive)
     });
-    PS.on('orders', () => { if (['account', 'track', 'order'].includes(current)) render(); });
+    PS.on('orders', () => { if (['account', 'orders', 'track', 'order'].includes(current)) render(); });
     PS.on('route', render);
     window.addEventListener('hashchange', render);
     render();

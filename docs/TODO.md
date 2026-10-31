@@ -35,6 +35,9 @@ Design changes from the review comments are in [V2-CHANGE-LIST.md](V2-CHANGE-LIS
 - [ ] Database + real accounts (Claude Code). Customers can edit account details at any time; move the profile and saved details off the browser. See `BACKEND-SPEC.md`
 - [ ] Orders, confirmation emails, inventory, shipping (Claude Code). Includes changing an order's shipping address for one hour after ordering, enforced in the database. See `BACKEND-SPEC.md`
 - [ ] Write down how a lab's COA gets uploaded and shown on the site (Claude Code, once products and lots are in the database)
+- [ ] **Before real sales, close the demo paths:** checkout must fail when Supabase can't be reached instead of saving a browser-only demo order, and the server must work out prices and totals, since the browser still sends them
+- [ ] Build the shipping step (Shippo): until then, order status and labels are set by hand in Supabase, and nobody is prompted to review `needs_address_review`
+- [ ] Standing orders: create each shipment as its own order, and let customers set a standing order's address (the column exists; needs payments and a scheduler)
 - [ ] Connect pepsoma.com (GoDaddy DNS, on hold until asked)
 - [ ] Test the order flow end to end
 - [ ] Analytics respecting cookie consent
@@ -42,6 +45,7 @@ Design changes from the review comments are in [V2-CHANGE-LIST.md](V2-CHANGE-LIS
 ### Business info
 
 - [ ] Company placeholders (address, state of formation, county, phone) in `PS.company` (`store/js/data.js`)
+- [ ] **Talk to an accountant about sales tax, before real sales.** Tax rates stay at 0% until then, as a placeholder and not a tax position. Ask: where must we register and collect (the home state may apply from the first sale; other states usually after about $100,000 in sales there, some also on transaction count); are our products taxable in each state; is shipping taxable; how do labs claim research exemptions (certificates, [Virginia example](https://www.tax.virginia.gov/laws-rules-decisions/rulings-tax-commissioner/19-23)); and do we need tax software yet.
 
 ### Design and site
 
@@ -77,8 +81,9 @@ Within each group the quick one-word answers come first.
 ### Checkout and accounts
 
 - [ ] **Shipping methods:** which carriers, speeds and prices?
-- [ ] **One-hour address changes vs. same-day shipping:** the site promises same-day shipping before 2 PM ET. Should printing the label close the window early, or does every order wait an hour before packing?
-- [x] **Address changes and tax:** state changes are allowed, and tax is recalculated (decided Oct 30). See `BACKEND-SPEC.md`
+- [ ] **One-hour address changes vs. same-day shipping:** the site promises same-day shipping before 2 PM ET. Should printing the label close the window early, or does every order wait an hour before packing? Suggested: the label closes the window, labels are printed in one batch shortly before carrier pickup, and the page says "up to one hour, until we print your label". Ask Noza who packs, when the carrier picks up and how many orders to expect per day.
+- [x] **Self-service address changes:** keep them for signed-in customers, before the label prints; guests email support (decided Oct 30). Every change is logged and emailed to the checkout email, and a change to another state gets a person's look before the label prints. See `BACKEND-SPEC.md`
+- [x] **Tax and refunds when an address changes:** no automatic charges or refunds at launch (decided Oct 30). While tax is 0% there's no difference; once it isn't, a change that alters the tax goes to support, whichever way the order was paid. Revisit once the processor and saved cards exist.
 - [ ] **Sign in with Google or Apple?** Supabase Auth supports both; needs the real backend first, and Apple needs a developer account.
 
 ### Lab tests
