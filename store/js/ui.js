@@ -141,12 +141,14 @@
     </form>`;
   };
 
-  H.contactForm = () => {
+  // q: the Contact page's address query, so a link elsewhere can open the form with a topic (and an order number or the start of a message) filled in
+  H.contactForm = (q) => {
+    q = q || {};
     const f = (o) => H.field(Object.assign({ form: 'ct' }, o));
     return `<form class="stack-form" data-form="contact" novalidate>
       <div class="field-row">${f({ name: 'name', label: 'Name', auto: 'name' })}${f({ name: 'email', label: 'Email', type: 'email', auto: 'email', validate: 'email' })}</div>
-      <div class="field-row">${f({ name: 'topic', label: 'Topic', options: [['', 'Select…'], ['order', 'Order support'], ['coa', 'Product / COA question'], ['wholesale', 'Wholesale & institutional'], ['other', 'Something else']] })}${f({ name: 'order', label: 'Order number', required: false, placeholder: 'PS123456' })}</div>
-      ${f({ name: 'message', label: 'Message', type: 'textarea', placeholder: 'How can we help?' })}
+      <div class="field-row">${f({ name: 'topic', label: 'Topic', options: [['', 'Select…'], ['order', 'Order support'], ['coa', 'Product / COA question'], ['wholesale', 'Wholesale & institutional'], ['other', 'Something else']], value: q.topic })}${f({ name: 'order', label: 'Order number', required: false, placeholder: 'PS123456', value: /^PS\d+$/i.test(q.order || '') ? q.order.toUpperCase() : '' })}</div>
+      ${f({ name: 'message', label: 'Message', type: 'textarea', placeholder: 'How can we help?', value: (q.msg || '').slice(0, 200) })}
       <p class="small muted">Please don’t include questions about personal use or dosing — we can only support laboratory research.</p>
       <button class="btn btn-primary" type="submit">Send message ${PS.icon('arrow')}</button>
     </form>`;
@@ -224,8 +226,8 @@
         <div class="lot-card-body">
           <h3 class="h4"><a href="#/product/${p.id}">${esc(p.name)}</a></h3>
           <dl class="lot-card-facts"><div><dt>Purity</dt><dd>${cur.purity}%</dd></div><div><dt>Lot</dt><dd><code>${esc(cur.code)}</code></dd></div><div><dt>Tested</dt><dd>${PS.date(cur.tested)}</dd></div></dl>
-          <a class="btn btn-primary btn-sm" href="#/coa/${esc(cur.code)}">${PS.icon('doc')} View COA</a>
-          ${older.length ? `<p class="lot-older">Earlier lots: ${older.map((l) => `<a href="#/coa/${esc(l.code)}">${esc(l.code)}</a>`).join(' · ')}</p>` : ''}
+          <button class="btn btn-primary btn-sm" type="button" data-coa="${esc(cur.code)}">${PS.icon('doc')} View COA</button>
+          ${older.length ? `<p class="lot-older">Earlier lots: ${older.map((l) => `<a href="#/coa/${esc(l.code)}" data-coa="${esc(l.code)}">${esc(l.code)}</a>`).join(' · ')}</p>` : ''}
         </div></article>`;
     }).join('')}</div><p class="empty-row" hidden>No lots match that search or filter.</p>`;
   };
@@ -312,7 +314,66 @@
     if (swap) swapModal(manageHtml(s)); else PS.openModal(manageHtml(s));
     syncManage($('#ps-modal form[data-form="manage-sub"]'));
   }
-  H.orderList = (orders) => `<ul class="order-list">${orders.map((o) => { const n = o.items.reduce((s, i) => s + i.qty, 0); return `<li><a href="#/order/${o.number}"><strong>${o.number}</strong><span>${PS.date(o.createdAt)} · ${n} item${n > 1 ? 's' : ''} · ${PS.money(o.total)}</span><span class="badge">${PS.orders.status(o).current.label}</span></a></li>`; }).join('')}</ul>`;
+  // an order's lines, one each ("2 × BPC-157 10 mg"), the first 3 and then "+N more"
+  const orderLines = (o) => `<span class="ol-lines">${o.items.slice(0, 3).map((i) => `<span>${i.qty} × ${esc(i.name)} ${esc(i.size)}${i.planId !== 'once' ? ' · ' + esc(i.plan) : ''}</span>`).join('')}${o.items.length > 3 ? `<span>+${o.items.length - 3} more</span>` : ''}</span>`;
+  H.orderList = (orders, opts) => `<ul class="order-list">${orders.map((o) => { const n = o.items.reduce((s, i) => s + i.qty, 0); return `<li><a href="#/order/${o.number}"><strong>${o.number}</strong><span>${PS.date(o.createdAt)} · ${n} item${n > 1 ? 's' : ''} · ${PS.money(o.total)}</span><span class="badge">${PS.orders.status(o).current.label}</span>${opts && opts.lines ? orderLines(o) : ''}</a></li>`; }).join('')}</ul>`;
+
+  /* ---------- profile: the account's name and email plus the details saved for checkout (PS.details), edited in place on /account ---------- */
+  const profileHtml = (u, edit) => {
+    const sv = PS.details.get(), ad = (sv && sv.address) || {};
+    if (!edit) {
+      return `<div class="profile-head"><h2 class="h3">Profile</h2><button class="btn btn-sm btn-secondary" type="button" data-profile-edit>Edit</button></div>
+        <p>${esc(u.name)}<br><span class="muted">${esc(u.email)}</span></p>
+        ${sv ? `<dl class="profile-facts"><div><dt>Phone</dt><dd>${sv.phone ? esc(sv.phone) : '—'}</dd></div><div><dt>Lab / institution</dt><dd>${sv.org ? esc(sv.org) : '—'}</dd></div>
+          <div><dt>Saved address</dt><dd>${ad.line1 ? `${esc(ad.line1)}${ad.line2 ? ', ' + esc(ad.line2) : ''}<br>${esc(ad.city)}, ${esc(ad.state)} ${esc(ad.zip)} <button class="link-btn" type="button" data-address-remove>Remove</button>` : 'None'}</dd></div></dl>`
+          : '<p class="small muted">No phone or address saved yet. <button class="link-btn" type="button" data-profile-edit>Add details</button></p>'}
+        <button class="btn btn-secondary" data-signout>Sign out</button>
+        <p class="small muted profile-note">Your details stay on this browser until real accounts exist.</p>`;
+    }
+    const f = (o) => H.field(Object.assign({ form: 'pf' }, o)), parts = u.name.split(' ');
+    return `<h2 class="h3">${sv ? 'Edit profile' : 'Add your details'}</h2><form class="stack-form" data-form="profile" novalidate>
+      <div class="field-row">${f({ name: 'first', label: 'First name', auto: 'given-name', value: sv ? sv.first : parts[0] })}${f({ name: 'last', label: 'Last name', auto: 'family-name', value: sv ? sv.last : parts.slice(1).join(' ') })}</div>
+      ${f({ name: 'email', label: 'Email', type: 'email', auto: 'email', validate: 'email', value: u.email })}
+      <div class="field-row">${f({ name: 'phone', label: 'Phone', type: 'tel', auto: 'tel', required: false, validate: 'phone', value: sv && sv.phone })}${f({ name: 'org', label: 'Lab / institution', auto: 'organization', required: false, value: sv && sv.org })}</div>
+      <h3 class="legend legend-sub">Saved address <span class="optional">optional</span></h3>
+      ${f({ name: 'address1', label: 'Street address', auto: 'address-line1', value: ad.line1 })}
+      ${f({ name: 'address2', label: 'Apt, suite, building', auto: 'address-line2', required: false, value: ad.line2 })}
+      <div class="field-row three">${f({ name: 'city', label: 'City', auto: 'address-level2', value: ad.city })}${f({ name: 'state', label: 'State', options: PS.states, auto: 'address-level1', value: ad.state })}${f({ name: 'zip', label: 'ZIP', auto: 'postal-code', validate: 'zip', attrs: 'inputmode="numeric" maxlength="10"', value: ad.zip })}</div>
+      <p class="form-msg" aria-live="polite"></p>
+      <div class="btn-row"><button class="btn btn-primary" type="submit">Save</button><button class="btn btn-ghost" type="button" data-profile-cancel>Cancel</button></div>
+    </form>`;
+  };
+
+  /* ---------- Manage orders (on /orders): Return and Get support open the same chooser, Order again fills the cart ---------- */
+  const manageOrders = (orders) => `<aside class="card pad manage-orders rise" style="--i:3"><h2 class="h3">Manage orders</h2><p class="muted small">${orders.length ? 'Return an order, buy it again or get help with one.' : 'Questions? Our team replies within one business day.'}</p>
+    <div class="manage-actions">${orders.length ? `<button class="btn btn-secondary" type="button" data-help="return">${PS.icon('box')} Return</button><button class="btn btn-secondary" type="button" data-reorder>${PS.icon('cart')} Order again</button>` : ''}<button class="btn btn-secondary" type="button" data-help="support">${PS.icon('mail')} Get support</button></div></aside>`;
+  const helpHtml = (kind) => `<h2 class="h3">${kind === 'return' ? 'Return an order' : 'Get support'}</h2><p class="muted">How would you like to reach us?</p>
+    <div class="choices"><a class="choice" href="#/contact?topic=order${kind === 'return' ? '&amp;msg=' + encodeURIComponent('Return request: ') : ''}"><strong>Send a message</strong><span>Through the Contact page</span></a>
+      <button class="choice" type="button" data-help-email="${kind}"><strong>Email us</strong><span>Opens a draft in your mail app</span></button></div>`;
+  const helpSubject = (kind, num) => (num ? `${kind === 'return' ? 'Return request' : 'Support'} — Order ${num}` : 'Question');
+  const helpMail = (kind, num) => `mailto:${PS.company.email}?subject=${encodeURIComponent(helpSubject(kind, num))}`;
+  const helpEmailHtml = (kind, orders) => {
+    const opt = (v, title, sub, on) => `<label class="option"><input type="radio" name="helpOrder" value="${v}" ${on ? 'checked' : ''}><span class="option-dot"></span><span class="option-body"><span class="option-title">${title}</span><span class="option-sub">${sub}</span></span></label>`;
+    return `<h2 class="h3">Which order is it about?</h2>
+      <div class="options">${orders.map((o, i) => { const n = o.items.reduce((s, x) => s + x.qty, 0); return opt(o.number, o.number, `${PS.date(o.createdAt)} · ${n} item${n > 1 ? 's' : ''} · ${PS.money(o.total)}`, i === 0); }).join('')}${opt('', 'Other question', 'Not about a particular order', !orders.length)}</div>
+      <p class="small muted">Nothing is sent. This opens a draft in your mail app.</p>
+      <div class="btn-row"><a class="btn btn-primary" data-help-mail="${kind}" href="${helpMail(kind, orders[0] && orders[0].number)}" target="_blank" rel="noopener">${PS.icon('mail')} Open email draft</a><button class="btn btn-ghost" type="button" data-help-back="${kind}">Back</button></div>`;
+  };
+  const reorderHtml = (orders) => `<h2 class="h3">Order again</h2><p class="muted">Which order should go in your cart?</p>
+    <div class="choices">${orders.map((o) => `<button class="choice" type="button" data-reorder-pick="${o.number}"><strong>${o.number} <small>${PS.date(o.createdAt)}</small></strong>${orderLines(o)}</button>`).join('')}</div>`;
+  // an order's lines go into the cart as they were bought (a standing order keeps its plan); lines whose product or size is gone are skipped
+  function reorder(o) {
+    let skipped = 0, added = 0;
+    o.items.forEach((i) => {
+      const p = PS.getProduct(i.id), s = p && p.sizes.find((x) => x.label === i.size);
+      if (!s) { skipped++; return; }
+      PS.cart.add(p.id, s.id, i.qty, i.planId);
+      added++;
+    });
+    PS.closeModal();
+    if (added) PS.openCart();
+    if (skipped) PS.toast(added ? `${skipped} item${skipped > 1 ? 's' : ''} from that order ${skipped > 1 ? 'are' : 'is'} no longer sold and ${skipped > 1 ? 'were' : 'was'} skipped.` : 'Nothing from that order is sold any more.', added ? '' : 'error');
+  }
 
   PS.defaultViews = {
     order({ params }) {
@@ -359,28 +420,12 @@
         after() { filterLots(); },
       };
     },
-    // a lot's COA as a page on the site; the lab's own certificate (the printable document) is a button at the bottom
+    // /coa/<lot> is Lab Tests with that lot's certificate open as a pop-up (closing it goes back to Lab Tests)
     coa({ params }) {
       const lot = PS.findLot(params.code);
       if (!lot) return PS.defaultViews.notFound({ msg: 'We couldn’t find that lot number. Check the label on your vial.' });
-      const p = PS.getProduct(lot.product);
-      return {
-        title: `COA ${lot.code}`,
-        html: `${T().pageHead({ eyebrow: 'Certificate of Analysis', title: esc(p.name), intro: `<strong>${esc(lot.lab)}</strong> · Report ID <code>${esc(lot.reportId)}</code><br>Lot <code>${esc(lot.code)}</code> · tested ${PS.date(lot.tested)}<br>${PS.labLine(lot)}` })}
-        <section class="container section-sm coa-web">
-          <div class="card pad coa-web-top">
-            <div><span class="label muted">HPLC purity</span><div class="big-purity">${lot.purity}<small>%</small></div><span class="coa-pass">Pass</span> <small class="muted">spec ≥ 98.0%</small></div>
-            <div><span class="label muted">RP-HPLC chromatogram · C18 · 220 nm · retention time (min)</span>${PS.chromatogram(lot)}</div>
-          </div>
-          <div class="card pad"><h2 class="h3">Test results</h2>
-            <ul class="coa-results">${PS.coaTests(lot).map(([test, method, spec, result]) => `<li><div><strong>${test}</strong><small>${method} · spec ${spec}</small></div><b>${result}</b><span class="coa-pass">Pass</span></li>`).join('')}</ul></div>
-          <div class="card pad"><h2 class="h3">Compound</h2>${H.specTable(p)}</div>
-          <div class="coa-web-foot">
-            <p class="small muted">Results apply only to lot ${esc(lot.code)}. For research use only.${lot.sample ? ' Sample data: illustrative values until real lab results are added.' : ''}</p>
-            <div class="btn-row">${lot.pdf ? `<a class="btn btn-secondary" href="${esc(lot.pdf)}" target="_blank" rel="noopener">${PS.icon('download')} Open the lab’s PDF</a>` : `<button class="btn btn-secondary" type="button" data-coa-pdf="${esc(lot.code)}">${PS.icon('download')} Open the lab’s PDF</button>`}<a class="btn btn-ghost" href="#/lab-tests">All lab tests</a></div>
-          </div>
-        </section>`,
-      };
+      const labs = PS.defaultViews.labs({ query: {} });
+      return Object.assign({}, labs, { title: `COA ${lot.code}`, after() { labs.after(); openCoa(lot.code); } });
     },
     faq() {
       return {
@@ -390,13 +435,13 @@
           <div class="card pad center mt"><h2 class="h3">Still have questions?</h2><p class="muted">Email <a href="mailto:${PS.company.email}">${PS.company.email}</a> or send us a message.</p><a class="btn btn-primary" href="#/contact">Contact support</a></div></section>`,
       };
     },
-    contact() {
+    contact({ query }) {
       const C = PS.company;
       return {
         title: 'Contact',
         html: `${T().pageHead({ eyebrow: 'Support', title: 'Contact us', intro: 'Questions about an order, a COA or wholesale? We reply within one business day.' })}
         <section class="container section-sm"><div class="contact-grid">
-          <div class="card pad" data-form-wrap>${H.contactForm()}</div>
+          <div class="card pad" data-form-wrap>${H.contactForm(query)}</div>
           <aside class="contact-side">
             <div class="card pad"><ul class="contact-list">
               <li>${PS.icon('mail')}<div><span class="label">Email</span><a href="mailto:${C.email}">${C.email}</a></div></li>
@@ -425,10 +470,10 @@
         title: 'My account',
         html: `${T().pageHead({ eyebrow: 'Account', title: `Welcome back, ${esc(u.name.split(' ')[0])}.`, intro: `Signed in as ${esc(u.email)} · member since ${PS.date(u.created, { month: 'long', year: 'numeric' })}` })}
         <section class="container section-sm"><div class="account-grid">
-          <div class="card pad"><h2 class="h3">Recent orders</h2>${orders.length ? `${H.orderList(orders.slice(0, 3))}<a class="link-arrow mt" href="#/orders">Order history ${PS.icon('arrow')}</a>` : `<p class="muted">No orders yet.</p><a class="btn btn-primary" href="#/shop">Start shopping</a>`}</div>
-          <div class="stack">
+          <div class="card pad rise" style="--i:2"><h2 class="h3">Recent orders</h2>${orders.length ? `${H.orderList(orders.slice(0, 3))}<a class="link-arrow mt" href="#/orders">Order history ${PS.icon('arrow')}</a>` : `<p class="muted">No orders yet.</p><a class="btn btn-primary" href="#/shop">Start shopping</a>`}</div>
+          <div class="stack rise" style="--i:3">
             <div class="card pad" id="standing-orders"><h2 class="h3">Standing orders</h2>${subs.length ? `<ul class="sub-list">${subs.map((s) => `<li><div><strong>${esc(s.name)}</strong> <small>${esc(s.size)} × ${s.qty}</small><span class="small muted">${esc(s.cur.short)} · ${s.off ? 'Cancelled' : s.next ? 'Next ship ' + PS.date(s.next) : 'No further shipments'}</span></div>${s.off ? '<span class="badge badge-muted">Cancelled</span>' : `<button class="btn btn-sm btn-ghost" data-manage-sub="${esc(s.key)}">Manage</button>`}</li>`).join('')}</ul>` : '<p class="muted small">No standing orders. Choose “Standing order” on any product page to save up to 15%.</p>'}</div>
-            <div class="card pad"><h2 class="h3">Profile</h2><p>${esc(u.name)}<br><span class="muted">${esc(u.email)}</span></p><button class="btn btn-secondary" data-signout>Sign out</button></div>
+            <div class="card pad" id="profile">${profileHtml(u)}</div>
           </div></div></section>`,
         after() { if (query.focus === 'standing') { const el = $('#standing-orders'); if (el) el.scrollIntoView({ block: 'center' }); } },
       };
@@ -444,7 +489,7 @@
       return {
         title: 'Order history',
         html: `${T().pageHead({ eyebrow: 'Account', title: 'Order history', intro: orders.length ? `${orders.length} order${orders.length > 1 ? 's' : ''} on ${esc(u.email)}.` : `Orders placed with ${esc(u.email)} show up here.` })}
-        <section class="container section-sm narrow"><div class="card pad">${orders.length ? H.orderList(orders) : `<p class="muted">No orders yet.</p><a class="btn btn-primary" href="#/shop">Start shopping</a>`}</div>
+        <section class="container section-sm"><div class="orders-grid"><div class="card pad rise" style="--i:2">${orders.length ? H.orderList(orders, { lines: true }) : `<p class="muted">No orders yet.</p><a class="btn btn-primary" href="#/shop">Start shopping</a>`}</div>${manageOrders(orders)}</div>
           <p class="small center mt"><a class="link-arrow" href="#/account">${PS.icon('arrow')} Back to my account</a></p></section>`,
       };
     },
@@ -494,10 +539,25 @@
     const m = $('#ps-modal');
     if (m.hidden || (m.dataset.locked && !force)) return;
     m.classList.remove('open');
-    setTimeout(() => { m.hidden = true; }, 200);
+    setTimeout(() => { if (!m.classList.contains('open')) m.hidden = true; }, 200); // not if a pop-up opened in the meantime
     if (!$('.drawer.open')) document.body.classList.remove('no-scroll');
     if (lastFocus && lastFocus.focus) lastFocus.focus();
   };
+  // A lot's Certificate of Analysis as a pop-up, with its Download PDF button right under the header (lab, report ID and so on). It is the lab's own
+  // PDF when the lot has one, otherwise the browser's print / save as PDF.
+  function openCoa(code) {
+    const lot = PS.findLot(code);
+    if (!lot) return;
+    const dl = lot.pdf
+      ? `<a class="btn btn-primary btn-sm" href="${esc(lot.pdf)}" target="_blank" rel="noopener" download>${PS.icon('download')} Download PDF</a>`
+      : `<button class="btn btn-primary btn-sm" type="button" data-print>${PS.icon('download')} Download PDF</button>`;
+    PS.openModal(PS.coaDoc(lot, `<div class="coa-actions">${dl}</div>`), { cls: 'modal-coa' });
+  }
+  // Escape, the backdrop and the close button: closing a certificate opened by its /coa/<lot> link goes on to Lab Tests
+  function dismissModal() {
+    PS.closeModal();
+    if (current === 'coa' && !$('#ps-modal').dataset.locked) location.replace('#/lab-tests');
+  }
   PS.openCart = () => {
     const d = $('#cart-drawer');
     d.hidden = false;
@@ -557,14 +617,60 @@
     return o;
   };
 
-  // Lab Tests: a card shows when it matches both the search box and the product filter
-  function filterLots() {
-    const i = $('[data-lot-search]'), f = $('[data-lot-product-filter]');
+  // Lab Tests: a card shows when it matches both the search box and the product filter.
+  // With `animate` (typing, the filter) the change plays for 220ms: cards that stop matching fade and shrink out where they stand, the others glide to
+  // their new places (FLIP: measure, change, then animate from the old place) and new matches fade in. No card is redrawn, so a keystroke in the middle
+  // of it carries on from wherever the cards are. With reduced motion, or without `animate`, it just shows and hides.
+  function filterLots(animate) {
+    const i = $('[data-lot-search]'), f = $('[data-lot-product-filter]'), grid = $('.lot-cards'), e = $('.empty-row');
     const q = (i ? i.value : '').trim().toLowerCase(), pid = f ? f.value : '';
-    let shown = 0;
-    $$('[data-lot-row]').forEach((r) => { const m = (!q || r.dataset.lotRow.includes(q)) && (!pid || r.dataset.lotProduct === pid); r.hidden = !m; if (m) shown++; });
-    const e = $('.empty-row');
-    if (e) e.hidden = shown > 0;
+    const cards = $$('[data-lot-row]'), want = cards.map((r) => (!q || r.dataset.lotRow.includes(q)) && (!pid || r.dataset.lotProduct === pid));
+    const shown = want.filter(Boolean).length;
+    const drop = (r) => { r.getAnimations().forEach((a) => a.cancel()); r.classList.remove('leaving'); r.style.cssText = ''; };
+    if (!animate || !grid || !grid.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      cards.forEach((r, k) => { drop(r); r.hidden = !want[k]; });
+      if (e) { e.getAnimations().forEach((a) => a.cancel()); e.hidden = shown > 0; }
+      return;
+    }
+    const opt = { duration: 220, easing: 'cubic-bezier(.25,.8,.25,1)' }, gr = grid.getBoundingClientRect();
+    // before: where every card on show stands right now (mid-animation included), and how visible it is
+    const before = new Map();
+    cards.forEach((r) => { if (!r.hidden) { const cs = getComputedStyle(r); before.set(r, { box: r.getBoundingClientRect(), op: +cs.opacity, sc: parseFloat(cs.scale) || 1 }); } });
+    const h0 = gr.height;
+    cards.forEach((r) => { if (before.has(r) && r._flip) r._flip.cancel(); });
+    if (grid._h) grid._h.cancel();
+    const stay = [], enter = [];
+    cards.forEach((r, k) => {
+      const b = before.get(r);
+      if (!want[k]) {
+        if (!b || r.classList.contains('leaving')) return; // hidden already, or already on its way out
+        r.getAnimations().forEach((a) => a.cancel());
+        r.style.cssText = `left:${b.box.left - gr.left}px;top:${b.box.top - gr.top}px;width:${b.box.width}px;height:${b.box.height}px`;
+        r.classList.add('leaving');
+        const out = r.animate([{ opacity: b.op, scale: b.sc }, { opacity: 0, scale: 0.96 }], Object.assign({ fill: 'forwards' }, opt));
+        out.onfinish = () => { drop(r); r.hidden = true; };
+      } else if (!b) {
+        r.hidden = false;
+        enter.push([r, 0, 0.96]);
+      } else {
+        if (r.classList.contains('leaving')) { drop(r); enter.push([r, b.op, b.sc]); } // matches again before it was gone
+        stay.push(r);
+      }
+    });
+    // after: the same cards at their new places
+    stay.forEach((r) => {
+      const a = before.get(r).box, b = r.getBoundingClientRect(), dx = a.left - b.left, dy = a.top - b.top;
+      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) r._flip = r.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], opt);
+    });
+    enter.forEach(([r, op, sc]) => { r.animate([{ opacity: op, scale: sc }, { opacity: 1, scale: 1 }], opt); });
+    const h1 = grid.getBoundingClientRect().height;
+    if (Math.abs(h1 - h0) > 1) grid._h = grid.animate([{ height: h0 + 'px' }, { height: h1 + 'px' }], opt);
+    if (e) { // the empty message fades too
+      const op = e.hidden ? 0 : +getComputedStyle(e).opacity;
+      e.getAnimations().forEach((a) => a.cancel());
+      if (!shown && op < 1) { e.hidden = false; e.animate([{ opacity: op }, { opacity: 1 }], opt); }
+      else if (shown && !e.hidden) { const out = e.animate([{ opacity: op }, { opacity: 0 }], Object.assign({ fill: 'forwards' }, opt)); out.onfinish = () => { out.cancel(); e.hidden = true; }; }
+    }
   }
 
   PS.trackLookup = (num, email) => {
@@ -640,7 +746,7 @@
       const d = t.dataset;
       if ('openCart' in d) { e.preventDefault(); PS.openCart(); }
       else if ('closeCart' in d) { e.preventDefault(); PS.closeCart(); }
-      else if ('closeModal' in d) { e.preventDefault(); PS.closeModal(); }
+      else if ('closeModal' in d) { e.preventDefault(); dismissModal(); }
       else if (d.add) {
         e.preventDefault();
         PS.cart.add(d.add, d.size, 1, 'once');
@@ -658,13 +764,24 @@
       }
       else if (d.lineRemove) { PS.cart.remove(d.lineRemove); }
       else if ('removePromo' in d) { PS.cart.removePromo(); }
-      else if (d.coa) { PS.go('#/coa/' + d.coa); }
-      else if (d.coaPdf) {
-        const lot = PS.findLot(d.coaPdf);
-        if (lot) PS.openModal(`${PS.coaDoc(lot)}<div class="coa-actions"><button class="btn btn-primary" type="button" data-print>${PS.icon('download')} Print / save PDF</button></div>`, { cls: 'modal-coa' });
-      }
+      else if (d.coa) { e.preventDefault(); openCoa(d.coa); }
       else if ('print' in d) { window.print(); }
       else if ('signout' in d) { PS.auth.signOut(); PS.toast('Signed out'); }
+      else if ('profileEdit' in d) { $('#profile').innerHTML = profileHtml(PS.auth.current(), true); $('#pf-first').focus(); }
+      else if ('profileCancel' in d) { $('#profile').innerHTML = profileHtml(PS.auth.current(), false); $('[data-profile-edit]', $('#profile')).focus(); }
+      else if ('addressRemove' in d) {
+        PS.details.set(Object.assign({}, PS.details.get(), { address: {}, billing: null }));
+        PS.toast('Saved address removed.');
+        render();
+      }
+      else if (d.help) { PS.openModal(helpHtml(d.help)); }
+      else if (d.helpEmail) { const u = PS.auth.current(); swapModal(helpEmailHtml(d.helpEmail, u ? PS.orders.forEmail(u.email) : [])); }
+      else if (d.helpBack) { swapModal(helpHtml(d.helpBack)); }
+      else if ('reorder' in d) {
+        const u = PS.auth.current(), orders = u ? PS.orders.forEmail(u.email) : [];
+        if (orders.length === 1) reorder(orders[0]); else if (orders.length) PS.openModal(reorderHtml(orders));
+      }
+      else if (d.reorderPick) { const o = PS.orders.get(d.reorderPick); if (o) reorder(o); }
       else if (d.manageSub) { openManage(d.manageSub, !!t.closest('#ps-modal')); }
       else if (d.cancelAsk) {
         const u = PS.auth.current(), s = u && subsOf(PS.orders.forEmail(u.email)).find((x) => x.key === d.cancelAsk);
@@ -678,7 +795,7 @@
         PS.toast('Standing order cancelled — no further charges.');
         render();
       }
-      else if ('ageAccept' in d) { PS.storage.set('ageOk', Date.now()); PS.closeModal(true); }
+      else if ('ageAccept' in d) { PS.storage.set('ageOk', Date.now()); PS.closeModal(true); if (current === 'coa') render(); } // a direct certificate link brings its pop-up back
       else if ('ageExit' in d) { $('.modal-panel').innerHTML = T().ageDenied(); }
       else if (d.cookie) { PS.storage.set('cookies', d.cookie); const b = $('.cookie-banner'); if (b) b.remove(); }
       else if ('navToggle' in d) { document.body.classList.toggle('nav-open'); t.setAttribute('aria-expanded', document.body.classList.contains('nav-open')); }
@@ -691,14 +808,23 @@
     });
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { PS.closeModal(); PS.closeCart(); document.body.classList.remove('nav-open'); }
+      if (e.key === 'Escape') { dismissModal(); PS.closeCart(); document.body.classList.remove('nav-open'); }
+      const m = $('#ps-modal');
+      if (e.key === 'Tab' && !m.hidden && m.classList.contains('open')) { // a pop-up keeps the focus inside itself
+        const panel = $('.modal-panel', m), els = $$('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])', panel).filter((x) => x.offsetParent), a = document.activeElement;
+        const first = els[0], last = els[els.length - 1];
+        if (!els.length) { e.preventDefault(); panel.focus(); }
+        else if (!panel.contains(a) || a === panel) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
+        else if (e.shiftKey && a === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
+      }
     });
 
     document.addEventListener('input', (e) => {
       const t = e.target;
       if (t.dataset.format === 'card') t.value = t.value.replace(/\D/g, '').slice(0, 16).replace(/(\d{4})(?=\d)/g, '$1 ');
       if (t.dataset.format === 'exp') { const d = t.value.replace(/\D/g, '').slice(0, 4); t.value = d.length > 2 ? d.slice(0, 2) + ' / ' + d.slice(2) : d; }
-      if ('lotSearch' in t.dataset) filterLots();
+      if ('lotSearch' in t.dataset) filterLots(true);
       const mf = t.closest('form[data-form="manage-sub"]');
       if (mf) {
         if (t.name === 'weeks') mf.elements.plan.value = 'custom'; // typing a number means Custom
@@ -723,9 +849,10 @@
       const pf = t.closest('form[data-form="product"]');
       if (pf && t.name === 'weeks') t.value = weeksIn(t.value);
       if (pf) PS.syncProductForm(pf);
-      if ('lotProductFilter' in t.dataset) filterLots();
+      if ('lotProductFilter' in t.dataset) filterLots(true);
       const mf = t.closest('form[data-form="manage-sub"]');
       if (mf) { if (t.name === 'weeks') t.value = weeksIn(t.value); syncManage(mf); }
+      if (t.name === 'helpOrder') { const a = $('[data-help-mail]'); a.setAttribute('href', helpMail(a.dataset.helpMail, t.value)); }
       if (t.name === 'billingSame') {
         // the billing address shows only when it differs from shipping; its fields are required while shown and off (skipped by the form) while hidden
         const box = $('[data-billing]', t.closest('form'));
@@ -758,6 +885,10 @@
       if (kind === 'search') { PS.go('#/shop?q=' + encodeURIComponent(data.q || '')); document.body.classList.remove('nav-open'); return; }
       if (kind === 'track-go') { PS.go(`#/track?order=${encodeURIComponent(data.order)}&email=${encodeURIComponent(data.email)}`); form.reset(); document.activeElement.blur(); return; }
       if (kind === 'promo') { const r = PS.cart.applyPromo(data.code); PS.toast(esc(r.msg), r.ok ? '' : 'error'); return; }
+      if (kind === 'profile') { // the address is all or nothing: once any of it is filled in, the main lines are required
+        const any = ['address1', 'address2', 'city', 'state', 'zip'].some((k) => data[k]);
+        ['address1', 'city', 'state', 'zip'].forEach((k) => { form.elements[k].required = any; });
+      }
       if (!validateForm(form)) return;
       const btn = $('button[type="submit"]', form);
       if (kind === 'manage-sub') {
@@ -797,12 +928,21 @@
         wrap.innerHTML = `<div class="success-panel"><span class="success-icon">${PS.icon('check')}</span><h2 class="h3">${kind === 'contact' ? 'Message sent' : 'Application received'}</h2><p class="muted">Thanks${data.name ? ', ' + esc(data.name.split(' ')[0]) : ''}. We’ll reply to <strong>${esc(data.email)}</strong> within one business day.</p><a class="btn btn-secondary" href="#/shop">Back to shop</a></div>`;
         return;
       }
+      if (kind === 'profile') {
+        const prev = PS.details.get(), r = PS.auth.update({ name: `${data.first} ${data.last}`, email: data.email });
+        if (!r.ok) { $('.form-msg', form).textContent = r.msg; return; }
+        PS.details.set({ email: data.email, phone: data.phone, first: data.first, last: data.last, org: data.org, address: { line1: data.address1, line2: data.address2, city: data.city, state: data.state, zip: data.zip }, billing: prev && prev.billing });
+        PS.emit('auth'); // the header's "Hi <name>" and this page follow the new name at once
+        PS.toast('Profile saved.');
+        return;
+      }
       if (kind === 'signin' || kind === 'signup') {
         btn.disabled = true;
+        signingIn = true;
         const r = kind === 'signin' ? await PS.auth.signIn(data) : await PS.auth.signUp(data);
-        btn.disabled = false;
-        if (!r.ok) { $('.form-msg', form).textContent = r.msg; return; }
-        PS.toast(kind === 'signin' ? 'Welcome back!' : 'Account created');
+        signingIn = false;
+        if (!r.ok) { btn.disabled = false; $('.form-msg', form).textContent = r.msg; return; }
+        arrive(form);
       }
     });
   }
@@ -888,20 +1028,38 @@
   // Same page redrawn (filters, sort, search, promo code, cart or sign-in changes) is "soft": nothing re-enters or jumps, only the shop grid fades.
   // Any other arrival, including one category of Shop to another, is a new page: it cross-fades with the browser's view transition (or the quick
   // page-enter fade where that isn't available), and the title's rise-in plays again.
-  let lastPath = null, lastName = null, latest = null, swapping = false;
+  let lastPath = null, lastName = null, latest = null, swapping = false, signingIn = false, arriving = false;
+  // Signing in or up goes on to where the visitor was headed (or the account page); on a page that asked for a sign-in (Order history) it is drawn again in place.
+  function goAfterAuth() {
+    const q = PS.parseHash().query;
+    if (PS.auth.current() && ['account', 'signup'].includes(current) && (q.next || current === 'signup')) PS.go('#' + (safeNext(q.next) || '/account'));
+    else if (['account', 'signup', 'orders', 'checkout', 'track'].includes(current)) render();
+  }
+  // After a good sign-in or sign-up the form fades and lifts out as "Welcome back, <name>" fades in, then the next page rises in (about 0.7s in all).
+  // The header already shows the signed-in button by now (the 'auth' event updated it). With reduced motion it goes straight on.
+  function arrive(form) {
+    const card = form.closest('.auth-card'), at = location.hash, go = () => { if (location.hash !== at) return; arriving = true; goAfterAuth(); };
+    if (!card || matchMedia('(prefers-reduced-motion: reduce)').matches) { go(); return; }
+    card.style.minHeight = card.offsetHeight + 'px';
+    card.insertAdjacentHTML('beforeend', `<div class="auth-welcome" role="status">${PS.icon('check')}<strong>${form.dataset.form === 'signup' ? 'Welcome' : 'Welcome back'}, ${esc(PS.auth.current().name.split(' ')[0])}</strong></div>`);
+    card.classList.add('welcome');
+    setTimeout(go, 300);
+  }
   function render() {
     const r = PS.parseHash();
     const views = Object.assign({}, PS.defaultViews, T().views);
     const fn = views[r.name] || views.notFound;
     const out = fn(r) || views.notFound(r);
-    const soft = lastName === r.name && lastPath === r.path;
+    const arrived = arriving;
+    arriving = false;
+    const soft = !arrived && lastName === r.name && lastPath === r.path;
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches || !document.startViewTransition;
-    const mode = soft ? 'soft' : lastName === null || still ? 'enter' : 'vt';
+    const mode = soft ? 'soft' : lastName === null || still || arrived ? 'enter' : 'vt';
     current = r.name;
     lastPath = r.path;
     lastName = r.name;
     if (swapping) { latest.r = r; latest.out = out; return; } // a page change is waiting for its frame: it will draw this one
-    latest = { r, out, mode };
+    latest = { r, out, mode, arrived };
     if (mode !== 'vt') { paint(); return; }
     const root = document.documentElement;
     swapping = true;
@@ -920,6 +1078,7 @@
     const focused = soft && main.contains(document.activeElement) ? document.activeElement.id : '';
     main.innerHTML = out.html;
     main.classList.toggle('soft', soft);
+    main.classList.toggle('arrive', !!latest.arrived);
     document.title = (out.title ? out.title + ' · ' : '') + 'Pepsoma — Research-grade peptides';
     $$('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === r.path.split('/')[1]));
     document.body.classList.remove('nav-open');
@@ -948,10 +1107,7 @@
     PS.on('auth', () => {
       $('#app-header').innerHTML = theme.header();
       refreshCart();
-      // signing in from the sign-in or create-account page goes on to where the visitor was headed (or the account page)
-      const q = PS.parseHash().query;
-      if (PS.auth.current() && ['account', 'signup'].includes(current) && (q.next || current === 'signup')) PS.go('#' + (safeNext(q.next) || '/account'));
-      else if (['account', 'signup', 'orders', 'checkout', 'track'].includes(current)) render();
+      if (!signingIn) goAfterAuth(); // a sign-in from its form waits for the welcome (see arrive)
     });
     PS.on('route', render);
     window.addEventListener('hashchange', render);

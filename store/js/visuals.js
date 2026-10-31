@@ -154,7 +154,7 @@
   };
 
   /* ---------- COA document ---------- */
-  // [test, method, specification, result], shared by the printable certificate and the COA page
+  // [test, method, specification, result], used by the certificate
   PS.coaTests = (lot) => [
     ['Purity', 'RP-HPLC', '≥ 98.0%', lot.purity + '%'],
     lot.identity ? ['Identity', 'ESI-MS', `${lot.identity.expected} ± 1.0 Da`, lot.identity.observed + ' Da'] : ['Identity', 'HPLC co-elution', 'Matches reference', 'Conforms'],
@@ -165,9 +165,10 @@
     ['Water content', 'Karl Fischer', '≤ 8.0%', lot.water + '%'],
     ['Appearance', 'Visual', 'Conforms to description', PS.esc(lot.appearance)],
   ];
-  // the line under the certificate's heading, on the COA page and in the printable document
+  // the line under the certificate's heading
   PS.labLine = (lot) => `Analysis performed by ${PS.esc(lot.lab)}. Results are shown as reported by the laboratory.`;
-  PS.coaDoc = function (lot) {
+  // `afterHead`: html set under the product details at the top (the pop-up's Download PDF button)
+  PS.coaDoc = function (lot, afterHead) {
     const p = PS.getProduct(lot.product);
     const esc = PS.esc;
     const row = (test, method, spec, result) => `<tr><td>${test}</td><td>${method}</td><td>${spec}</td><td><strong>${result}</strong></td><td><span class="coa-pass">Pass</span></td></tr>`;
@@ -184,6 +185,7 @@
         <div><span>Formula</span><strong>${esc(p.formula)}</strong></div>
         <div><span>Mol. weight</span><strong>${p.mw ? p.mw + ' g/mol' : '—'}</strong></div>
       </div>
+      ${afterHead || ''}
       <div class="coa-chart"><div class="coa-label">RP-HPLC chromatogram · C18 · 220 nm · retention time (min)</div>${PS.chromatogram(lot)}</div>
       <div class="coa-table-wrap"><table class="coa-table">
         <thead><tr><th>Test</th><th>Method</th><th>Specification</th><th>Result</th><th></th></tr></thead>

@@ -60,7 +60,7 @@ p { margin: 0 0 1em; }
 
 /* forms */
 .field { display: grid; gap: 6px; margin-bottom: 0; min-width: 0; }
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; align-items: start; } /* a message that wraps in one field doesn't stretch its neighbours */
 .field-row.three { grid-template-columns: 1.3fr 1fr .8fr; }
 .label { font-size: .8rem; font-weight: 600; letter-spacing: .01em; }
 .optional { font-weight: 400; color: var(--muted); }
@@ -190,7 +190,8 @@ html[data-var-field-err="b"] .is-invalid > .input:not(textarea) { height: 46px; 
 .timeline li:not(.done) strong { color: var(--muted); font-weight: 500; }
 
 /* orders / account */
-.order-grid, .account-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; align-items: start; }
+.order-grid, .account-grid, .orders-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; align-items: start; }
+.orders-grid { grid-template-columns: 1.6fr 1fr; }
 .order-items { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 10px; font-size: .92rem; }
 .order-items li { display: flex; justify-content: space-between; gap: 12px; }
 .order-items small { color: var(--muted); display: block; }
@@ -337,7 +338,7 @@ html[data-var-field-err="b"] .is-invalid > .input:not(textarea) { height: 46px; 
 
 /* responsive */
 @media (max-width: 960px) {
-  .order-grid, .account-grid, .contact-grid, .auth-grid, .policy-layout { grid-template-columns: 1fr; }
+  .order-grid, .account-grid, .orders-grid, .contact-grid, .auth-grid, .policy-layout { grid-template-columns: 1fr; }
   .policy-nav { position: static; display: flex; overflow-x: auto; gap: 6px; padding-bottom: 6px; }
   .policy-nav a { white-space: nowrap; border: 1px solid var(--line); }
   .policy-cards { grid-template-columns: 1fr 1fr; }

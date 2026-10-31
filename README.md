@@ -25,7 +25,7 @@ Both are published from this repo as one site with two links:
 - **Checkout**: field validation, card checks (Luhn, expiry, CVC), three shipping methods, and required checkboxes for research use, 21+, terms and auto-renew
 - **Orders**: confirmation page, order tracking by number + email (a sped-up demo status timeline), order history
 - **Accounts**: sign up, sign in, sign out, order history, cancelling standing orders
-- **Lab Tests / COAs**: a card per product with its current lot, lot search, a COA page per lot with a generated HPLC chart, and the lab's printable certificate (print/save as PDF) at the bottom
+- **Lab Tests / COAs**: a card per product with its current lot, lot search, a certificate pop-up per lot (opens in place, or from a `#/coa/<lot>` link) with a generated HPLC chart and a Download PDF button under its header
 - **Pages**: FAQ, About, Contact form, Wholesale application, 404
 - **Compliance**: 21+ age gate, cookie consent banner, research-use disclaimers site-wide
 - **Policies**: Terms of Service, Research Use Only, Shipping, Refund & Return, Testing & COA, Standing Order (auto-renewal) Terms, Privacy, Cookies, Accessibility

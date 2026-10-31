@@ -878,8 +878,8 @@
       ['hero-art', 'Vials and glow', 'The tilted vials and the floating chips next to the headline.', '/', '.hero-art'],
       ['net', 'Molecule network', 'The slow-moving dots behind the top of the page. A nice touch, or distracting?', '/', '.hero'],
       ['stats', 'Stats under the headline', 'Purity, lots tested and dispatch time count up. Easy to read? Believable?', '/', '.hero-stats'],
-      ['deal', 'Deal bar', 'There is no deal bar any more. The bulk discount is a line above the quantity on product pages and a row in the checkout summary, and on Home a small offer card fades in after a few seconds on the carousel. Is the deal clear?', '/', '[data-best]'],
-      ['rail', 'Product carousel', 'The row of product cards on the home page. Scroll through it.', '/', '.chips-band'],
+      ['deal', 'Deal bar', 'There is no deal bar any more. The bulk discount is a line above the quantity on product pages and a row in the checkout summary, and on Home a small offer card appears once you have scrolled to Most-selling compounds (and 10 seconds have passed). Is the deal clear?', '/', '[data-best]'],
+      ['rail', 'Browse compounds', 'The one slow row of compounds drifting left to right on Home; it pauses when you hover. Click one: it scrolls to its card in Most-selling compounds, or opens its product page.', '/', '.chips-band'],
       ['testi', 'Reviews', 'The "Why Pepsoma" section: four plain points about how Pepsoma works, in place of the old sample reviews. Clear and believable?', '/', '.testi'],
       ['closer', 'Closing section', 'The last big section before the footer.', '/', '.closer'],
       ['footer', 'Footer', 'Links, the newsletter sign-up and the giant wordmark at the bottom.', '/', '.site-footer'],
@@ -908,7 +908,7 @@
     ]],
     ['Header and menus', [
       ['nav-menus', 'Dropdown menus', 'Hover Shop Peptides, Research Stacks and Resources. Clear and easy to use?', '/', '.main-nav'],
-      ['nav-search', 'Search', 'Search sits next to "Best-selling compounds" on Home (the header has no search button). Type a compound and press Enter.', '/', '.home-search'],
+      ['nav-search', 'Search', 'Search sits next to "Most-selling compounds" on Home (the header has no search button). Type a compound and press Enter.', '/', '.home-search'],
       ['nav-track', 'Track order', 'Hover the truck button in the header.', '/', '.track-wrap'],
       ['nav-account', 'Account Login', 'The Account Login button and where it takes you.', '/', '.hdr-actions a[href="#/account"]'],
       ['nav-explore', 'Explore Peptides button', 'The main yellow button in the header.', '/', '.hdr-actions .btn-yellow'],
@@ -922,9 +922,9 @@
       ['mo-pill', 'Menu highlight', 'Move across the top menu: a pill slides under the links.', '/', '.main-nav'],
       ['mo-fly', 'Add-to-cart fly-in', 'Add something to the cart and watch the little circle fly to the cart icon. It stays inside the window; nothing else pops up.', '/shop'],
       ['mo-drawer', 'Cart sliding open', 'The cart panel sliding in from the side when you press the cart button. It no longer opens by itself after adding.', '/shop'],
-      ['mo-modal', 'Pop-ups', 'Open and close a pop-up, like a lab certificate PDF or the sign-in box.', '/lab-tests'],
+      ['mo-modal', 'Pop-ups', 'Open and close a pop-up, like a lab certificate (press View COA on Lab Tests). Escape, the dark backdrop and the × all close it.', '/lab-tests'],
       ['mo-theme', 'Theme change', 'Click the sun/moon button: the new theme spreads out in a circle.', '/', '.theme-btn'],
-      ['mo-toast', 'Little notices', 'Adding to the cart no longer shows a notice; the flying circle and the cart count are the feedback. Other messages, like applying a promo code, still appear at the bottom of the screen.', '/shop'],
+      ['mo-toast', 'Little notices', 'Adding to the cart shows a notice at the top of the screen, under the header, with a green outline; its button opens the cart. Other messages, like applying a promo code, appear at the bottom of the screen.', '/shop'],
       ['mo-amount', 'Amount of motion', 'All together: too much movement, too little, or about right?', '/'],
     ]],
     ['Shop and products', [
@@ -937,7 +937,7 @@
       ['pdp-plan', 'One-time vs standing order', 'The standing order option and its discount. Is it clear what you are signing up for?', '/product/bpc-157', '.plans'],
       ['pdp-qty', 'Quantity', 'The quantity picker.', '/product/bpc-157', '.qty'],
       ['pdp-specs', 'Specs and details', 'The spec table and product details.', '/product/bpc-157', '.spec-table'],
-      ['pdp-coa', 'Lab results on the product', 'The lab test section on the product page.', '/product/bpc-157'],
+      ['pdp-coa', 'Lab results on the product', 'The lab test section on the product page. Open full COA opens the certificate as a pop-up.', '/product/bpc-157'],
       ['stacks', 'Research stacks', 'A research stack: several compounds sold together.', '/product/stack-recovery'],
     ]],
     ['Cart and checkout', [
@@ -957,14 +957,14 @@
     ['After ordering', [
       ['ord-track', 'Order tracking', 'Track the order you just placed with its number and email.', '/track'],
       ['acc-signup', 'Creating an account', 'Sign up for an account.', '/account'],
-      ['acc-history', 'Order history', 'Sign in and look at past orders.', '/account'],
+      ['acc-history', 'Order history', 'Sign in and look at past orders. Each lists its items, and the Manage orders box has Return, Order again and Get support.', '/account'],
       ['acc-standing', 'Standing orders', 'If you placed a standing order, find it and try cancelling it.', '/account'],
     ]],
     ['Lab tests', [
-      ['lab-search', 'Lot search', 'Search for a lot number on the Lab Tests page.', '/lab-tests'],
+      ['lab-search', 'Lot search', 'Search for a lot number on the Lab Tests page. The cards animate as you type.', '/lab-tests'],
       ['lab-cards', 'Product list', 'One card per product. Easy to find what you need?', '/lab-tests', '.lot-cards'],
-      ['lab-web', 'Certificate page', 'Open a certificate. Does it read well as a web page?', '/lab-tests'],
-      ['lab-pdf', 'PDF version', 'The option at the bottom of a certificate that opens the lab\'s PDF.', '/lab-tests'],
+      ['lab-web', 'Certificate pop-up', 'Press View COA on a card. The certificate opens as a pop-up over the page. Does it read well, and is it easy to close?', '/lab-tests', '.lot-card .btn-primary'],
+      ['lab-pdf', 'PDF version', 'The Download PDF button directly under the certificate\'s header. Press it to save or print the certificate.', '/lab-tests', '.lot-card .btn-primary'],
       ['lab-chart', 'Purity chart', 'The chart on a certificate.', '/lab-tests'],
     ]],
     ['Other pages', [
@@ -1214,15 +1214,15 @@
       ['save-details', 'Save my details', 'A "Save my details for next time" box sits above Place order, unticked at first, with a note that details stay on this browser only. Tick it and place an order: your email, phone, name and addresses (billing too) are kept on this browser, never the card, and fill in next time. Untick it on a later order to delete them.', '/checkout', '.checkout-form > .field-check'],
     ]],
     ['Account', [
-      ['signin-swap', 'After signing in', 'An animated transition takes you into the account page instead of an instant swap.', '/account', '.auth-card'],
-      ['profile', 'Profile', 'You can edit your name, email, phone and saved address.', '/account', '.auth-card'],
-      ['order-lines', 'Order history items', 'Each order lists its items as lines like "2 × BPC-157 10 mg", kept light.', '/orders', '.order-list'],
-      ['manage-orders', 'Manage orders box', 'A box on the right of Order history has Return, Order again and Get support. Support offers a message through the Contact page, or email; for email you pick the order or "Other question", and a button opens an email in a new tab with the subject filled in.', '/orders', '.order-list'],
+      ['signin-swap', 'After signing in', 'After you sign in or create an account, the form fades and lifts out with a short "Welcome back, <name>" and the next page rises in, about three quarters of a second in all. It still goes on to the page you were headed for. With reduced motion it goes straight through. Sign out first (account menu in the header), then sign in with the form (outlined).', '/account', '.auth-card'],
+      ['profile', 'Profile', 'The Profile card has an Edit button. It opens first name, last name, email, phone, lab / institution and a saved address, with Save and Cancel. Saving updates "Hi <name>" in the header at once and fills in checkout. "Remove" next to the address clears it, and with nothing saved yet the card offers "Add details". Everything stays on this browser. Sign in first.', '/account', '#profile'],
+      ['order-lines', 'Order history items', 'Each order on Order history lists its items as lines like "2 × BPC-157 10 mg", in small muted text. A standing order adds its plan after the item ("· Every 4 weeks"), and an order with more than three lines shows the first three and "+N more". Sign in first.', '/orders', '.order-list'],
+      ['manage-orders', 'Manage orders box', 'A "Manage orders" box sits to the right of Order history (under it on a phone) with Return, Order again and Get support. Return and Get support open the same small chooser: "Send a message" goes to the Contact page with the topic filled in, "Email us" lists your orders plus "Other question" and a button opens an email draft in a new tab with the subject filled in, like "Return request — Order PS592049". Order again adds an order to the cart (a standing order keeps its plan; items no longer sold are skipped) and opens the cart. With no orders only Get support shows. Sign in first.', '/orders', '.manage-orders'],
     ]],
     ['Lab tests', [
-      ['lab-search', 'Search', 'Results animate smoothly as you type.', '/lab-tests', '.lot-tools'],
-      ['coa-popup', 'Certificate', 'The certificate opens as a pop-up again, as in V1. /coa/<lot> links still work and open the pop-up over Lab Tests.', '/coa/PS-BPC-2609A', '.coa-web'],
-      ['coa-pdf', 'Download PDF', 'The button moved below the certificate\'s header area.', '/coa/PS-BPC-2609A', '.coa-web'],
+      ['lab-search', 'Search', 'Results now animate as you type, in about a fifth of a second: cards that stop matching fade and shrink away, the others glide to their new places and new matches fade in. The product filter and the "No lots match" message do the same. Type a few letters in the search box (outlined). Reduced motion skips it.', '/lab-tests', '.lot-tools'],
+      ['coa-popup', 'Certificate', 'The certificate opens as a pop-up again, as in V1, with the lab name and report ID from V2 kept. Press View COA on a card (outlined); Escape, the dark backdrop or the × closes it. A /coa/<lot> link still works: it opens the pop-up over Lab Tests, and closing it goes to Lab Tests. (The outline is on the first View COA button because the certificate itself only exists once it is open.)', '/lab-tests', '.lot-card .btn-primary'],
+      ['coa-pdf', 'Download PDF', 'The Download PDF button moved to directly under the certificate\'s header area (lab, report ID, lot, date and the product), instead of the bottom. This opens a certificate by its /coa/ link, with the button outlined.', '/coa/PS-BPC-2609A', '.modal-coa .coa-actions .btn'],
     ]],
   ];
   const CH = CHANGES.flatMap(([g, items]) => items.map(([id, t, ask, go, sel, vars, v2opts]) => ({ id, g, t, ask, go, sel, vars: vars || [], v2opts })));

@@ -284,10 +284,27 @@
     async signIn({ email, password }) {
       email = String(email).trim().toLowerCase();
       const u = PS.storage.get('users', {})[email];
-      if (!u || u.hash !== (await sha(email + ':' + password))) return { ok: false, msg: 'Email or password is incorrect.' };
+      if (!u || u.hash !== (await sha((u.salt || email) + ':' + password))) return { ok: false, msg: 'Email or password is incorrect.' };
       PS.storage.set('session', email);
       PS.emit('auth');
       return { ok: true };
+    },
+    // Profile edit: a new name and/or email for the signed-in account. A new email moves the record (and its orders) to that email;
+    // the password hash was made with the first email, so `salt` remembers it.
+    update({ name, email }) {
+      const old = PS.storage.get('session', null), users = PS.storage.get('users', {}), u = old && users[old];
+      if (!u) return { ok: false, msg: 'Sign in again to edit your profile.' };
+      email = String(email).trim().toLowerCase();
+      if (email !== old) {
+        if (users[email]) return { ok: false, msg: 'An account with that email already exists.' };
+        delete users[old];
+        users[email] = Object.assign({}, u, { salt: u.salt || old });
+        PS.storage.set('session', email);
+        PS.storage.set('orders', PS.orders.all().map((o) => (o.email === old ? Object.assign({}, o, { email }) : o)));
+      }
+      users[email].name = String(name).trim();
+      PS.storage.set('users', users);
+      return { ok: true }; // the caller emits 'auth' once its other changes are saved
     },
     signOut() { PS.storage.remove('session'); PS.emit('auth'); },
   };

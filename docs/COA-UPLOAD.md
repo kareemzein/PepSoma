@@ -18,15 +18,15 @@ Today every lot and COA on the site is sample data. The site draws three sample 
 
    | Field | What it is |
    | --- | --- |
-   | `lab`, `reportId` | The lab and its report number. Shown at the top of the COA page and the printable certificate. |
+   | `lab`, `reportId` | The lab and its report number. Shown at the top of the certificate pop-up. |
    | `tested` | Test date, as `'YYYY-MM-DD'`. |
    | `purity` | HPLC purity as a number (no % sign). |
-   | `pdf` | Path of the lab's PDF. With it, "Open the lab's PDF" opens that file in a new tab instead of the site's own printable certificate. |
+   | `pdf` | Path of the lab's PDF. With it, the pop-up's "Download PDF" button opens that file in a new tab instead of printing the site's own certificate. |
    | `identity`, `content`, `endotoxin`, `water`, `appearance` | Optional. Same shape as the sample values (`identity: { expected: '1419.5', observed: '1419.6' }`, `endotoxin: '0.14'`, and so on). Leave out what the lab didn't report. |
 
 3. **Until all your lots are real**, every other lot still shows the placeholder `[Testing lab]` and `[Report ID]`. To change the placeholder for all of them at once, edit `PS.lab` in the same file.
 4. **If it's a product's current lot**, also update that product's `purity` in `data.js`, so the shop cards and the product page match the COA.
-5. **Commit and push to `main`.** The site republishes in about a minute. Check it at `#/coa/<lot code>`: the lab, the report ID and the date should be the lab's, and the "SAMPLE DATA" marks are gone for that lot.
+5. **Commit and push to `main`.** The site republishes in about a minute. Check it at `#/coa/<lot code>` (it opens the certificate pop-up over Lab Tests): the lab, the report ID and the date should be the lab's, and the "SAMPLE DATA" marks are gone for that lot.
 
 Not covered yet:
 
@@ -45,6 +45,6 @@ Then adding a COA needs no code and no deploy:
 
 1. In the Supabase dashboard, **Storage → coa → Upload** the lab's PDF, named by lot code (`PS-BPC-2609A.pdf`).
 2. **Table Editor → lots → Insert row**: lot code, product, test date, purity, lab, report ID, and the PDF's file name. Tick "current" for the newest lot of that product, and untick the one before it.
-3. Reload the site. The lot shows up on Lab Tests and at `#/coa/<lot code>`, any lot code works, and "Open the lab's PDF" serves the uploaded file.
+3. Reload the site. The lot shows up on Lab Tests and at `#/coa/<lot code>`, any lot code works, and "Download PDF" serves the uploaded file.
 
 Update the product's purity in the `products` table too (its `details.purity`), so the shop cards match the new current lot.

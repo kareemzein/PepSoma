@@ -519,6 +519,9 @@ button.size-chip:focus-visible { outline: 2px solid var(--focus); outline-offset
 .lot-older { margin: 12px 0 0; font-size: .78rem; color: var(--muted); }
 .lot-older a { color: inherit; }
 
+/* Lab Tests: a card that stops matching is lifted out of the grid where it stands and fades out (see filterLots in js/ui.js) */
+.lot-cards { position: relative; isolation: isolate; align-content: start; }
+.lot-card.leaving { position: absolute; margin: 0; z-index: -1; pointer-events: none; }
 /* the chromatogram's drawing is stretched to its box, its labels are a second SVG over it (see PS.chromatogram) */
 .chromatogram { position: relative; }
 .chromatogram svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -530,24 +533,17 @@ button.size-chip:focus-visible { outline: 2px solid var(--focus); outline-offset
 .coa-meta div { white-space: nowrap; }
 .coa-lab-line { margin: -4px 0 16px; font-size: .78rem; color: #555; }
 
-/* ---------- COA page ---------- */
-.coa-web { display: grid; gap: 18px; }
-.coa-web-top { display: grid; grid-template-columns: 240px 1fr; gap: 28px; align-items: center; }
-.coa-web-top .big-purity { margin: 6px 0 10px; }
-.coa-web-top .chromatogram { width: 100%; height: 170px; margin-top: 10px; color: var(--muted); }
-.coa-results { list-style: none; margin: 0; padding: 0; }
-.coa-results li { display: grid; grid-template-columns: 1fr auto auto; gap: 16px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); }
-.coa-results li:last-child { border-bottom: 0; }
-.coa-results small { display: block; color: var(--muted); font-size: .8rem; }
-.coa-results b { font-variant-numeric: tabular-nums; text-align: right; }
-.coa-web-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding-top: 6px; }
-.coa-web-foot p { margin: 0; max-width: 560px; }
+/* ---------- certificate pop-up ---------- */
+.modal-coa .coa-actions { margin: 0 0 18px; }
 @media (max-width: 640px) {
   .lot-tools { flex-direction: column; align-items: stretch; }
   .lot-tools select.input { width: 100%; }
-  .coa-web-top { grid-template-columns: 1fr; }
-  .coa-results li { grid-template-columns: 1fr auto; }
-  .coa-results .coa-pass { display: none; }
+  .modal-coa { padding: 10px; }
+  .modal-coa .modal-panel { padding: 10px; max-height: calc(100vh - 20px); }
+  .coa-table { font-size: .76rem; }
+  .coa-table th, .coa-table td { padding: 8px 4px; overflow-wrap: break-word; }
+  .coa-table th { font-size: .58rem; letter-spacing: .04em; }
+  .coa-table th:last-child, .coa-table td:last-child { display: none; } /* the Pass badges: the table fits without scrolling sideways */
   .lot-card { grid-template-columns: 84px 1fr; }
   .lot-card-img { height: 120px; }
 }
@@ -722,10 +718,37 @@ button.size-chip:focus-visible { outline: 2px solid var(--focus); outline-offset
 .auth-page.from-right .auth-wordmark { right: -.7em; animation: wmRight 1s var(--ease-out) both; }
 @keyframes wmLeft { from { transform: translate(-12%, -50%); opacity: 0; } to { transform: translate(0, -50%); opacity: 1; } }
 @keyframes wmRight { from { transform: translate(12%, -50%); opacity: 0; } to { transform: translate(0, -50%); opacity: 1; } }
-.auth-card { max-width: 460px; margin: 0 auto; }
+.auth-card { max-width: 460px; margin: 0 auto; position: relative; }
+/* after signing in: the form fades and lifts out as a welcome fades in (see arrive() in js/ui.js), then the next page rises in a little quicker than usual */
+.auth-card > * { transition: opacity .16s ease, transform .16s ease; }
+.auth-card.welcome > :not(.auth-welcome) { opacity: 0; transform: translateY(-10px); pointer-events: none; }
+.auth-welcome { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; text-align: center; font-size: 1.3rem; opacity: 0; animation: welcomeIn .2s .02s var(--ease-out) forwards; }
+.auth-welcome .icon { width: 38px; height: 38px; color: var(--success); stroke-width: 2.4; }
+@keyframes welcomeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+#view.arrive.page-enter { animation-duration: .3s; }
+#view.arrive .rise { animation-duration: .35s; animation-delay: calc(var(--i, 0) * 35ms); }
+/* profile */
+.profile-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
+.profile-head h2 { margin: 0; }
+.profile-facts { display: grid; gap: 10px; margin: 0 0 18px; font-size: .92rem; }
+.profile-facts div { display: grid; grid-template-columns: 130px 1fr; gap: 12px; }
+.profile-facts dt { color: var(--muted); }
+.profile-facts dd { margin: 0; }
+.profile-note { margin: 14px 0 0; }
+#profile form { animation: gridIn .2s var(--ease-out); }
+#profile .legend-sub { margin: 14px 0 10px; }
+/* order history: each order's lines, and the Manage orders box beside it */
+.order-list .ol-lines { grid-column: 1 / -1; display: grid; gap: 2px; }
+.order-list .ol-lines span { font-size: .8rem; }
+.manage-orders p { margin: 0 0 16px; }
+.manage-actions { display: grid; gap: 10px; }
+.choices { display: grid; gap: 10px; margin-top: 16px; }
+.choice { display: grid; gap: 4px; width: 100%; padding: 16px; text-align: left; border: 1.5px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); text-decoration: none; cursor: pointer; transition: border-color .15s; }
+.choice:hover { border-color: var(--primary); }
+.choice span, .choice small { color: var(--muted); font-size: .85rem; font-weight: 400; }
+.choice .ol-lines { display: grid; gap: 2px; }
 .auth-switch { margin: 18px 0 0; text-align: center; font-size: .92rem; color: var(--muted); }
 .auth-switch a { color: var(--accent); font-weight: 600; }
-#ps-modal .field-row { align-items: start; }
 #ps-modal .options { margin-bottom: 16px; }
 .manage-next { margin: 2px 0 16px; padding: 12px 14px; border-radius: var(--radius); background: var(--bg-soft); font-size: .92rem; }
 .option .plan-weeks { position: static; opacity: 1; margin: 0 2px; }
