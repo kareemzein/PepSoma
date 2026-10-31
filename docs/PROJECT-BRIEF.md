@@ -47,7 +47,7 @@ Step zero is getting the final list of offerings from Noza: the catalog, deals a
 | 1 | Implement the review comments | Must (Tue) | Claude Code | Pull from the Sheet or review mode's Copy all, group by page, apply to `store/` |
 | 2 | Update catalog to Noza's list, add Retatrutide, set up deals/combos | Must (Tue) | Decide here, build in Claude Code | Retatrutide already bought; Selank and Semax already listed. Settle the FDA question first |
 | 3 | Compliance pass on site copy | Must (Tue) | Research here, edits in Claude Code | Dosing language, BAC water pairing, human-use signals (see Risks) |
-| 4 | Pick a payment processor and a backend | Must (Mon AM) | Research here | Cowork recommends one of each, with costs and setup time |
+| 4 | Pick a payment processor and a backend | Must (Mon AM) | Research here | Done Oct 26: Unison Payment + custom backend (see Payments and backend) |
 | 5 | Apply to the payment processor | Must (Mon) | You | Approval takes days to weeks, so apply Monday |
 | 6 | Sign up for database, email and shipping services | Must (Mon) | You | Claude Code needs the keys to build against them |
 | 7 | Database and real accounts | Must (Tue) | Claude Code | Moves accounts and products out of the browser |
@@ -64,6 +64,50 @@ Step zero is getting the final list of offerings from Noza: the catalog, deals a
 | 18 | Real COAs and reviews | After Tue | You and Noza, then Claude Code | Replace sample COA data and sample testimonials |
 | 19 | Take the preview banner down and turn checkout on | After Tue | Claude Code | Once the processor approves and payments are real |
 | 20 | Analytics respecting cookie consent | After Tue | Claude Code | |
+
+## Payments and backend (task 4)
+
+Decision: apply to [Unison Payment](https://www.unisonpayment.com/industries/peptides) Monday morning, send a second application to AllayPay the same day, and build a custom backend behind the current store (Cloudflare Pages + Supabase + Resend + Shippo + Authorize.net). Fixed cost is about $50/mo before card fees. Claude Code can build it in 1–2 sessions and test checkout in the Authorize.net sandbox before any approval.
+
+### Payment processor
+
+| Option | Takes RUO peptides? | Card rate | Reserve | Approval | Notes |
+| --- | --- | --- | --- | --- | --- |
+| [Unison Payment](https://www.unisonpayment.com/industries/peptides) (pick) | Yes: lists research-only peptide suppliers with compliant pages | Interchange-plus, about 3–6% + per-transaction fee | Often 5–10%, held 90–180 days | 3–7 business days, up to 2 weeks | No setup fee or contract. Authorize.net or NMI gateway. LegitScript not always required |
+| AllayPay (backup) | Yes, no LegitScript ([SeamlessChex](https://www.seamlesschex.com/blog/best-payment-processor-for-peptides), [onPoint](https://onpoint.to/10-peptide-store-payment-gateways/)) | Not published | 10%, held 3–6 months | 1–3 business days | Third-party info only; confirm on the call |
+| [SeamlessChex ACH](https://www.seamlesschex.com/deep-dives/do-peptide-research-only-sellers-qualify-for-ach-origination-without-legitscript) (backstop) | Yes, via bank transfer outside card-network rules | Not published | 5–10%, held 90–180 days | 5–7 business days | Bank payments only. Fallback if cards get pulled |
+| [Easy Pay Direct](https://www.easypaydirect.com/blog/peptide-merchant-account-fast-and-easy-payment-processing/), [Corepay](https://corepay.net/industries/best-peptide-merchant-accounts/) | No: both need LegitScript, which lists RUO peptide sellers as [not eligible](https://www.legitscript.com/certification/healthcare-certification/faq/) | | | | Corepay says outright it won't take RUO sellers |
+| Stripe, Shopify Payments, PayPal, Adyen | No ([Binderr](https://binderr.com/marketplace/high-risk-payment-processors-for-peptides)) | | | | |
+
+Gateway on top: [Authorize.net](https://www.authorize.net/sign-up/pricing.html) is $25/mo + $0.10 per transaction + $0.10 per daily batch, $0 setup. Typical extras: $20–35 per chargeback, $99–200/yr PCI.
+
+What affects approval:
+
+- **Retatrutide:** most acquirers refuse GLP-1 RUO sellers outright ([Binderr](https://binderr.com/marketplace/high-risk-payment-processors-for-peptides)). Plan keeps it anyway: list it on every application, since hiding it gets the account closed and funds frozen. Apply to processors that say they take RUO or GLP-1: Unison, [Vector Payments](https://www.vectorpayments.com/peptide-payment-processing/) (lists GLP-1 compounds) and [2Accept](https://www.2accept.net/industries/peptides) (takes RUO; ask about RUO GLP-1). If cards get approved with Reta excluded, checkout hides card payment whenever Reta is in the cart and offers crypto or business Zelle instead. The FDA risk stays either way.
+- **Site copy:** underwriters check the same flags as the FDA: dosing language, BAC water next to injectables, missing RUO disclaimers and COAs. Fix the obvious ones before the underwriter looks, and add a research-use checkbox at checkout.
+- **Paperwork:** EIN letter, owner ID, voided check, business bank statements, policies, COAs. Underwriters need a real business address and entity, so the company placeholders (task 16) move up.
+- **Card-network risk:** [Chameleon Peptides closed on Sep 27, 2026](https://compoundreview.com/guides/peptide-vendor-closures) after Visa questioned its banks about who it sold to. Approval isn't permanent, which is why the ACH backstop is there.
+- **Never** run sales through someone else's merchant account. That's transaction laundering and gets you blacklisted.
+
+### Backend
+
+| Option | Monthly cost | Setup time | Verdict |
+| --- | --- | --- | --- |
+| Custom on the current store (pick) | About $50 + card fees | 1–2 Claude Code sessions | Keeps the finished front-end, and checkout can be tested in the sandbox Tuesday |
+| WooCommerce | Hosting $25–350 + plugins ([Swell](https://www.swell.is/content/best-shopify-alternatives-peptide-brands)) | 1–2 weeks to rebuild the design as a WordPress theme | The usual peptide-store setup and swapping gateways is easy, but you'd throw away the custom front-end and take on plugin upkeep |
+| [Shopify](https://www.shopify.com/pricing) | $39 Basic (billed monthly) + 2% fee on every sale through a third-party gateway | 1–2 weeks to rebuild in Liquid | No: Shopify Payments is out, and Shopify can act on stores it judges harmful, so the store could be shut down |
+
+Custom stack:
+
+| Piece | Service | Cost |
+| --- | --- | --- |
+| Hosting | Cloudflare Pages. Has to move off GitHub Pages, whose [terms bar e-commerce](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits) | $0 |
+| Database + accounts | [Supabase](https://supabase.com/pricing) Pro (the free plan pauses after 1 week idle) | $25 |
+| Order emails | [Resend](https://resend.com/pricing) free plan: 3,000/mo, 100/day | $0, then $20 |
+| Shipping labels | [Shippo](https://goshippo.com/pricing) Starter: 30 labels/mo | $0, then $17 |
+| Card checkout | Authorize.net hosted card fields via Unison. [Sandbox](https://developer.authorize.net/hello_world/sandbox.html) signup needs no merchant account | $25 + $0.10/txn |
+
+Your Monday steps: Unison and AllayPay applications (about 1 hour each with docs ready), then Supabase, Resend, Shippo, Cloudflare and Authorize.net sandbox signups (task 6), and hand the keys to Claude Code.
 
 ## Who does what, where
 
