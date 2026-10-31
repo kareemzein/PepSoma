@@ -1,8 +1,8 @@
 # Handoff: Supabase account and order edits (not merged)
 
 ## Current state
-- Branch `claude/supabase-accounts-products-1648c7`, rebased on main at `722980f`. **Not merged or pushed.** Merge only after it's tested against the real Supabase project.
-- Kareem's project has `schema.sql` and `seed.sql` applied. `supabase/002_account_order_edits.sql` is written and **not yet run there**. The keys aren't in this worktree yet.
+- Merged to `main` and pushed on Oct 31. The deployed store reads `SUPABASE_URL` and `SUPABASE_ANON_KEY` from the Actions secrets (both set). `.env` is per worktree and gitignored.
+- Kareem's project has `schema.sql`, `seed.sql` and `002_account_order_edits.sql` applied, and the test data is deleted. Enable Email provider is on and Confirm email is off until Resend is set up.
 - Decisions are in `docs/BACKEND-SPEC.md` and `docs/TODO.md`: signed-in owners only edit addresses, guests email support, tax 0%, no automatic charges or refunds, a person reviews state changes.
 
 ## How it works
@@ -11,18 +11,16 @@
 - Checkout now waits for the database. Unreachable falls back to a demo order, which must change before real sales (`docs/TODO.md`).
 - The browser's edit check is display only. `update_order_address` decides, by the database's clock, and answers with a code rather than raising, so `EDIT_MSG` in `backend.js` maps the messages.
 
-## What was verified, and how
-- `supabase/*.sql` on real Postgres (PGlite) with Supabase's auth schema and roles stubbed: all the spec's rules, including 59 and 61 minutes, labels, tax refusal and RLS.
-- The store in headless Chrome against a stand-in for Supabase's Auth and REST API over that database: sign up, sign in, profile, one-time import, checkout, address changes, standing orders, email change, guest tracking, two customers. Also no keys and unreachable. No uncaught errors.
-- The test scripts are in this session's scratchpad (`pg/sqltest.mjs`, `pg/fake.mjs`, `e2e.mjs`), not the repo.
+## What was verified
+- On the real project, in headless Chrome and against its API: sign up, sign in, profiles, the one-time import, checkout, order history, address changes, standing orders, guest tracking, and the access rules between two customers, a guest and signed-out visitors. The publishable key works.
+- In the SQL Editor on the real project, 10 of 10: edits at 59 and 61 minutes, the tax refusal, labels, shipping, the review flag and the change history.
+- No keys and unreachable: the demo still works (against a test stand-in and the same code).
+- The test scripts were in the session scratchpad, not the repo.
 
 ## Not verified
-- Anything on real Supabase: the real API, real column grants, publishable key format, real email links (`#message=` is coded from the docs).
-- `supabase/functions/order-address-email`: never run.
-- Whether Confirm email off makes an email change apply instantly. Test it; it may need Resend SMTP and Confirm email on.
+- **Email change.** On the real project it failed with `Email address "..." is invalid`, naming the account's current `@example.com` address, even with Confirm email off. It's probably Supabase emailing the current address. The error shows and nothing changes. Retest with real inboxes after Resend. The `#message=` link handling in `backend.js` has never seen a real link.
+- `supabase/functions/order-address-email`: not deployed, never run.
 - Safari, Firefox, phones.
 
 ## Next
-1. Kareem runs 002, supplies keys. Write `.env`, set the Actions secrets with `gh` (he approved this).
-2. Rerun the spec's "Done means" list against the real project. The 59/61-minute and label tests need SQL he runs, since the browser can no longer set those columns.
-3. Update the README if anything differs, rebase, merge, push. Pushing deploys.
+Resend (see `docs/TODO.md`), then the orders prompt: inventory, order confirmation emails, Shippo labels. Order status and labels are set by hand in Supabase until then.

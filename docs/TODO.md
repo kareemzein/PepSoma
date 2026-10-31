@@ -32,7 +32,8 @@ Design changes from the review comments are in [V2-CHANGE-LIST.md](V2-CHANGE-LIS
 ### Backend and launch
 
 - [ ] Sign up for database, email, shipping services
-- [ ] Database + real accounts (Claude Code). Customers can edit account details at any time; move the profile and saved details off the browser. See `BACKEND-SPEC.md`
+- [x] Database + real accounts (Claude Code). Live on Supabase, tested on the real project. See `BACKEND-SPEC.md`
+- [ ] **Resend, then finish email:** sign up and verify `pepsoma.com`, connect Resend as Supabase's email sender, turn Confirm email back on, deploy `order-address-email`, then test an email change with real inboxes. Until then email changes show an error and sign-ups aren't confirmed
 - [ ] Orders, confirmation emails, inventory, shipping (Claude Code). Includes changing an order's shipping address for one hour after ordering, enforced in the database. See `BACKEND-SPEC.md`
 - [ ] Write down how a lab's COA gets uploaded and shown on the site (Claude Code, once products and lots are in the database)
 - [ ] **Before real sales, close the demo paths:** checkout must fail when Supabase can't be reached instead of saving a browser-only demo order, and the server must work out prices and totals, since the browser still sends them
