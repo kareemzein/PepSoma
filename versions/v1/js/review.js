@@ -798,8 +798,8 @@
   window.addEventListener('online', sync);
 
   /* ---------- everyone's comments, read from the sheet ---------- */
-  // sheet rows hold the full address; only rows filed under this version's HOME count, and the part after # becomes the route
-  const where = (u) => { try { const x = new URL(u); return [u.split('#')[0], x.hash.slice(1).split('?')[0] || '/']; } catch (e) { return []; } };
+  // sheet rows hold the full address; only rows filed under this version's HOME count, matched on its ?version part so a new domain still finds older rows, and the part after # becomes the route
+  const where = (u) => { try { const x = new URL(u); return [x.search, x.hash.slice(1).split('?')[0] || '/']; } catch (e) { return []; } };
   // the password is checked by the Apps Script (its ADMIN_KEY property); this tab remembers it until it closes or Lock
   const KEY = 'pepsoma.reviewKey';
   let key = '', keyMsg = '';
@@ -816,7 +816,7 @@
       if (mine !== loads) return;
       if (out.locked) { setKey(''); keyMsg = out.error || 'Wrong password.'; sheet = []; sheetState = 'locked'; paint(); const i = $('[data-key] input', panel); if (i) i.focus(); return; }
       if (!out.ok) throw new Error(out.error);
-      sheet = out.comments.filter((c) => where(c.page)[0] === HOME).map((c, i) => ({ ...c, ro: true, n: i + 1, page: where(c.page)[1] }));
+      sheet = out.comments.filter((c) => where(c.page)[0] === new URL(HOME).search).map((c, i) => ({ ...c, ro: true, n: i + 1, page: where(c.page)[1] }));
       sheetState = 'ok';
     } catch (e) {
       if (mine !== loads) return;

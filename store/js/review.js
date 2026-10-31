@@ -825,8 +825,8 @@
   window.addEventListener('online', sync);
 
   /* ---------- everyone's comments, read from the sheet ---------- */
-  // sheet rows hold the full address; only rows filed under this version's HOME count, and the part after # becomes the route
-  const where = (u) => { try { const x = new URL(u); return [u.split('#')[0], x.hash.slice(1).split('?')[0] || '/']; } catch (e) { return []; } };
+  // sheet rows hold the full address; only rows filed under this version's HOME count, matched on its ?version part so a new domain still finds older rows, and the part after # becomes the route
+  const where = (u) => { try { const x = new URL(u); return [x.search, x.hash.slice(1).split('?')[0] || '/']; } catch (e) { return []; } };
   // the password is checked by the Apps Script (its ADMIN_KEY property); this tab remembers it until it closes or Lock
   const KEY = 'pepsoma.reviewKey';
   let key = '', keyMsg = '';
@@ -843,7 +843,7 @@
       if (mine !== loads) return;
       if (out.locked) { setKey(''); keyMsg = out.error || 'Wrong password.'; sheet = []; sheetState = 'locked'; paint(); const i = $('[data-key] input', panel); if (i) i.focus(); return; }
       if (!out.ok) throw new Error(out.error);
-      sheet = out.comments.filter((c) => where(c.page)[0] === HOME).map((c, i) => ({ ...c, ro: true, n: i + 1, page: where(c.page)[1] }));
+      sheet = out.comments.filter((c) => where(c.page)[0] === new URL(HOME).search).map((c, i) => ({ ...c, ro: true, n: i + 1, page: where(c.page)[1] }));
       sheetState = 'ok';
     } catch (e) {
       if (mine !== loads) return;
@@ -1218,6 +1218,7 @@
       ['profile', 'Profile', 'The Profile card has an Edit button. It opens first name, last name, email, phone, lab / institution and a saved address, with Save and Cancel. Saving updates "Hi <name>" in the header at once and fills in checkout. "Remove" next to the address clears it, and with nothing saved yet the card offers "Add details". Everything stays on this browser. Sign in first.', '/account', '#profile'],
       ['order-lines', 'Order history items', 'Each order on Order history lists its items as lines like "2 × BPC-157 10 mg", in small muted text. A standing order adds its plan after the item ("· Every 4 weeks"), and an order with more than three lines shows the first three and "+N more". Sign in first.', '/orders', '.order-list'],
       ['manage-orders', 'Manage orders box', 'A "Manage orders" box sits to the right of Order history (under it on a phone) with Return, Order again and Get support. Return and Get support open the same small chooser: "Send a message" goes to the Contact page with the topic filled in, "Email us" lists your orders plus "Other question" and a button opens an email draft in a new tab with the subject filled in, like "Return request — Order PS592049". Order again adds an order to the cart (a standing order keeps its plan; items no longer sold are skipped) and opens the cart. With no orders only Get support shows. Sign in first.', '/orders', '.manage-orders'],
+      ['order-edit', 'Change the shipping address', 'New: for one hour after ordering, an order\'s page has a "Change address" link under Ship to, with the time it closes. It opens a pop-up with the name, phone, lab and address. After the hour, the link is replaced by a note to contact us. Your profile can be edited any time and doesn\'t change orders already placed. Open an order from this list, or place one first.', '/orders', '.order-list'],
     ]],
     ['Lab tests', [
       ['lab-search', 'Search', 'Results now animate as you type, in about a fifth of a second: cards that stop matching fade and shrink away, the others glide to their new places and new matches fade in. The product filter and the "No lots match" message do the same. Type a few letters in the search box (outlined). Reduced motion skips it.', '/lab-tests', '.lot-tools'],

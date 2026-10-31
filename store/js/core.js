@@ -51,6 +51,7 @@
     };
   };
   PS.date = (ts, opts) => new Date(ts).toLocaleDateString('en-US', opts || { month: 'short', day: 'numeric', year: 'numeric' });
+  PS.time = (ts) => new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
   /* ---------- commerce config ---------- */
   PS.config = {
@@ -192,8 +193,8 @@
     { id: 'placed', label: 'Order placed', at: 0 },
     { id: 'verified', label: 'Research-use terms accepted', at: 0 }, // ticked at checkout, so done the moment the order exists
     { id: 'packed', label: 'Packed with lot-matched COA', at: 3 },
-    { id: 'shipped', label: 'Shipped', at: 8 },
-    { id: 'delivered', label: 'Delivered', at: 30 },
+    { id: 'shipped', label: 'Shipped', at: 60 }, // not before the one-hour window to change the address closes
+    { id: 'delivered', label: 'Delivered', at: 180 },
   ];
   PS.orders = {
     all: () => PS.storage.get('orders', []),
@@ -229,6 +230,22 @@
       PS.storage.set('orders', list);
       PS.emit('orders', order);
       return order;
+    },
+    // the shipping address can be changed for an hour after ordering, as long as the order hasn't shipped
+    editUntil: (order) => order.createdAt + 60 * 60000,
+    editable(order) {
+      const st = PS.orders.status(order).current.id;
+      return Date.now() < PS.orders.editUntil(order) && st !== 'shipped' && st !== 'delivered';
+    },
+    // keeps what the order said before each change in addressEdits. Checks the window again, since the form can sit open past it
+    updateAddress(num, next) {
+      const list = PS.orders.all(), o = list.find((x) => x.number === num);
+      if (!o || !PS.orders.editable(o)) return { ok: false, msg: 'The one-hour window to change this address has closed.' };
+      o.addressEdits = (o.addressEdits || []).concat({ at: Date.now(), from: { name: o.name, org: o.org, phone: o.phone, address: o.address } });
+      Object.assign(o, next);
+      PS.storage.set('orders', list);
+      PS.emit('orders', o);
+      return { ok: true };
     },
     // Demo timeline is accelerated: statuses advance over minutes instead of days.
     status(order) {

@@ -359,6 +359,18 @@
       <p class="small muted">Nothing is sent. This opens a draft in your mail app.</p>
       <div class="btn-row"><a class="btn btn-primary" data-help-mail="${kind}" href="${helpMail(kind, orders[0] && orders[0].number)}" target="_blank" rel="noopener">${PS.icon('mail')} Open email draft</a><button class="btn btn-ghost" type="button" data-help-back="${kind}">Back</button></div>`;
   };
+  const orderAddressHtml = (o) => {
+    const f = (x) => H.field(Object.assign({ form: 'oa' }, x)), a = o.address;
+    return `<h2 class="h3">Change shipping address</h2><p class="muted">Order ${o.number}. You can change this until ${PS.time(PS.orders.editUntil(o))}.</p><form class="stack-form" data-form="order-address" data-order="${o.number}" novalidate>
+      ${f({ name: 'name', label: 'Full name', auto: 'name', value: o.name })}
+      <div class="field-row">${f({ name: 'phone', label: 'Phone', type: 'tel', auto: 'tel', required: false, validate: 'phone', value: o.phone })}${f({ name: 'org', label: 'Lab / institution', auto: 'organization', required: false, value: o.org })}</div>
+      ${f({ name: 'address1', label: 'Street address', auto: 'address-line1', value: a.line1 })}
+      ${f({ name: 'address2', label: 'Apt, suite, building', auto: 'address-line2', required: false, value: a.line2 })}
+      <div class="field-row three">${f({ name: 'city', label: 'City', auto: 'address-level2', value: a.city })}${f({ name: 'state', label: 'State', options: PS.states, auto: 'address-level1', value: a.state })}${f({ name: 'zip', label: 'ZIP', auto: 'postal-code', validate: 'zip', attrs: 'inputmode="numeric" maxlength="10"', value: a.zip })}</div>
+      <p class="form-msg" aria-live="polite"></p>
+      <div class="btn-row"><button class="btn btn-primary" type="submit">Save address</button><button class="btn btn-ghost" type="button" data-close-modal>Cancel</button></div>
+    </form>`;
+  };
   const reorderHtml = (orders) => `<h2 class="h3">Order again</h2><p class="muted">Which order should go in your cart?</p>
     <div class="choices">${orders.map((o) => `<button class="choice" type="button" data-reorder-pick="${o.number}"><strong>${o.number} <small>${PS.date(o.createdAt)}</small></strong>${orderLines(o)}</button>`).join('')}</div>`;
   // an order's lines go into the cart as they were bought (a standing order keeps its plan); lines whose product or size is gone are skipped
@@ -386,7 +398,9 @@
         <section class="container section-sm"><div class="order-grid">
           <div class="card pad"><h2 class="h3">Status</h2>${H.orderStatus(o)}<div class="btn-row"><a class="btn btn-secondary" href="#/track?order=${o.number}&email=${encodeURIComponent(o.email)}">Track this order</a><a class="btn btn-ghost" href="#/shop">Continue shopping</a></div></div>
           <div class="card pad"><h2 class="h3">Summary</h2>${H.orderItems(o)}
-            <div class="order-meta"><div><span class="label">Ship to</span><p>${esc(o.name)}${o.org ? '<br>' + esc(o.org) : ''}<br>${esc(o.address.line1)}${o.address.line2 ? ', ' + esc(o.address.line2) : ''}<br>${esc(o.address.city)}, ${esc(o.address.state)} ${esc(o.address.zip)}</p></div>
+            <div class="order-meta"><div><span class="label">Ship to</span><p>${esc(o.name)}${o.org ? '<br>' + esc(o.org) : ''}<br>${esc(o.address.line1)}${o.address.line2 ? ', ' + esc(o.address.line2) : ''}<br>${esc(o.address.city)}, ${esc(o.address.state)} ${esc(o.address.zip)}</p>
+              ${PS.orders.editable(o) ? `<button class="link-btn" type="button" data-order-edit="${o.number}">Change address</button><br><small class="muted">Until ${PS.time(PS.orders.editUntil(o))}</small>` : '<small class="muted">The one-hour window to change this has closed. <a href="#/contact">Contact us</a> for help.</small>'}
+              ${o.addressEdits ? `<br><small class="muted">Updated ${PS.time(o.addressEdits[o.addressEdits.length - 1].at)}</small>` : ''}</div>
             <div><span class="label">Method</span><p>${esc(o.method.label)}<br><small class="muted">${esc(o.method.eta)}</small></p></div>
             <div><span class="label">Payment</span><p>${esc(o.payment.brand)} ending ${esc(o.payment.last4)}<br><small class="muted">Demo — not charged</small></p></div></div>
           </div></div></section>`,
@@ -767,6 +781,7 @@
       else if (d.coa) { e.preventDefault(); openCoa(d.coa); }
       else if ('print' in d) { window.print(); }
       else if ('signout' in d) { PS.auth.signOut(); PS.toast('Signed out'); }
+      else if (d.orderEdit) { const o = PS.orders.get(d.orderEdit); if (o && PS.orders.editable(o)) PS.openModal(orderAddressHtml(o)); else { PS.toast('The one-hour window to change this address has closed.', 'error'); render(); } }
       else if ('profileEdit' in d) { $('#profile').innerHTML = profileHtml(PS.auth.current(), true); $('#pf-first').focus(); }
       else if ('profileCancel' in d) { $('#profile').innerHTML = profileHtml(PS.auth.current(), false); $('[data-profile-edit]', $('#profile')).focus(); }
       else if ('addressRemove' in d) {
@@ -926,6 +941,14 @@
         PS.storage.set(key, PS.storage.get(key, []).concat(Object.assign({ at: Date.now() }, data)));
         const wrap = form.closest('[data-form-wrap]') || form.parentElement;
         wrap.innerHTML = `<div class="success-panel"><span class="success-icon">${PS.icon('check')}</span><h2 class="h3">${kind === 'contact' ? 'Message sent' : 'Application received'}</h2><p class="muted">Thanks${data.name ? ', ' + esc(data.name.split(' ')[0]) : ''}. We’ll reply to <strong>${esc(data.email)}</strong> within one business day.</p><a class="btn btn-secondary" href="#/shop">Back to shop</a></div>`;
+        return;
+      }
+      if (kind === 'order-address') {
+        const r = PS.orders.updateAddress(form.dataset.order, { name: data.name.trim(), phone: data.phone || '', org: data.org || '', address: { line1: data.address1, line2: data.address2 || '', city: data.city, state: data.state, zip: data.zip } });
+        if (!r.ok) { $('.form-msg', form).textContent = r.msg; return; }
+        PS.closeModal();
+        PS.toast('Shipping address updated.');
+        render();
         return;
       }
       if (kind === 'profile') {

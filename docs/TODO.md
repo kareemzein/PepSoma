@@ -1,6 +1,6 @@
 # Pepsoma to-dos and open questions
 
-**This file isn't always up to date.** The current version is in Notion: the "To do" section of the [Pepsoma page](https://app.notion.com/p/3ec1f1852d9780359b64ea85fb3c45b4) and the [Open questions](https://app.notion.com/p/4061f1852d978181a94beec4d2e722a8) page. Copied from Notion on Oct 28, 2026.
+**This file isn't always up to date.** The current version is in Notion: the "To do" section of the [Pepsoma page](https://app.notion.com/p/3ec1f1852d9780359b64ea85fb3c45b4) and the [Open questions](https://app.notion.com/p/4061f1852d978181a94beec4d2e722a8) page. Copied from Notion on Oct 28, 2026, with Oct 30 additions.
 
 Design changes from the review comments are in [V2-CHANGE-LIST.md](V2-CHANGE-LIST.md) and [V3-CHANGE-LIST.md](V3-CHANGE-LIST.md), not here.
 
@@ -32,8 +32,8 @@ Design changes from the review comments are in [V2-CHANGE-LIST.md](V2-CHANGE-LIS
 ### Backend and launch
 
 - [ ] Sign up for database, email, shipping services
-- [ ] Database + real accounts (Claude Code). Move the profile and saved details (`PS.details`) off the browser
-- [ ] Orders, confirmation emails, inventory, shipping (Claude Code)
+- [ ] Database + real accounts (Claude Code). Customers can edit account details at any time; move the profile and saved details off the browser. See `BACKEND-SPEC.md`
+- [ ] Orders, confirmation emails, inventory, shipping (Claude Code). Includes changing an order's shipping address for one hour after ordering, enforced in the database. See `BACKEND-SPEC.md`
 - [ ] Write down how a lab's COA gets uploaded and shown on the site (Claude Code, once products and lots are in the database)
 - [ ] Connect pepsoma.com (GoDaddy DNS, on hold until asked)
 - [ ] Test the order flow end to end
@@ -77,6 +77,8 @@ Within each group the quick one-word answers come first.
 ### Checkout and accounts
 
 - [ ] **Shipping methods:** which carriers, speeds and prices?
+- [ ] **One-hour address changes vs. same-day shipping:** the site promises same-day shipping before 2 PM ET. Should printing the label close the window early, or does every order wait an hour before packing?
+- [ ] **Address changes and tax:** once tax is real, a change of state can change the amount owed. Block state changes, or recalculate?
 - [ ] **Sign in with Google or Apple?** Supabase Auth supports both; needs the real backend first, and Apple needs a developer account.
 
 ### Lab tests

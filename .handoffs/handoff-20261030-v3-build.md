@@ -33,6 +33,11 @@ Check `git log origin/main` to see whether this has been pushed. Saved cards are
 - **Fields are about 6px taller** in every form, because space for the error line is always reserved.
 - **Offer card** sits mid-screen and can cover part of the Most-selling heading while it's up.
 
+## Added after V3 went live
+- **Comments across domains:** Pages now forwards to `testing.pepsoma.com`, so all three review tools match sheet rows on the `?version` part of the address, not the whole address.
+- **Order address edits:** `PS.orders.editable` / `updateAddress` in `store/js/core.js`, `orderAddressHtml` in `store/js/ui.js`. One hour, not after shipping. The demo's "Shipped" moved from 8 to 60 minutes and "Delivered" from 30 to 180, so the window can run its full hour.
+- **Backend:** `docs/BACKEND-SPEC.md` says what Code B has to build for account and order edits.
+
 ## Open items for next time
 - Kareem picks `why` and `field-err`. Make the chosen one the default and remove the other.
 - COA placeholders: "[Testing lab]" / "[Report ID]" show publicly until Noza names the lab.

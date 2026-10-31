@@ -59,7 +59,12 @@ V2 is frozen at `versions/v2/`. `store/` becomes V3. Compare any of this in revi
 30. **Certificate:** opens as a pop-up again, as in V1. `/coa/<lot>` links still work and open the pop-up over Lab Tests.
 31. **Download PDF:** moves below the certificate's header area.
 
+## Added after V3 went live
+
+32. **Change the shipping address:** for one hour after ordering, as long as the order hasn't shipped, the order page lets the customer change the name, phone, lab and address. Each change keeps a record of what it replaced. The demo timeline now ships at the one-hour mark, not 8 minutes in. Profile edits are allowed at any time and don't change orders already placed.
+
 ## Not built
 
 - **Saved cards:** needs the payment processor. Goes in Notion and `TODO.md`.
-- **Real accounts:** profile and saved details stay on this browser until the backend exists.
+- **Real accounts:** profile, saved details and address changes stay on this browser until the backend exists. `docs/BACKEND-SPEC.md` says what the database needs.
+- **Changing what's in an order:** items, quantities and shipping speed change the amount charged, so those stay with support for now.
