@@ -18,12 +18,17 @@ Customers can change their name, email, phone, lab / institution and saved addre
 **Rule:** a customer can change it until one hour after `created_at`, and only while the order hasn't shipped and has no shipping label. The database decides this using its own clock. The browser's check is only for display.
 
 - **What can change:** recipient name, phone, org, and the address.
-- **What can't:** email, items, quantities, shipping speed, totals, billing address. These affect the amount charged or the payment record, so they go through support for now.
+- **What can't:** email, items, quantities, shipping speed, billing address. These go through support for now. The only total that can change is tax (below).
 - **Who can change it:** the signed-in owner, or a guest with the order number and checkout email, the same check `track_order` uses. Rate-limit this, since it can change where an order goes.
 - **How:** a `security definer` function, `update_order_address(p_number, p_email, p_changes jsonb)`. Keep "no update policies" on `orders`, so this function is the only way in.
 - **Validation:** repeat the store's rules on the server: required fields, a valid state, a 5-digit ZIP.
 - **History:** add an `order_address_edits` table with order id, time, old values, new values and who made the change. The demo keeps the same record in `addressEdits`.
 - **Email:** send a confirmation through Resend after every change. Send it to the checkout email, so the customer hears about a change they didn't make.
+- **State changes and tax:** allowed. When the new address changes the tax, recalculate it and update the order's tax and total:
+  - Show the customer the new tax and the difference before they save.
+  - If tax goes down, refund the difference. If it goes up, charge the difference. Save the new address only if that charge succeeds.
+  - Record the old and new tax in the history row.
+  - Orders paid by crypto or Zelle can't be charged or refunded automatically, so flag the difference for manual handling.
 - **Labels:** Shippo labels always read the current address. Creating a label closes the window straight away.
 - **Fraud:** changing the address after payment is a common pattern in fraud and chargebacks, so make edits easy to see in the admin view.
 
@@ -43,10 +48,9 @@ Keep the address in `data`, and update it there along with the history row, in o
 
 ## Open questions
 
-Don't guess these; ask Kareem and Noza. They're also on the Notion Open questions page.
+Don't guess this; ask Kareem and Noza. It's also on the Notion Open questions page.
 
-1. **One-hour window vs. same-day shipping.** The site promises same-day shipping before 2 PM ET. Default in this spec: printing the label closes the window, so an order packed quickly could close it early. The alternative is holding every order for an hour before packing.
-2. **State changes and tax.** Tax is $0 on the site today. Once tax is real, a change of state can change the amount owed, so either block state changes or recalculate.
+**One-hour window vs. same-day shipping.** The site promises same-day shipping before 2 PM ET. Default in this spec: printing the label closes the window, so an order packed quickly could close it early. The alternative is holding every order for an hour before packing.
 
 ## Before starting
 
@@ -61,5 +65,6 @@ Verified against a real Supabase project:
 - A wrong number and email combination changes nothing.
 - An edit at 59 minutes works, and one at 61 minutes is refused even if the browser's clock is wrong.
 - An edit after a label exists is refused.
+- A state change recalculates tax: a lower tax refunds the difference, and a higher tax charges it, with a failed charge leaving the address unchanged.
 - A profile edit leaves placed orders unchanged.
 - A confirmed email change keeps the order history, and guest tracking still works with the checkout email.

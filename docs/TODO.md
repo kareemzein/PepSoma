@@ -78,7 +78,7 @@ Within each group the quick one-word answers come first.
 
 - [ ] **Shipping methods:** which carriers, speeds and prices?
 - [ ] **One-hour address changes vs. same-day shipping:** the site promises same-day shipping before 2 PM ET. Should printing the label close the window early, or does every order wait an hour before packing?
-- [ ] **Address changes and tax:** once tax is real, a change of state can change the amount owed. Block state changes, or recalculate?
+- [x] **Address changes and tax:** state changes are allowed, and tax is recalculated (decided Oct 30). See `BACKEND-SPEC.md`
 - [ ] **Sign in with Google or Apple?** Supabase Auth supports both; needs the real backend first, and Apple needs a developer account.
 
 ### Lab tests
