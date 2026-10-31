@@ -2,7 +2,7 @@
 
 **This file isn't always up to date.** The current version is in Notion: the "To do" section of the [Pepsoma page](https://app.notion.com/p/3ec1f1852d9780359b64ea85fb3c45b4) and the [Open questions](https://app.notion.com/p/4061f1852d978181a94beec4d2e722a8) page. Copied from Notion on Oct 28, 2026.
 
-Design changes from the review comments are in [V2-CHANGE-LIST.md](V2-CHANGE-LIST.md), not here.
+Design changes from the review comments are in [V2-CHANGE-LIST.md](V2-CHANGE-LIST.md) and [V3-CHANGE-LIST.md](V3-CHANGE-LIST.md), not here.
 
 ## To do
 
@@ -27,11 +27,12 @@ Design changes from the review comments are in [V2-CHANGE-LIST.md](V2-CHANGE-LIS
 - [ ] Crypto + business Zelle checkout as the Retatrutide fallback (Claude Code builds the switch)
 - [ ] Payments wired into checkout, test mode (may wait on processor approval)
 - [ ] Take the preview banner down and turn checkout on once the processor approves
+- [ ] Saved cards at checkout (Oct 30 review): needs the processor, since cards are saved with them and not on our site
 
 ### Backend and launch
 
 - [ ] Sign up for database, email, shipping services
-- [ ] Database + real accounts (Claude Code)
+- [ ] Database + real accounts (Claude Code). Move the profile and saved details (`PS.details`) off the browser
 - [ ] Orders, confirmation emails, inventory, shipping (Claude Code)
 - [ ] Write down how a lab's COA gets uploaded and shown on the site (Claude Code, once products and lots are in the database)
 - [ ] Connect pepsoma.com (GoDaddy DNS, on hold until asked)
@@ -44,7 +45,7 @@ Design changes from the review comments are in [V2-CHANGE-LIST.md](V2-CHANGE-LIS
 
 ### Design and site
 
-- [ ] Implement the review comments (Claude Code). Oct 1 round is live; Oct 27–28 round is in `V2-CHANGE-LIST.md`
+- [x] Implement the review comments (Claude Code). Oct 1 and Oct 27–28 rounds are V2 (`V2-CHANGE-LIST.md`); Oct 29–30 round is V3 (`V3-CHANGE-LIST.md`)
 - [ ] Own tweaks pass
 - [ ] Other design assets (Componentry, Unicorn Studio, Lenis)
 - [ ] Cart animation fixes

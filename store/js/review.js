@@ -920,7 +920,7 @@
       ['mo-enter', 'Page entrance', 'Content rises in when a page opens. Switch between a few pages. Press S to watch it in slow motion.', '/shop'],
       ['mo-hover', 'Hover effects', 'Hover buttons and product cards. Do they respond nicely?', '/shop'],
       ['mo-pill', 'Menu highlight', 'Move across the top menu: a pill slides under the links.', '/', '.main-nav'],
-      ['mo-fly', 'Add-to-cart fly-in', 'Add something to the cart and watch the little circle fly to the cart icon. It stays inside the window; nothing else pops up.', '/shop'],
+      ['mo-fly', 'Add-to-cart fly-in', 'Add something to the cart and watch the little circle fly to the cart icon. It stays inside the window, and a notice appears at the top.', '/shop'],
       ['mo-drawer', 'Cart sliding open', 'The cart panel sliding in from the side when you press the cart button. It no longer opens by itself after adding.', '/shop'],
       ['mo-modal', 'Pop-ups', 'Open and close a pop-up, like a lab certificate (press View COA on Lab Tests). Escape, the dark backdrop and the × all close it.', '/lab-tests'],
       ['mo-theme', 'Theme change', 'Click the sun/moon button: the new theme spreads out in a circle.', '/', '.theme-btn'],
