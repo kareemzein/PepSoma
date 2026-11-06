@@ -47,6 +47,9 @@ Design changes from the review comments are in [V2-CHANGE-LIST.md](V2-CHANGE-LIS
 
 - [ ] Company placeholders (address, state of formation, county, phone) in `PS.company` (`store/js/data.js`)
 - [ ] **Talk to an accountant about sales tax, before real sales.** Tax rates stay at 0% until then, as a placeholder and not a tax position. Ask: where must we register and collect (the home state may apply from the first sale; other states usually after about $100,000 in sales there, some also on transaction count); are our products taxable in each state; is shipping taxable; how do labs claim research exemptions (certificates, [Virginia example](https://www.tax.virginia.gov/laws-rules-decisions/rulings-tax-commissioner/19-23)); and do we need tax software yet.
+- [ ] **Register for a Pennsylvania sales tax license** (free, online on myPATH: Pennsylvania Online Business Tax Registration). Needs the EIN and company details. Do it before the first taxable sale; the payment processor doesn't handle this.
+- [ ] **Collect PA sales tax at checkout (Claude Code):** replace the 0% placeholder with 6% for PA delivery addresses (7% Allegheny, 8% Philadelphia). Other states stay 0% until the accountant says otherwise. Turn it on once the license is issued.
+- [ ] **File and pay PA sales tax returns** on the schedule PA assigns at registration. Set a calendar reminder; PA expects a return each period, even with no sales.
 
 ### Design and site
 
